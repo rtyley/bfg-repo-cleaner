@@ -45,7 +45,7 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
 
     unwantedBlobsByCommit should be('empty)
 
-    allCommits.head.getFullMessage should include("Former-Commit-Id")
+    allCommits.head.getFullMessage should include("Former-commit-id")
   }
 }
 
