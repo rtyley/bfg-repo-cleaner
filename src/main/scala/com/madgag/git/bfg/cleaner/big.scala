@@ -275,7 +275,7 @@ object RepoRewriter {
         c.setCommitter(originalCommit.getCommitterIdent)
         val message = originalCommit.getFullMessage
         val updatedMessage = replaceOldCommitIds(message, objectDB.newReader) // slow!
-        c.setMessage(updatedMessage + "\nFormer-Commit-Id: " + commitId.name)
+        c.setMessage(updatedMessage + "\nFormer-commit-id: " + commitId.name)
         val cleanCommit = newInserter.insert(c)
         // objectChecker.checkCommit(c.toByteArray)
         cleanCommit
