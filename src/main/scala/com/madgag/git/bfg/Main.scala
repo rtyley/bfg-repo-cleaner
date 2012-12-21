@@ -29,6 +29,7 @@ import scala.Some
 import scopt.immutable.OptionParser
 import System.nanoTime
 import GitUtil._
+import collection.SortedSet
 
 case class CMDConfig(stripBiggestBlobs: Option[Int] = None,
                      stripBlobsBiggerThan: Option[Int] = None,
@@ -90,20 +91,20 @@ object Main extends App {
       println("Found " + protectedBlobIds.size + " blobs to protect")
 
       val start = nanoTime
-      val badIds = {
-        biggestBlobs(repo).filterNot(o => protectedBlobIds(o.objectId)).take(config.stripBiggestBlobs.get).map(_.objectId).toSet
-      } // getBadBlobsFromAdjacentFile(repo)
+      val biggestUnprotectedBlobs = biggestBlobs(repo).filterNot(o => protectedBlobIds(o.objectId))
+
+      val biggest=config.stripBlobsBiggerThan.map(threshold => biggestUnprotectedBlobs.takeWhile(_.size>threshold))
+      val big = config.stripBiggestBlobs.map(num => biggestUnprotectedBlobs.take(num))
+
+      val badIds = SortedSet(Seq(biggest, big).flatMap(_.getOrElse(Set.empty)):_*)
       val end = nanoTime
 
       println("Blob-targeting pack-scan duration = %.3f".format((end - start) / 1.0e9))
 
-      println("Found " + badIds.size + " blob ids to remove")
+      println("Found " + badIds.size + " blob ids to remove biggest="+badIds.max.size+" smallest="+badIds.min.size)
+      println("Total size (unpacked)="+badIds.map(_.size).sum)
 
-      //val eliminateableBlobIds = badIds -- protectedBlobIds
-
-      //println("badIdsExcludingProtectedIds size = " + eliminateableBlobIds.size)
-
-      RepoRewriter.rewrite(repo, new BlobReplacer(badIds))
+      RepoRewriter.rewrite(repo, new BlobReplacer(badIds.map(_.objectId).toSet))
   }
 
 }
