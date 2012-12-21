@@ -81,30 +81,29 @@ object Main extends App {
 
       implicit val codec = scalax.io.Codec.UTF8
 
-      def getBigBlobsFromPack: Set[ObjectId] = {
-        biggestBlobs(repo).take(config.stripBiggestBlobs.get).map(_._1).toSet
-      }
-
       //      def getBadBlobsFromAdjacentFile(repo: FileRepository): Set[ObjectId] = {
       //        Path.fromString(repo.getDirectory.getAbsolutePath + ".bad").lines().map(line => ObjectId.fromString(line.split(' ')(0))).toSet
       //      }
 
-      val allProtectedBlobIds: Set[ObjectId] = allBlobsReachableFrom(config.protectBlobsFromRevisions)
+      val protectedBlobIds: Set[ObjectId] = allBlobsReachableFrom(config.protectBlobsFromRevisions)
 
-      println("Found " + allProtectedBlobIds.size + " blobs to protect")
+      println("Found " + protectedBlobIds.size + " blobs to protect")
 
       val start = nanoTime
-      val badIds = getBigBlobsFromPack // getBadBlobsFromAdjacentFile(repo)
+      val badIds = {
+        biggestBlobs(repo).filterNot(o => protectedBlobIds(o.objectId)).take(config.stripBiggestBlobs.get).map(_.objectId).toSet
+      } // getBadBlobsFromAdjacentFile(repo)
       val end = nanoTime
-      println("duration = %.3f".format((end - start) / 1.0e9))
 
-      println("Found " + badIds.size + " bad ids")
+      println("Blob-targeting pack-scan duration = %.3f".format((end - start) / 1.0e9))
 
-      val eliminateableBlobIds = badIds -- allProtectedBlobIds
+      println("Found " + badIds.size + " blob ids to remove")
 
-      println("badIdsExcludingProtectedIds size = " + eliminateableBlobIds.size)
+      //val eliminateableBlobIds = badIds -- protectedBlobIds
 
-      RepoRewriter.rewrite(repo, new BlobReplacer(eliminateableBlobIds))
+      //println("badIdsExcludingProtectedIds size = " + eliminateableBlobIds.size)
+
+      RepoRewriter.rewrite(repo, new BlobReplacer(badIds))
   }
 
 }

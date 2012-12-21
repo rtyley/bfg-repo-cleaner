@@ -28,8 +28,9 @@ import collection.mutable
 import org.eclipse.jgit.storage.file.{ObjectDirectory, FileRepository}
 import scala.collection.JavaConversions._
 import java.io.File
-import scala.Some
+import scala.{Long, Some}
 import org.eclipse.jgit.util.FS
+import org.eclipse.jgit.lib.Constants.OBJ_BLOB
 
 object GitUtil {
   implicit def fileRepository2ObjectDirectory(repo: FileRepository): ObjectDirectory = repo.getObjectDatabase
@@ -82,11 +83,17 @@ object GitUtil {
     }
   }
 
-  def biggestBlobs(implicit objectDB: ObjectDirectory): Stream[(ObjectId, Long)] = {
+  case class SizedObject(objectId: ObjectId, size: Long)
+
+  def biggestBlobs(implicit objectDB: ObjectDirectory): Stream[SizedObject] = {
+    val reader = objectDB.newReader
     objectDB.getPacks.flatMap {
-      _.map(_.toObjectId).map {
-        objectId => objectId -> objectDB.newReader.getObjectSize(objectId, OBJ_ANY)
-      }
-    }.toStream.sortBy(_._2).reverse
+      pack =>
+        pack.map(_.toObjectId).map {
+          objectId =>
+            SizedObject(objectId, reader.getObjectSize(objectId, OBJ_ANY))
+        }
+    }.toSeq.sorted(Ordering.by[SizedObject, Long](_.size).reverse)
+      .toStream.filter(oid => reader.open(oid.objectId).getType == OBJ_BLOB)
   }
 }
