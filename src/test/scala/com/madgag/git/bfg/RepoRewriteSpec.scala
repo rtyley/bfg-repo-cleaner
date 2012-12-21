@@ -25,7 +25,6 @@ import org.scalatest._
 import matchers.ShouldMatchers
 import org.eclipse.jgit.lib.ObjectId
 import GitUtil._
-import GitTestHelper._
 import org.eclipse.jgit.api.Git
 import scala.collection.JavaConversions._
 
