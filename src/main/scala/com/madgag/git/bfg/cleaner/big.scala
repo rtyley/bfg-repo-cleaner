@@ -304,9 +304,12 @@ object RepoRewriter {
           }
       }
 
+    lazy val allRemovedFiles = collection.mutable.Map[FileName, SizedObject]()
+
     def cleanTree(originalObjectId: ObjectId): ObjectId = {
       val parser = new CanonicalTreeParser
-      parser.reset(objectDB.newReader, originalObjectId)
+      val reader = objectDB.newReader
+      parser.reset(reader, originalObjectId)
 
       val tree = Tree(parser)
 
@@ -320,6 +323,9 @@ object RepoRewriter {
 
         val updatedTree = tree copyWith(cleanedSubtrees, hunterFixedTreeBlobs)
 
+        val removedFiles = tree.blobs.entryMap -- hunterFixedTreeBlobs.entryMap.keys
+        val sizedRemovedFiles=removedFiles.mapValues {case (_,objectId) => SizedObject(objectId, reader.getObjectSize(objectId, ObjectReader.OBJ_ANY)) }
+        allRemovedFiles ++= sizedRemovedFiles
         // objectChecker.checkTree(updatedTree.formatter.toByteArray) // throws exception if bad
 
         val updatedTreeId = updatedTree.formatter.insertTo(newInserter)
@@ -359,7 +365,9 @@ object RepoRewriter {
       repo.getRefDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(revWalk, progressMonitor)
     }
 
-    println("\nPost-update\n")
+    println("\nPost-update allRemovedFiles.size="+allRemovedFiles.size)
+
+    allRemovedFiles.toSeq.sortBy(_._2).foreach { case (name,SizedObject(id,size)) => println(id.shortName+"\t"+size+"\t"+name) }
   }
 
 
