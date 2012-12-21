@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="Files for Copyright" pattern="src:com.madgag..*||test:com.madgag..*" />
+</component>
