@@ -39,7 +39,7 @@ object MemoUtil {
         val map: java.util.concurrent.ConcurrentMap[V, V] = new MapMaker().makeComputingMap(f)
         (k: V) =>
           val v = map.get(k)
-          map.put(v, v)
+          map.put(v, v) // enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
           v
     }
   }
