@@ -6,6 +6,8 @@ organization := "com.madgag"
 
 assemblySettings
 
+resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
+
 libraryDependencies ++= Seq(
   "org.scalaz" %% "scalaz-core" % "6.0.4",
   "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.1",
