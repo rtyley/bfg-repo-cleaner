@@ -18,17 +18,16 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/ .
  */
 
-package com.madgag.git.bfg
+package com.madgag.git
 
+import bfg.GitUtil._
 import org.eclipse.jgit.lib.Repository
-import GitUtil._
 import org.eclipse.jgit.storage.file.FileRepository
-import com.madgag.compress.CompressUtil._
 import scalax.file.Path
-import java.io.File.separatorChar
+import java.io.File._
+import com.madgag.compress.CompressUtil._
 
-object GitTestHelper {
-
+package object bfg {
   def unpackRepo(fileName: String): Repository = {
     val resolvedGitDir = resolveGitDirFor(unpackRepoAndGetGitDir(fileName).jfile)
     require(resolvedGitDir.exists)
@@ -44,5 +43,4 @@ object GitTestHelper {
     rawZipFileInputStream.close
     repoParentFolder
   }
-
 }
