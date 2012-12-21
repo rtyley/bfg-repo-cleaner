@@ -83,7 +83,9 @@ object GitUtil {
     }
   }
 
-  case class SizedObject(objectId: ObjectId, size: Long)
+  case class SizedObject(objectId: ObjectId, size: Long) extends Ordered[SizedObject] {
+    def compare(that: SizedObject) = size.compareTo(that.size)
+  }
 
   def biggestBlobs(implicit objectDB: ObjectDirectory): Stream[SizedObject] = {
     val reader = objectDB.newReader
@@ -93,7 +95,6 @@ object GitUtil {
           objectId =>
             SizedObject(objectId, reader.getObjectSize(objectId, OBJ_ANY))
         }
-    }.toSeq.sorted(Ordering.by[SizedObject, Long](_.size).reverse)
-      .toStream.filter(oid => reader.open(oid.objectId).getType == OBJ_BLOB)
+    }.toSeq.sorted.reverse.toStream.filter(oid => reader.open(oid.objectId).getType == OBJ_BLOB)
   }
 }
