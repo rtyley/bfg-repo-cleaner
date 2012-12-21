@@ -183,13 +183,12 @@ object RepoRewriter {
 
 
     val revWalk = new RevWalk(repo)
+    revWalk.sort(TOPO) // crucial to ensure we visit parents BEFORE children, otherwise blow stack
 
     val commits = {
       import scala.collection.JavaConversions._
 
-
-      revWalk.sort(TOPO) // crucial to ensure we visit parents BEFORE children, otherwise blow stack
-      val objReader: ObjectReader = objectDB.newReader
+      val objReader = objectDB.newReader
 
       val refsByObjType = repo.getAllRefs.values.groupBy {
         ref => objReader.open(ref.getObjectId).getType
@@ -265,7 +264,7 @@ object RepoRewriter {
       val originalTree = originalCommit.getTree
       val cleanedTree = memoCleanObjectFor(originalCommit.getTree)
 
-      val originalParentCommits: List[RevCommit] = originalCommit.getParents.toList
+      val originalParentCommits = originalCommit.getParents.toList
       val cleanedParentCommits = originalParentCommits.map(memoCleanObjectFor).seq
 
       if (cleanedParentCommits != originalParentCommits || cleanedTree != originalTree) {
@@ -275,16 +274,15 @@ object RepoRewriter {
         c.setAuthor(originalCommit.getAuthorIdent)
         c.setCommitter(originalCommit.getCommitterIdent)
         val message = originalCommit.getFullMessage
-        val updatedMessage = replaceOldCommitIds(message, objectDB.newReader)
+        val updatedMessage = replaceOldCommitIds(message, objectDB.newReader) // slow!
         c.setMessage(updatedMessage + "\nFormer-Commit-Id: " + commitId.name)
         val cleanCommit = newInserter.insert(c)
-        objectChecker.checkCommit(c.toByteArray)
+        // objectChecker.checkCommit(c.toByteArray)
         cleanCommit
       } else {
         originalCommit
       }
     }
-
 
     def isDirty(objectId: ObjectId) = memoCleanObjectFor(objectId) != objectId
 
@@ -316,15 +314,13 @@ object RepoRewriter {
         case (name, treeId) => (name, memoCleanObjectFor(treeId))
       }.seq)
 
-      val inserter: RetryingObjectInserter = newInserter
-
       val hunterFixedTreeBlobs: TreeBlobs = treeCleaner fix(tree.blobs, new TreeCleaner.Kit(objectDB))
 
       if (hunterFixedTreeBlobs != tree.blobs || cleanedSubtrees != tree.subtrees) {
 
         val updatedTree = tree copyWith(cleanedSubtrees, hunterFixedTreeBlobs)
 
-        objectChecker.checkTree(updatedTree.formatter.toByteArray) // throws exception if bad
+        // objectChecker.checkTree(updatedTree.formatter.toByteArray) // throws exception if bad
 
         val updatedTreeId = updatedTree.formatter.insertTo(newInserter)
 
@@ -333,7 +329,7 @@ object RepoRewriter {
         originalObjectId
       }
     }
-  
+
     new Actor { override def act() = {
       commits.par.foreach {
         commit => memoCleanObjectFor(commit.getTree) ; print(".")
