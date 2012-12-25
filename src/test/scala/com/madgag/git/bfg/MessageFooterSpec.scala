@@ -1,0 +1,51 @@
+/*
+ * Copyright (c) 2012 Roberto Tyley
+ *
+ * This file is part of 'BFG Repo-Cleaner' - a tool for removing large
+ * or troublesome blobs from Git repositories.
+ *
+ * BFG Repo-Cleaner is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BFG Repo-Cleaner is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/ .
+ */
+
+package com.madgag.git.bfg
+
+import cleaner.{Footer, CommitMessage}
+import org.scalatest._
+import matchers.ShouldMatchers
+import org.eclipse.jgit.revwalk.RevCommit
+import scala.collection.JavaConversions._
+import org.eclipse.jgit.lib.PersonIdent
+
+class MessageFooterSpec extends FlatSpec with ShouldMatchers {
+
+  val p = new PersonIdent("Dave Eg", "dave@e.com")
+
+  def commit(m : String) = CommitMessage(p, p, m)
+  
+  "Message footers" should "append footer without new paragraph if footers already present" in {
+
+    val updatedCommit = commit("Sub\n\nmessage\n\nSigned-off-by: Joe Eg <joe@e.com>") add Footer("Foo", "Bar")
+
+    updatedCommit.message should be("Sub\n\nmessage\n\nSigned-off-by: Joe Eg <joe@e.com>\nFoo: Bar")
+  }
+
+  "Message footers" should "create paragraph break if no footers already present" in {
+
+    val updatedCommit = commit("Sub\n\nmessage") add Footer("Foo", "Bar")
+
+    updatedCommit.message should be("Sub\n\nmessage\n\nFoo: Bar")
+  }
+
+  // def footersViaJGit(commit: RevCommit) = commit.getFooterLines.map(f => Footer(f.getKey, f.getValue)).toList
+}
