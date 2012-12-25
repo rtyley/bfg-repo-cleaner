@@ -80,7 +80,7 @@ object TreeCleaner {
   class Kit(objectDB: ObjectDatabase) {
     lazy val objectReader = objectDB.newReader
 
-    private lazy val inserter = new RetryingObjectInserter(objectDB.newInserter)
+    private lazy val inserter = objectDB.newInserter
 
     lazy val blobInserter = new BlobInserter {
       def insert(length: Long, in: InputStream) = inserter.insert(OBJ_BLOB, length, in)
@@ -146,29 +146,6 @@ trait BlobTextModifier extends TreeCleaner {
   }
 }
 
-class RetryingObjectInserter(val delegate: ObjectInserter) extends ObjectInserter.Filter {
-
-  override def insert(objectType: Int, data: Array[Byte], off: Int, len: Int) = {
-    try {
-      super.insert(objectType, data, off, len)
-    } catch {
-      case e: IOException =>
-        println("RETRYING ARRAY AFTER " + e)
-        super.insert(objectType, data, off, len)
-    }
-  }
-
-  override def insert(objectType: Int, length: Long, in: InputStream) = {
-    try {
-      super.insert(objectType, length, in)
-    } catch {
-      case e: IOException =>
-        println("RETRYING STREAM AFTER " + e)
-        super.insert(objectType, length, in)
-    }
-  }
-}
-
 object RepoRewriter {
 
   def rewrite(repo: org.eclipse.jgit.lib.Repository, treeCleaner: TreeCleaner) {
@@ -221,7 +198,7 @@ object RepoRewriter {
       }
     }
 
-    def newInserter = new RetryingObjectInserter(objectDB.newInserter)
+    def newInserter = objectDB.newInserter
 
     def cleanTag(id: ObjectId): ObjectId = {
       val originalTag = getTag(id)

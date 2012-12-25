@@ -12,7 +12,7 @@ libraryDependencies ++= Seq(
   "org.scalaz" %% "scalaz-core" % "6.0.4",
   "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.1",
   "com.google.guava" % "guava" % "13.0.1", "com.google.code.findbugs" % "jsr305" % "1.3.+",
-  "org.eclipse.jgit" % "org.eclipse.jgit" % "2.1.0.201209190230-r",
+  "com.madgag" % "org.eclipse.jgit" % "2.2.0.0.2-UNOFFICIAL-ROBERTO-RELEASE",
   "com.github.scopt" %% "scopt" % "2.1.0",
   "org.scalatest" %% "scalatest" % "1.8" % "test",
   "com.madgag" % "util-compress" % "1.33" % "test"
