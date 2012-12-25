@@ -23,7 +23,6 @@ package com.madgag.git.bfg
 import cleaner.{RepoRewriter, BlobRemover}
 import org.scalatest._
 import matchers.ShouldMatchers
-import org.eclipse.jgit.lib.ObjectId
 import GitUtil._
 import org.eclipse.jgit.api.Git
 import scala.collection.JavaConversions._
@@ -32,7 +31,8 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
 
   "Git repo" should "not explode" in {
     implicit val repo = unpackRepo("/sample-repos/example.git.zip")
-    val blobsToRemove = Set(ObjectId.fromString("06d7405020018ddf3cacee90fd4af10487da3d20"))
+
+    val blobsToRemove = Set(ObjectId("06d7405020018ddf3cacee90fd4af10487da3d20"))
     RepoRewriter.rewrite(repo, new BlobRemover(blobsToRemove))
 
     val allCommits = new Git(repo).log.all.call.toSeq

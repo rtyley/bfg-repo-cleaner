@@ -32,6 +32,10 @@ import scala.{Long, Some}
 import org.eclipse.jgit.util.FS
 import org.eclipse.jgit.lib.Constants.OBJ_BLOB
 
+object ObjectId {
+  def apply(str: String) = org.eclipse.jgit.lib.ObjectId.fromString(str)
+}
+
 object GitUtil {
   implicit def fileRepository2ObjectDirectory(repo: FileRepository): ObjectDirectory = repo.getObjectDatabase
 
