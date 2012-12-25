@@ -93,16 +93,16 @@ object Main extends App {
       val start = nanoTime
       val biggestUnprotectedBlobs = biggestBlobs(repo).filterNot(o => protectedBlobIds(o.objectId))
 
-      val biggest=config.stripBlobsBiggerThan.map(threshold => biggestUnprotectedBlobs.takeWhile(_.size>threshold))
+      val biggest = config.stripBlobsBiggerThan.map(threshold => biggestUnprotectedBlobs.takeWhile(_.size > threshold))
       val big = config.stripBiggestBlobs.map(num => biggestUnprotectedBlobs.take(num))
 
-      val badIds = SortedSet(Seq(biggest, big).flatMap(_.getOrElse(Set.empty)):_*)
+      val badIds = SortedSet(Seq(biggest, big).flatMap(_.getOrElse(Set.empty)): _*)
       val end = nanoTime
 
       println("Blob-targeting pack-scan duration = %.3f".format((end - start) / 1.0e9))
 
-      println("Found " + badIds.size + " blob ids to remove biggest="+badIds.max.size+" smallest="+badIds.min.size)
-      println("Total size (unpacked)="+badIds.map(_.size).sum)
+      println("Found " + badIds.size + " blob ids to remove biggest=" + badIds.max.size + " smallest=" + badIds.min.size)
+      println("Total size (unpacked)=" + badIds.map(_.size).sum)
 
       RepoRewriter.rewrite(repo, new BlobReplacer(badIds.map(_.objectId).toSet))
   }
