@@ -46,7 +46,13 @@ object GitUtil {
   class RichObjectId(objectId: AnyObjectId) {
     def asRevObject(implicit revWalk: RevWalk) = revWalk.parseAny(objectId)
 
+    def asRevCommit(implicit revWalk: RevWalk) = revWalk.parseCommit(objectId)
+
     lazy val shortName = objectId.getName.take(8)
+  }
+
+  class RichRevCommit(commit: RevCommit) {
+    lazy val message = commit.getFullMessage
   }
 
   class RichObjectReader(reader: ObjectReader) {

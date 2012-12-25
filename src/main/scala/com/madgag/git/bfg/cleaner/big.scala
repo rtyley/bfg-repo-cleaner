@@ -23,18 +23,15 @@ package com.madgag.git.bfg.cleaner
 import org.eclipse.jgit.revwalk.{RevTag, RevWalk, RevCommit}
 import org.eclipse.jgit.treewalk.CanonicalTreeParser
 import scalaz.Memo
-import org.eclipse.jgit.lib.Constants.{OBJ_TREE, OBJ_COMMIT, OBJ_TAG, OBJ_BLOB}
-import java.io.{ByteArrayOutputStream, IOException, InputStream}
+import org.eclipse.jgit.lib.Constants.{OBJ_TREE, OBJ_COMMIT, OBJ_TAG}
+import java.io.InputStream
 import org.eclipse.jgit.transport.ReceiveCommand
 import org.eclipse.jgit.revwalk.RevSort.TOPO
-import org.eclipse.jgit.diff.RawText
 import com.madgag.git.bfg.model._
-import com.madgag.git.bfg.cleaner.TreeCleaner._
 import com.madgag.git.bfg.MemoUtil
 import com.madgag.git.bfg.GitUtil._
 import org.eclipse.jgit.lib._
 import com.madgag.git.bfg.model.TreeSubtrees
-import scala.Some
 import com.madgag.git.bfg.model.Tree
 import actors.Actor
 
@@ -75,77 +72,6 @@ trait BlobInserter {
   def insert(length: Long, in: InputStream): ObjectId
 }
 
-object TreeCleaner {
-
-  class Kit(objectDB: ObjectDatabase) {
-    lazy val objectReader = objectDB.newReader
-
-    private lazy val inserter = objectDB.newInserter
-
-    lazy val blobInserter = new BlobInserter {
-      def insert(length: Long, in: InputStream) = inserter.insert(OBJ_BLOB, length, in)
-
-      def insert(data: Array[Byte]) = inserter.insert(OBJ_BLOB, data)
-    }
-  }
-
-}
-
-trait TreeCleaner {
-  def fix(treeBlobs: TreeBlobs, kit: Kit): TreeBlobs
-}
-
-class BlobRemover(blobIds: Set[ObjectId]) extends TreeCleaner {
-  def fix(treeBlobs: TreeBlobs, kit: Kit) = treeBlobs.filter(oid => !blobIds.contains(oid))
-}
-
-class BlobReplacer(badBlobs: Set[ObjectId]) extends TreeCleaner {
-  def fix(treeBlobs: TreeBlobs, kit: Kit) = {
-    val updatedEntryMap = treeBlobs.entryMap.map {
-      case (filename, (mode, oid)) if badBlobs.contains(oid) =>
-        val newFile = FileName(filename + ".REMOVED.git-id")
-        // println("Replacing with " + newFile.string)
-        newFile ->(RegularFile, kit.blobInserter.insert(oid.name.getBytes))
-      case e => e
-    }
-    TreeBlobs(updatedEntryMap)
-  }
-}
-
-class BlobPasswordRemover extends BlobTextModifier {
-  val reg = """(\.password=).*""".r
-
-  override def cleanLine(line: String) = reg.replaceAllIn(line, m => m.group(1) + "*** PASSWORD ***")
-}
-
-trait BlobTextModifier extends TreeCleaner {
-
-  def cleanLine(line: String): String
-
-  def fix(treeBlobs: TreeBlobs, kit: Kit) = {
-
-    TreeBlobs(treeBlobs.entries.map {
-      e =>
-        val objectLoader = kit.objectReader.open(e.objectId)
-        if (objectLoader.isLarge) {
-          println("LARGE")
-          e
-        } else {
-          val cachedBytes = objectLoader.getCachedBytes
-          val rawText = new RawText(cachedBytes)
-
-          val b = new ByteArrayOutputStream(cachedBytes.length)
-
-          (1 until rawText.size).map(rawText.getString(_)).map(cleanLine).foreach(line => b.write(line.getBytes))
-
-          val oid = kit.blobInserter.insert(b.toByteArray)
-
-          e.copy(objectId = oid)
-        }
-    })
-  }
-}
-
 object RepoRewriter {
 
   def rewrite(repo: org.eclipse.jgit.lib.Repository, treeCleaner: TreeCleaner) {
@@ -177,7 +103,6 @@ object RepoRewriter {
 
       revWalk.markStart(refsByObjType(OBJ_COMMIT).map(ref => revWalk.lookupCommit(ref.getObjectId)))
       // revWalk.markStart(refsByObjType(OBJ_TAG).map(_.getPeeledObjectId).filter(id=>objectDB.open(id).getType==OBJ_COMMIT).map(revWalk.lookupCommit(_)))
-
 
       println("Getting full commit list:")
       revWalk.toList.reverse // we want to start with the earliest commits and work our way up...
@@ -220,17 +145,10 @@ object RepoRewriter {
       }
     }
 
-    lazy val hexRegex = """\p{XDigit}{8,40}""".r
+    lazy val commitMessageCleaner: CommitCleaner = FormerCommitFooter
 
-    def replaceOldCommitIds(message: String, reader: ObjectReader): String = {
-      hexRegex.replaceAllIn(message, m => {
-        Some(AbbreviatedObjectId.fromString(m.matched))
-          .flatMap(reader.resolveExistingUniqueId).flatMap(objectIdSubstitution).map {
-          case (oldId, newId) =>
-            println("\nSubstituting " + oldId.shortName + " -> " + newId.shortName)
-            reader.abbreviate(newId, m.matched.length).name + " (formerly " + m.matched + ")"
-        }.getOrElse(m.matched)
-      })
+    lazy val mapper = new CleaningMapper[ObjectId] {
+      lazy val clean = memoCleanObjectFor
     }
 
     def cleanCommit(commitId: ObjectId): ObjectId = {
@@ -246,13 +164,15 @@ object RepoRewriter {
 
       if (cleanedParentCommits != originalParentCommits || cleanedTree != originalTree) {
         val c = new CommitBuilder
+        c.setEncoding(originalCommit.getEncoding)
         c.setParentIds(cleanedParentCommits)
         c.setTreeId(cleanedTree)
-        c.setAuthor(originalCommit.getAuthorIdent)
-        c.setCommitter(originalCommit.getCommitterIdent)
-        val message = originalCommit.getFullMessage
-        val updatedMessage = replaceOldCommitIds(message, objectDB.newReader) // slow!
-        c.setMessage(updatedMessage + "\nFormer-commit-id: " + commitId.name)
+        val kit = new CommitCleaner.Kit(objectDB, originalCommit, mapper)
+        val updatedCommit = commitMessageCleaner.fix(CommitMessage(originalCommit), kit)
+
+        c.setAuthor(updatedCommit.author)
+        c.setCommitter(updatedCommit.committer)
+        c.setMessage(updatedCommit.message)
         val cleanCommit = newInserter.insert(c)
         // objectChecker.checkCommit(c.toByteArray)
         cleanCommit
@@ -261,18 +181,11 @@ object RepoRewriter {
       }
     }
 
-    def isDirty(objectId: ObjectId) = memoCleanObjectFor(objectId) != objectId
-
-    def objectIdSubstitution(oldId: ObjectId): Option[(ObjectId, ObjectId)] = {
-      val newId = memoCleanObjectFor(oldId)
-      if (newId == oldId) None else Some((oldId, newId))
-    }
-
     lazy val memoCleanObjectFor: (ObjectId) => ObjectId =
       memo {
         objectId =>
         // print(".")
-
+        // pass reader through to cleaners?
           objectDB.newReader.open(objectId).getType match {
             case OBJ_COMMIT => cleanCommit(objectId)
             case OBJ_TREE => cleanTree(objectId)
@@ -301,7 +214,9 @@ object RepoRewriter {
         val updatedTree = tree copyWith(cleanedSubtrees, hunterFixedTreeBlobs)
 
         val removedFiles = tree.blobs.entryMap -- hunterFixedTreeBlobs.entryMap.keys
-        val sizedRemovedFiles=removedFiles.mapValues {case (_,objectId) => SizedObject(objectId, reader.getObjectSize(objectId, ObjectReader.OBJ_ANY)) }
+        val sizedRemovedFiles = removedFiles.mapValues {
+          case (_, objectId) => SizedObject(objectId, reader.getObjectSize(objectId, ObjectReader.OBJ_ANY))
+        }
         allRemovedFiles ++= sizedRemovedFiles
         // objectChecker.checkTree(updatedTree.formatter.toByteArray) // throws exception if bad
 
@@ -313,19 +228,17 @@ object RepoRewriter {
       }
     }
 
-    new Actor { override def act() = {
-      commits.par.foreach {
-        commit => memoCleanObjectFor(commit.getTree) ; print(".")
-        //print(diagnosticChar('a', commit.getTree, correctTree))
+    new Actor {
+      override def act() = commits.par.foreach {
+        commit => memoCleanObjectFor(commit.getTree)
       }
-    } }.start
+    }.start
 
     progressMonitor.beginTask("Cleaning commits", commits.size)
     commits.foreach {
       commit =>
-      memoCleanObjectFor(commit)
-      progressMonitor update 1
-      // print(diagnosticChar('x', commit, correctCommit))
+        memoCleanObjectFor(commit)
+        progressMonitor update 1
     }
     progressMonitor.endTask()
 
@@ -333,7 +246,7 @@ object RepoRewriter {
 
     {
       import scala.collection.JavaConversions._
-      val refUpdateCommands = repo.getAllRefs.values.filterNot(_.isSymbolic).filter(ref => isDirty(ref.getObjectId)).map {
+      val refUpdateCommands = repo.getAllRefs.values.filterNot(_.isSymbolic).filter(ref => mapper.isDirty(ref.getObjectId)).map {
         ref =>
           new ReceiveCommand(ref.getObjectId, memoCleanObjectFor(ref.getObjectId), ref.getName)
       }
@@ -342,15 +255,9 @@ object RepoRewriter {
       repo.getRefDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(revWalk, progressMonitor)
     }
 
-    println("\nPost-update allRemovedFiles.size="+allRemovedFiles.size)
+    println("\nPost-update allRemovedFiles.size=" + allRemovedFiles.size)
 
-    allRemovedFiles.toSeq.sortBy(_._2).foreach { case (name,SizedObject(id,size)) => println(id.shortName+"\t"+size+"\t"+name) }
+    // allRemovedFiles.toSeq.sortBy(_._2).foreach { case (name,SizedObject(id,size)) => println(id.shortName+"\t"+size+"\t"+name) }
   }
 
-
-  def diagnosticChar(base: Char, o: ObjectId, n: ObjectId): Char = {
-    val same = o == n
-    val char: Char = ((n.getFirstByte % 2) + base).toChar
-    if (same) char else char.toUpper
-  }
 }
