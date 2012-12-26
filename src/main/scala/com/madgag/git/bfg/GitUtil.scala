@@ -43,6 +43,8 @@ object GitUtil {
 
   implicit def objectReaderSweetener(reader: ObjectReader): RichObjectReader = new RichObjectReader(reader)
 
+  def abbrId(str: String)(implicit reader: ObjectReader): ObjectId = reader.resolveExistingUniqueId(AbbreviatedObjectId.fromString(str)).get
+
   class RichObjectId(objectId: AnyObjectId) {
     def asRevObject(implicit revWalk: RevWalk) = revWalk.parseAny(objectId)
 
@@ -74,14 +76,13 @@ object GitUtil {
     protectedIds.toSet
   }
 
+  // use ObjectWalk instead ??
   def allBlobsReachableFrom(revisions: Set[String])(implicit repo: Repository): Set[ObjectId] = {
     implicit val revWalk = new RevWalk(repo)
 
-    (revisions.map {
-      repo.resolve
-    }.toSet.map {
+    revisions.map(repo.resolve).toSet.map {
       objectId: ObjectId => allBlobsReachableFrom(objectId.asRevObject)
-    } fold Set.empty)(_ ++ _)
+    } reduce (_ ++ _)
   }
 
   def allBlobsReachableFrom(revObject: RevObject)(implicit repo: Repository): Set[ObjectId] = {
