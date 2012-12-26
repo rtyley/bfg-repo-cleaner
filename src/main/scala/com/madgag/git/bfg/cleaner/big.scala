@@ -85,7 +85,7 @@ object RepoRewriter {
     val memo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentHashMapMemo
 
 
-    val revWalk = new RevWalk(repo)
+    implicit val revWalk = new RevWalk(repo)
     revWalk.sort(TOPO) // crucial to ensure we visit parents BEFORE children, otherwise blow stack
 
     val commits = {
@@ -101,7 +101,7 @@ object RepoRewriter {
         case (typ, refs) => println("Found " + refs.size + " " + Constants.typeString(typ) + "-pointing refs")
       }
 
-      revWalk.markStart(refsByObjType(OBJ_COMMIT).map(ref => revWalk.lookupCommit(ref.getObjectId)))
+      revWalk.markStart(refsByObjType(OBJ_COMMIT).map(ref => ref.getObjectId.asRevCommit))
       // revWalk.markStart(refsByObjType(OBJ_TAG).map(_.getPeeledObjectId).filter(id=>objectDB.open(id).getType==OBJ_COMMIT).map(revWalk.lookupCommit(_)))
 
       println("Getting full commit list:")
