@@ -22,6 +22,7 @@ package com.madgag.git.bfg.cleaner
 
 trait CleaningMapper[V] {
 
+  // endomorphism - scalaz.Endo?
   val clean: V => V
 
   def isDirty(v: V) = clean(v) != v
