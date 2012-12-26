@@ -65,8 +65,8 @@ object Main extends App {
 
     def byteSizeFrom(v: String): Int = {
       val magnitudeChars = List('B', 'K', 'M', 'G')
-      magnitudeChars.indexOf(v.takeRight(1)(0)) match {
-        case -1 => v.toInt
+      magnitudeChars.indexOf(v.takeRight(1)(0).toUpper) match {
+        case -1 => throw new IllegalArgumentException("Size unit is missing (ie %s)".format(magnitudeChars.mkString(", ")))
         case index => v.dropRight(1).toInt << (index * 10)
       }
     }
