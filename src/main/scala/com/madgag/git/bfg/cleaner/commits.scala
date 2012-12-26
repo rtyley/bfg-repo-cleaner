@@ -31,20 +31,19 @@ object CommitCleaner {
     lazy val objectReader = objectDB.newReader
   }
 
+  def chain(cleaners: Seq[CommitCleaner]): CommitCleaner = new CommitCleaner {
+    def fixer(kit: CommitCleaner.Kit) = Function.chain(cleaners.map(_.fixer(kit)))
+  }
 }
 
 trait CommitCleaner {
-  def fix(commit: CommitMessage, kit: CommitCleaner.Kit): CommitMessage
+  def fixer(kit: CommitCleaner.Kit): (CommitMessage => CommitMessage)
 }
 
-object ObjectIdSubstititor {
+object ObjectIdSubstititor extends CommitCleaner {
   val hexRegex = """\p{XDigit}{8,40}""".r
-}
 
-class ObjectIdSubstititor extends CommitCleaner {
-  override def fix(commit: CommitMessage, kit: CommitCleaner.Kit) = {
-    commit.copy(message = replaceOldCommitIds(commit.message, kit.objectReader, kit.mapper))
-  }
+  override def fixer(kit: CommitCleaner.Kit) = cm => cm.copy(message = replaceOldCommitIds(cm.message, kit.objectReader, kit.mapper))
 
   // slow!
   def replaceOldCommitIds(message: String, reader: ObjectReader, mapper: CleaningMapper[ObjectId]): String = {
@@ -60,8 +59,7 @@ class ObjectIdSubstititor extends CommitCleaner {
 }
 
 object FormerCommitFooter extends CommitCleaner {
-  override def fix(commit: CommitMessage, kit: CommitCleaner.Kit) =
-    commit add Footer("Former-commit-id", kit.originalCommit.name)
+  override def fixer(kit: CommitCleaner.Kit) = _ add Footer("Former-commit-id", kit.originalCommit.name)
 }
 
 //case class CommitStructure(parentIds: Seq[ObjectId], treeId: ObjectId)

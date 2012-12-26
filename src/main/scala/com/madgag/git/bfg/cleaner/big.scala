@@ -145,7 +145,7 @@ object RepoRewriter {
       }
     }
 
-    lazy val commitMessageCleaner: CommitCleaner = FormerCommitFooter
+    lazy val commitMessageCleaner = CommitCleaner.chain(Seq(ObjectIdSubstititor, FormerCommitFooter))
 
     lazy val mapper = new CleaningMapper[ObjectId] {
       lazy val clean = memoCleanObjectFor
@@ -168,7 +168,7 @@ object RepoRewriter {
         c.setParentIds(cleanedParentCommits)
         c.setTreeId(cleanedTree)
         val kit = new CommitCleaner.Kit(objectDB, originalCommit, mapper)
-        val updatedCommit = commitMessageCleaner.fix(CommitMessage(originalCommit), kit)
+        val updatedCommit = commitMessageCleaner.fixer(kit)(CommitMessage(originalCommit))
 
         c.setAuthor(updatedCommit.author)
         c.setCommitter(updatedCommit.committer)
