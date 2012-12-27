@@ -246,11 +246,10 @@ object RepoRewriter {
 
     {
       import scala.collection.JavaConversions._
-      val refUpdateCommands = repo.getAllRefs.values.filterNot(_.isSymbolic).filter(ref => mapper.isDirty(ref.getObjectId)).map {
-        ref =>
-          new ReceiveCommand(ref.getObjectId, memoCleanObjectFor(ref.getObjectId), ref.getName)
-      }
-
+      
+      val refUpdateCommands = for (ref <- repo.getAllRefs.values if !ref.isSymbolic;
+                                   (oldId, newId) <- mapper.objectIdSubstitution(ref.getObjectId)
+      ) yield (new ReceiveCommand(oldId, newId, ref.getName))
 
       repo.getRefDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(revWalk, progressMonitor)
     }
