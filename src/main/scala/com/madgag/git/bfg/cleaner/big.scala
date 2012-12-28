@@ -28,7 +28,7 @@ import java.io.InputStream
 import org.eclipse.jgit.transport.ReceiveCommand
 import org.eclipse.jgit.revwalk.RevSort.TOPO
 import com.madgag.git.bfg.model._
-import com.madgag.git.bfg.MemoUtil
+import com.madgag.git.bfg.{Timing, MemoUtil}
 import com.madgag.git.bfg.GitUtil._
 import org.eclipse.jgit.lib._
 import com.madgag.git.bfg.model.TreeSubtrees
@@ -77,7 +77,7 @@ object RepoRewriter {
   def rewrite(repo: org.eclipse.jgit.lib.Repository, treeCleaner: TreeCleaner) {
 
     assert(!repo.getAllRefs.isEmpty, "Can't find any refs in repo at " + repo.getDirectory.getAbsolutePath)
-    val progressMonitor = new TextProgressMonitor
+    implicit val progressMonitor = new TextProgressMonitor
     val objectChecker = new ObjectChecker()
     val objectDB = repo.getObjectDatabase
 
@@ -228,25 +228,25 @@ object RepoRewriter {
       }
     }
 
-    new Actor {
-      override def act() = commits.par.foreach {
-        commit => memoCleanObjectFor(commit.getTree)
-      }
-    }.start
+    Timing.measureTask("Cleaning commits", commits.size) {
+      new Actor {
+        override def act() = commits.par.foreach {
+          commit => memoCleanObjectFor(commit.getTree)
+        }
+      }.start
 
-    progressMonitor.beginTask("Cleaning commits", commits.size)
-    commits.foreach {
-      commit =>
-        memoCleanObjectFor(commit)
-        progressMonitor update 1
+      commits.foreach {
+        commit =>
+          memoCleanObjectFor(commit)
+          progressMonitor update 1
+      }
     }
-    progressMonitor.endTask()
 
     println("\nRefs\n")
 
     {
       import scala.collection.JavaConversions._
-      
+
       val refUpdateCommands = for (ref <- repo.getAllRefs.values if !ref.isSymbolic;
                                    (oldId, newId) <- mapper.objectIdSubstitution(ref.getObjectId)
       ) yield (new ReceiveCommand(oldId, newId, ref.getName))
