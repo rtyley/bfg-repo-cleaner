@@ -20,19 +20,25 @@
 
 package com.madgag.git.bfg
 
-import cleaner.{RepoRewriter, BlobRemover}
+import cleaner.{FormerCommitFooter, BlobPasswordRemover, RepoRewriter, BlobRemover}
 import org.scalatest._
 import matchers.ShouldMatchers
 import GitUtil._
 import org.eclipse.jgit.api.Git
 import scala.collection.JavaConversions._
+import java.util.Properties
+import org.eclipse.jgit.util.RawParseUtils
+import java.io.StringReader
+import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.revwalk.RevCommit
 
 class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
 
   "Git repo" should "not explode" in {
     implicit val repo = unpackRepo("/sample-repos/example.git.zip")
+    implicit val reader = repo.newObjectReader
 
-    val blobsToRemove = Set(ObjectId("06d7405020018ddf3cacee90fd4af10487da3d20"))
+    val blobsToRemove = Set(abbrId("06d740"))
     RepoRewriter.rewrite(repo, new BlobRemover(blobsToRemove))
 
     val allCommits = new Git(repo).log.all.call.toSeq
@@ -44,7 +50,45 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
 
     unwantedBlobsByCommit should be('empty)
 
-    allCommits.head.getFullMessage should include("Former-commit-id")
+    allCommits.head.getFullMessage should include(FormerCommitFooter.Key)
+  }
+
+  "Git repo" should "have passwords removed" in {
+    implicit val repo = unpackRepo("/sample-repos/example.git.zip")
+    implicit val reader = repo.newObjectReader
+
+    def propertiesIn(contents: String) = {
+      val p = new Properties()
+      p.load(new StringReader(contents))
+      p
+    }
+
+    def passwordFileContentsIn(id: ObjectId) = {
+      val cleanedPasswordFile = repo.resolve(id.name + ":folder/secret-passwords.txt")
+      RawParseUtils.decode(reader.open(cleanedPasswordFile).getCachedBytes)
+    }
+
+    def commitThatWasFormerly(id: ObjectId): RevCommit => Boolean =
+      _.getFooterLines.exists(f => f.getKey == FormerCommitFooter.Key && ObjectId(f.getValue) == id)
+
+    RepoRewriter.rewrite(repo, BlobPasswordRemover)
+
+    val allCommits = new Git(repo).log.all.call.toSeq
+
+    val oldCommitContainingPasswords = abbrId("37bcc89")
+
+    val cleanedCommitWithPasswordsRemoved = allCommits.find(commitThatWasFormerly(oldCommitContainingPasswords)).get
+
+    val originalContents = passwordFileContentsIn(oldCommitContainingPasswords)
+    val cleanedContents = passwordFileContentsIn(cleanedCommitWithPasswordsRemoved)
+
+    cleanedContents should include("science")
+    cleanedContents should include("database.password=")
+    originalContents should include("correcthorse")
+    cleanedContents should not include ("correcthorse")
+
+    propertiesIn(cleanedContents) should have size (propertiesIn(originalContents).size)
+
   }
 }
 

@@ -63,7 +63,7 @@ class BlobReplacer(badBlobs: Set[ObjectId]) extends TreeCleaner {
   }
 }
 
-class BlobPasswordRemover extends BlobTextModifier {
+object BlobPasswordRemover extends BlobTextModifier {
   val reg = """(\.password=).*""".r
 
   override def cleanLine(line: String) = reg.replaceAllIn(line, m => m.group(1) + "*** PASSWORD ***")
@@ -87,7 +87,7 @@ trait BlobTextModifier extends TreeCleaner {
 
           val b = new ByteArrayOutputStream(cachedBytes.length)
 
-          (1 until rawText.size).map(rawText.getString(_)).map(cleanLine).foreach(line => b.write(line.getBytes))
+          (0 until rawText.size).map(l => rawText.getString(l, l + 1, false)).map(cleanLine).foreach(line => b.write(line.getBytes))
 
           val oid = kit.blobInserter.insert(b.toByteArray)
 
