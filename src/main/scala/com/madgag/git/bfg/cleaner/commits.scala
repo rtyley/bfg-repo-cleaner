@@ -59,7 +59,9 @@ object ObjectIdSubstititor extends CommitCleaner {
 }
 
 object FormerCommitFooter extends CommitCleaner {
-  override def fixer(kit: CommitCleaner.Kit) = _ add Footer("Former-commit-id", kit.originalCommit.name)
+  val Key = "Former-commit-id"
+
+  override def fixer(kit: CommitCleaner.Kit) = _ add Footer(Key, kit.originalCommit.name)
 }
 
 //case class CommitStructure(parentIds: Seq[ObjectId], treeId: ObjectId)

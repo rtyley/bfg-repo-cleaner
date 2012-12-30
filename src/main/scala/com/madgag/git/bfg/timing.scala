@@ -25,13 +25,13 @@ import org.eclipse.jgit.lib.ProgressMonitor
 import java.util.concurrent.TimeUnit.NANOSECONDS
 
 object Timing {
-//  def measure[T](block: => T) = {
-//    val start = nanoTime
-//    val result = block
-//    val duration = nanoTime - start
-//    println("duration="+duration)
-//    result
-//  }
+  //  def measure[T](block: => T) = {
+  //    val start = nanoTime
+  //    val result = block
+  //    val duration = nanoTime - start
+  //    println("duration="+duration)
+  //    result
+  //  }
 
   def measureTask[T](taskName: String, workSize: Int)(block: => T)(implicit progressMonitor: ProgressMonitor) = {
     progressMonitor.beginTask(taskName, workSize)
