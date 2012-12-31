@@ -26,6 +26,9 @@ import org.eclipse.jgit.diff.RawText
 import java.io.{InputStream, ByteArrayOutputStream}
 import org.eclipse.jgit.lib.Constants._
 import com.madgag.git.bfg.cleaner.TreeCleaner.Kit
+import java.util.regex.Pattern
+import util.matching.Regex
+import util.matching.Regex.Match
 
 
 object TreeCleaner {
@@ -63,10 +66,16 @@ class BlobReplacer(badBlobs: Set[ObjectId]) extends TreeCleaner {
   }
 }
 
-object BlobPasswordRemover extends BlobTextModifier {
-  val reg = """(\.password=).*""".r
+case class RegexReplacer(regex: Regex, replacer: Match => String) {
+  def replaceAllIn(target: java.lang.CharSequence): String = regex.replaceAllIn(target, replacer)
+}
 
-  override def cleanLine(line: String) = reg.replaceAllIn(line, m => m.group(1) + "*** PASSWORD ***")
+object BlobTextRemover extends BlobTextModifier {
+  val boomed = RegexReplacer("""(\.password=).*""".r ,  _.group(1) + "*** PASSWORD ***"  )
+
+  val regexReplacer = boomed
+
+  override def cleanLine(line: String) = regexReplacer.replaceAllIn(line)
 }
 
 trait BlobTextModifier extends TreeCleaner {

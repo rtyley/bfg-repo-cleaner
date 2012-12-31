@@ -20,7 +20,7 @@
 
 package com.madgag.git.bfg
 
-import cleaner.{FormerCommitFooter, BlobPasswordRemover, RepoRewriter, BlobRemover}
+import cleaner._
 import org.scalatest._
 import matchers.ShouldMatchers
 import GitUtil._
@@ -31,6 +31,7 @@ import org.eclipse.jgit.util.RawParseUtils
 import java.io.StringReader
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.revwalk.RevCommit
+import scala.Some
 
 class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
 
@@ -71,7 +72,7 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
     def commitThatWasFormerly(id: ObjectId): RevCommit => Boolean =
       _.getFooterLines.exists(f => f.getKey == FormerCommitFooter.Key && ObjectId(f.getValue) == id)
 
-    RepoRewriter.rewrite(repo, BlobPasswordRemover)
+    RepoRewriter.rewrite(repo, BlobTextRemover)
 
     val allCommits = new Git(repo).log.all.call.toSeq
 

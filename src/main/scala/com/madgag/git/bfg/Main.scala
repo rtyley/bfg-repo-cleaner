@@ -20,7 +20,7 @@
 
 package com.madgag.git.bfg
 
-import cleaner.{RepoRewriter, BlobReplacer}
+import cleaner.{BlobTextRemover, RepoRewriter, BlobReplacer}
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.storage.file.{WindowCacheConfig, WindowCache, FileRepository}
 import org.eclipse.jgit.util.FS
@@ -30,10 +30,15 @@ import scopt.immutable.OptionParser
 import System.nanoTime
 import GitUtil._
 import collection.SortedSet
+import scalax.file.Path
+import util.matching.Regex
 
 case class CMDConfig(stripBiggestBlobs: Option[Int] = None,
                      stripBlobsBiggerThan: Option[Int] = None,
                      protectBlobsFromRevisions: Set[String] = Set("HEAD"),
+                     filterFiles: String => Boolean = _ => true,
+                     replaceBannedStrings: Traversable[String] = List.empty,
+                     replaceBannedRegex: Traversable[Regex] = List.empty,
                      gitdir: Option[File] = None)
 
 object Main extends App {
@@ -53,10 +58,19 @@ object Main extends App {
       opt("p", "protect-blobs-from", "<refs>", "protect blobs that appear in the most recent versions of the specified refs") {
         (v: String, c: CMDConfig) => c.copy(protectBlobsFromRevisions = v.split(',').toSet)
       },
+      opt("f", "filter-contents-for", "<glob>", "filter only files with the specified names") {
+        (v: String, c: CMDConfig) => c.copy(replaceBannedStrings = Path.fromString(v).lines())
+      },
+      opt("r", "replace-banned-strings", "<banned-strings-file>", "replace strings specified in file, one string per line") {
+        (v: String, c: CMDConfig) => c.copy(replaceBannedStrings = Path.fromString(v).lines())
+      },
+      opt("r", "replace-banned-regex", "<banned-regex-file>", "replace regex specified in file, one regex per line") {
+        (v: String, c: CMDConfig) => c.copy(replaceBannedRegex = Path.fromString(v).lines().map(_.r))
+      },
       arg("<repo>", "repo to clean") {
         (v: String, c: CMDConfig) =>
           val dir = new File(v).getCanonicalFile
-          val gitdir = RepositoryCache.FileKey.resolve(dir, FS.detect())
+          val gitdir = resolveGitDirFor(dir)
           if (gitdir == null || !gitdir.exists)
             throw new IllegalArgumentException("'%s' is not a valid Git repository.".format(dir.getAbsolutePath))
           c.copy(gitdir = Some(gitdir))
@@ -77,6 +91,7 @@ object Main extends App {
       println(config)
 
       implicit val repo = new FileRepository(config.gitdir.get)
+      implicit val progressMonitor = new TextProgressMonitor()
 
       println("Using repo : " + repo.getDirectory.getAbsolutePath)
 
@@ -90,21 +105,20 @@ object Main extends App {
 
       println("Found " + protectedBlobIds.size + " blobs to protect")
 
-      val start = nanoTime
-      val biggestUnprotectedBlobs = biggestBlobs(repo).filterNot(o => protectedBlobIds(o.objectId))
+      val badIds = Timing.measureTask("Finding target blobs", ProgressMonitor.UNKNOWN) {
+        val biggestUnprotectedBlobs = biggestBlobs(repo).filterNot(o => protectedBlobIds(o.objectId))
 
-      val biggest = config.stripBlobsBiggerThan.map(threshold => biggestUnprotectedBlobs.takeWhile(_.size > threshold))
-      val big = config.stripBiggestBlobs.map(num => biggestUnprotectedBlobs.take(num))
-
-      val badIds = SortedSet(Seq(biggest, big).flatMap(_.getOrElse(Set.empty)): _*)
-      val end = nanoTime
-
-      println("Blob-targeting pack-scan duration = %.3f".format((end - start) / 1.0e9))
+        val biggest = config.stripBlobsBiggerThan.map(threshold => biggestUnprotectedBlobs.takeWhile(_.size > threshold))
+        val big = config.stripBiggestBlobs.map(num => biggestUnprotectedBlobs.take(num))
+        SortedSet(Seq(biggest, big).flatMap(_.getOrElse(Set.empty)): _*)
+      }
 
       println("Found " + badIds.size + " blob ids to remove biggest=" + badIds.max.size + " smallest=" + badIds.min.size)
       println("Total size (unpacked)=" + badIds.map(_.size).sum)
 
-      RepoRewriter.rewrite(repo, new BlobReplacer(badIds.map(_.objectId).toSet))
+      // RepoRewriter.rewrite(repo, new BlobReplacer(badIds.map(_.objectId).toSet))
+      RepoRewriter.rewrite(repo, BlobTextRemover)
+
   }
 
 }
