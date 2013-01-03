@@ -20,12 +20,15 @@
 
 package com.madgag.git
 
+import bfg.cleaner.FormerCommitFooter
 import bfg.GitUtil._
-import org.eclipse.jgit.lib.Repository
+import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.storage.file.FileRepository
 import scalax.file.Path
 import java.io.File._
 import com.madgag.compress.CompressUtil._
+import org.eclipse.jgit.revwalk.RevCommit
+import scala.collection.JavaConversions._
 
 package object bfg {
   def unpackRepo(fileName: String): Repository = {
@@ -43,4 +46,7 @@ package object bfg {
     rawZipFileInputStream.close
     repoParentFolder
   }
+
+  def commitThatWasFormerly(id: ObjectId): RevCommit => Boolean =
+    _.getFooterLines.exists(f => f.getKey == FormerCommitFooter.Key && ObjectId(f.getValue) == id)
 }

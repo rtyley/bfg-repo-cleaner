@@ -74,7 +74,7 @@ trait BlobInserter {
 
 object RepoRewriter {
 
-  def rewrite(repo: org.eclipse.jgit.lib.Repository, treeCleaner: TreeCleaner) {
+  def rewrite(repo: org.eclipse.jgit.lib.Repository, treeCleaner: TreeBlobsCleaner) {
 
     assert(!repo.getAllRefs.isEmpty, "Can't find any refs in repo at " + repo.getDirectory.getAbsolutePath)
     implicit val progressMonitor = new TextProgressMonitor
@@ -207,7 +207,7 @@ object RepoRewriter {
         case (name, treeId) => (name, memoCleanObjectFor(treeId))
       }.seq)
 
-      val hunterFixedTreeBlobs: TreeBlobs = treeCleaner fix(tree.blobs, new TreeCleaner.Kit(objectDB))
+      val hunterFixedTreeBlobs: TreeBlobs = treeCleaner fix(tree.blobs, new TreeBlobsCleaner.Kit(objectDB))
 
       if (hunterFixedTreeBlobs != tree.blobs || cleanedSubtrees != tree.subtrees) {
 

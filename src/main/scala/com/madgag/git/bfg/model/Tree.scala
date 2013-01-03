@@ -78,7 +78,7 @@ object Tree {
   }
 
   trait EntryGrouping {
-    val entries: Traversable[Tree.Entry]
+    val treeEntries: Traversable[Tree.Entry]
   }
 
 }
@@ -114,23 +114,29 @@ case class Tree(entryMap: Map[FileName, (FileMode, ObjectId)]) {
 
   def copyWith(subtrees: TreeSubtrees, blobs: TreeBlobs): Tree = {
     val otherEntries = (entriesByType - OBJ_BLOB - OBJ_TREE).values.flatten
-    Tree(blobs.entries ++ subtrees.entries ++ otherEntries)
+    Tree(blobs.treeEntries ++ subtrees.treeEntries ++ otherEntries)
   }
 
 }
 
+case class TreeBlobEntry(filename: FileName, mode: BlobFileMode, objectId: ObjectId) {
+  lazy val toTreeEntry = Tree.Entry(filename, mode.mode, objectId)
+
+  lazy val withoutName: (BlobFileMode, ObjectId) = (mode, objectId)
+}
 
 object TreeBlobs {
-  def apply(entries: Traversable[Tree.Entry]): TreeBlobs = {
-    TreeBlobs(entries.map(e => e.name ->(BlobFileMode(e.fileMode).get, e.objectId)).toMap)
-  }
+  def apply(entries: Traversable[TreeBlobEntry]): TreeBlobs =
+    TreeBlobs(entries.map(e => e.filename -> (e.mode, e.objectId)).toMap)
 }
 
 case class TreeBlobs(entryMap: Map[FileName, (BlobFileMode, ObjectId)]) extends Tree.EntryGrouping {
 
   lazy val entries = entryMap.map {
-    case (name, (blobFileMode, objectId)) => Tree.Entry(name, blobFileMode.mode, objectId)
+    case (name, (blobFileMode, objectId)) => TreeBlobEntry(name, blobFileMode, objectId)
   }
+
+  lazy val treeEntries = entries.map(_.toTreeEntry)
 
   def filter(p: ObjectId => Boolean): TreeBlobs = {
     TreeBlobs(entryMap.filter {
@@ -142,7 +148,7 @@ case class TreeBlobs(entryMap: Map[FileName, (BlobFileMode, ObjectId)]) extends 
 
 case class TreeSubtrees(entryMap: Map[FileName, ObjectId]) extends Tree.EntryGrouping {
 
-  lazy val entries = entryMap.map {
+  lazy val treeEntries = entryMap.map {
     case (name, objectId) => Tree.Entry(name, FileMode.TREE, objectId)
   }
 

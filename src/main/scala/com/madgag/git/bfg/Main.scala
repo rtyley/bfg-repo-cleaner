@@ -20,23 +20,24 @@
 
 package com.madgag.git.bfg
 
-import cleaner.{BlobTextRemover, RepoRewriter, BlobReplacer}
+import cleaner._
+import model.{TreeBlobEntry, Tree, FileName}
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.storage.file.{WindowCacheConfig, WindowCache, FileRepository}
-import org.eclipse.jgit.util.FS
 import java.io.File
-import scala.Some
-import scopt.immutable.OptionParser
-import System.nanoTime
 import GitUtil._
 import collection.SortedSet
 import scalax.file.Path
+import textmatching.RegexReplacer._
 import util.matching.Regex
+import com.madgag.globs.openjdk.Globs
+import scopt.immutable.OptionParser
+import scala.Some
 
 case class CMDConfig(stripBiggestBlobs: Option[Int] = None,
                      stripBlobsBiggerThan: Option[Int] = None,
                      protectBlobsFromRevisions: Set[String] = Set("HEAD"),
-                     filterFiles: String => Boolean = _ => true,
+                     filterFiles: FileName => Boolean = _ => true,
                      replaceBannedStrings: Traversable[String] = List.empty,
                      replaceBannedRegex: Traversable[Regex] = List.empty,
                      gitdir: Option[File] = None)
@@ -59,12 +60,12 @@ object Main extends App {
         (v: String, c: CMDConfig) => c.copy(protectBlobsFromRevisions = v.split(',').toSet)
       },
       opt("f", "filter-contents-for", "<glob>", "filter only files with the specified names") {
+        (v: String, c: CMDConfig) => c.copy(filterFiles = fn => Globs.toUnixRegexPattern(v).matches(fn.string))
+      },
+      opt("rs", "replace-banned-strings", "<banned-strings-file>", "replace strings specified in file, one string per line") {
         (v: String, c: CMDConfig) => c.copy(replaceBannedStrings = Path.fromString(v).lines())
       },
-      opt("r", "replace-banned-strings", "<banned-strings-file>", "replace strings specified in file, one string per line") {
-        (v: String, c: CMDConfig) => c.copy(replaceBannedStrings = Path.fromString(v).lines())
-      },
-      opt("r", "replace-banned-regex", "<banned-regex-file>", "replace regex specified in file, one regex per line") {
+      opt("rr", "replace-banned-regex", "<banned-regex-file>", "replace regex specified in file, one regex per line") {
         (v: String, c: CMDConfig) => c.copy(replaceBannedRegex = Path.fromString(v).lines().map(_.r))
       },
       arg("<repo>", "repo to clean") {
@@ -117,7 +118,14 @@ object Main extends App {
       println("Total size (unpacked)=" + badIds.map(_.size).sum)
 
       // RepoRewriter.rewrite(repo, new BlobReplacer(badIds.map(_.objectId).toSet))
-      RepoRewriter.rewrite(repo, BlobTextRemover)
+      RepoRewriter.rewrite(repo, new BlobTextModifier {
+        val regexReplacer = """(\.password=).*""".r --> (_.group(1) + "*** PASSWORD ***")
+
+        val fileNameFilter = config.filterFiles
+
+        override def lineCleanerFor(entry: TreeBlobEntry) =
+          if (config.filterFiles(entry.filename)) Some(regexReplacer) else None
+      })
 
   }
 
