@@ -20,18 +20,19 @@
 
 package com.madgag.git.bfg.cleaner
 
-import org.eclipse.jgit.lib.{ObjectDatabase, ObjectId}
-import com.madgag.git.bfg.model.{RegularFile, FileName, TreeBlobs}
+import org.eclipse.jgit.lib.{FileMode, ObjectDatabase, ObjectId}
+import com.madgag.git.bfg.model._
 import org.eclipse.jgit.diff.RawText
 import java.io.{InputStream, ByteArrayOutputStream}
 import org.eclipse.jgit.lib.Constants._
-import com.madgag.git.bfg.cleaner.TreeCleaner.Kit
-import java.util.regex.Pattern
+import com.madgag.git.bfg.cleaner.TreeBlobsCleaner.Kit
 import util.matching.Regex
 import util.matching.Regex.Match
+import scalaz.Memo
+import com.madgag.git.bfg.MemoUtil
 
 
-object TreeCleaner {
+object TreeBlobsCleaner {
 
   class Kit(objectDB: ObjectDatabase) {
     lazy val objectReader = objectDB.newReader
@@ -47,15 +48,15 @@ object TreeCleaner {
 
 }
 
-trait TreeCleaner {
+trait TreeBlobsCleaner {
   def fix(treeBlobs: TreeBlobs, kit: Kit): TreeBlobs
 }
 
-class BlobRemover(blobIds: Set[ObjectId]) extends TreeCleaner {
+class BlobRemover(blobIds: Set[ObjectId]) extends TreeBlobsCleaner {
   def fix(treeBlobs: TreeBlobs, kit: Kit) = treeBlobs.filter(oid => !blobIds.contains(oid))
 }
 
-class BlobReplacer(badBlobs: Set[ObjectId]) extends TreeCleaner {
+class BlobReplacer(badBlobs: Set[ObjectId]) extends TreeBlobsCleaner {
   def fix(treeBlobs: TreeBlobs, kit: Kit) = {
     val updatedEntryMap = treeBlobs.entryMap.map {
       case (filename, (mode, oid)) if badBlobs.contains(oid) =>
@@ -66,42 +67,49 @@ class BlobReplacer(badBlobs: Set[ObjectId]) extends TreeCleaner {
   }
 }
 
-case class RegexReplacer(regex: Regex, replacer: Match => String) {
-  def replaceAllIn(target: java.lang.CharSequence): String = regex.replaceAllIn(target, replacer)
+
+trait TreeBlobModifier extends TreeBlobsCleaner {
+
+  val memo: Memo[TreeBlobEntry, TreeBlobEntry] = MemoUtil.concurrentHashMapMemo
+
+  override def fix(treeBlobs: TreeBlobs, kit: Kit) = TreeBlobs(treeBlobs.entries.map(memo {
+    entry =>
+      val (mode, objectId) = fix(entry, kit)
+      TreeBlobEntry(entry.filename, mode, objectId)
+  }))
+
+  def fix(entry: TreeBlobEntry, kit: Kit): (BlobFileMode, ObjectId) // implementing code can not safely know valid filename
 }
 
-object BlobTextRemover extends BlobTextModifier {
-  val boomed = RegexReplacer("""(\.password=).*""".r ,  _.group(1) + "*** PASSWORD ***"  )
 
-  val regexReplacer = boomed
+trait BlobTextModifier extends TreeBlobModifier {
 
-  override def cleanLine(line: String) = regexReplacer.replaceAllIn(line)
-}
+  def lineCleanerFor(entry: TreeBlobEntry): Option[String => String]
 
-trait BlobTextModifier extends TreeCleaner {
+  override def fix(entry: TreeBlobEntry, kit: Kit) = {
 
-  def cleanLine(line: String): String
+    def filterTextIn(e: TreeBlobEntry, lineCleaner: String => String): TreeBlobEntry = {
+      val objectLoader = kit.objectReader.open(e.objectId)
+      if (objectLoader.isLarge) {
+        println("LARGE")
+        e
+      } else {
+        val cachedBytes = objectLoader.getCachedBytes
+        val rawText = new RawText(cachedBytes)
 
-  def fix(treeBlobs: TreeBlobs, kit: Kit) = {
+        val b = new ByteArrayOutputStream(cachedBytes.length)
 
-    TreeBlobs(treeBlobs.entries.map {
-      e =>
-        val objectLoader = kit.objectReader.open(e.objectId)
-        if (objectLoader.isLarge) {
-          println("LARGE")
-          e
-        } else {
-          val cachedBytes = objectLoader.getCachedBytes
-          val rawText = new RawText(cachedBytes)
+        (0 until rawText.size).map(l => rawText.getString(l, l + 1, false)).map(lineCleaner).foreach(line => b.write(line.getBytes))
 
-          val b = new ByteArrayOutputStream(cachedBytes.length)
+        val oid = kit.blobInserter.insert(b.toByteArray)
 
-          (0 until rawText.size).map(l => rawText.getString(l, l + 1, false)).map(cleanLine).foreach(line => b.write(line.getBytes))
+        e.copy(objectId = oid)
+      }
+    }
 
-          val oid = kit.blobInserter.insert(b.toByteArray)
-
-          e.copy(objectId = oid)
-        }
-    })
+    lineCleanerFor(entry) match {
+      case Some(lineCleaner) => filterTextIn(entry, lineCleaner).withoutName
+      case None => entry.withoutName
+    }
   }
 }

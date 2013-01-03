@@ -21,6 +21,8 @@
 package com.madgag.git.bfg
 
 import cleaner._
+import model.{TreeBlobEntry, Tree}
+import model.Tree.Entry
 import org.scalatest._
 import matchers.ShouldMatchers
 import GitUtil._
@@ -30,8 +32,10 @@ import java.util.Properties
 import org.eclipse.jgit.util.RawParseUtils
 import java.io.StringReader
 import org.eclipse.jgit.lib.ObjectId
-import org.eclipse.jgit.revwalk.RevCommit
 import scala.Some
+import com.madgag.globs.openjdk.Globs
+import textmatching.RegexReplacer._
+import PartialFunction.condOpt
 
 class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
 
@@ -69,10 +73,14 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
       RawParseUtils.decode(reader.open(cleanedPasswordFile).getCachedBytes)
     }
 
-    def commitThatWasFormerly(id: ObjectId): RevCommit => Boolean =
-      _.getFooterLines.exists(f => f.getKey == FormerCommitFooter.Key && ObjectId(f.getValue) == id)
+    RepoRewriter.rewrite(repo, treeCleaner = new BlobTextModifier {
 
-    RepoRewriter.rewrite(repo, BlobTextRemover)
+      val TxtFiles = Globs.toUnixRegexPattern("*.txt")
+
+      override def lineCleanerFor(entry: TreeBlobEntry) = condOpt(entry.filename.string) {
+        case TxtFiles => """(\.password=).*""".r --> (_.group(1) + "*** PASSWORD ***")
+      }
+    })
 
     val allCommits = new Git(repo).log.all.call.toSeq
 
