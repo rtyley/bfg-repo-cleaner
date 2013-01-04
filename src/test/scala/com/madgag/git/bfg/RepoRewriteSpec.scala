@@ -21,8 +21,7 @@
 package com.madgag.git.bfg
 
 import cleaner._
-import model.{TreeBlobEntry, Tree}
-import model.Tree.Entry
+import model.TreeBlobEntry
 import org.scalatest._
 import matchers.ShouldMatchers
 import GitUtil._
