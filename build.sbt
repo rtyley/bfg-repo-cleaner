@@ -4,6 +4,8 @@ name := "bfg-repo-cleaner"
 
 organization := "com.madgag"
 
+scalaVersion := "2.9.2"
+
 assemblySettings
 
 resolvers ++= Seq(
@@ -18,7 +20,7 @@ libraryDependencies ++= Seq(
   "com.madgag" % "org.eclipse.jgit" % "2.2.0.0.2-UNOFFICIAL-ROBERTO-RELEASE",
   "com.github.scopt" %% "scopt" % "2.1.0",
   "com.madgag" % "globs-for-java" % "0.2",
-  "org.scalatest" %% "scalatest" % "1.8" % "test",
+  "org.scalatest" %% "scalatest" % "1.9.1" % "test",
   "com.madgag" % "util-compress" % "1.33" % "test"
 )
 
