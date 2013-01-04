@@ -21,7 +21,7 @@
 package com.madgag.git.bfg
 
 import cleaner._
-import model.{TreeBlobEntry, Tree, FileName}
+import model.{TreeBlobEntry, FileName}
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.storage.file.{WindowCacheConfig, WindowCache, FileRepository}
 import java.io.File

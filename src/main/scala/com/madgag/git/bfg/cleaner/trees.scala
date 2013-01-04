@@ -20,14 +20,12 @@
 
 package com.madgag.git.bfg.cleaner
 
-import org.eclipse.jgit.lib.{FileMode, ObjectDatabase, ObjectId}
+import org.eclipse.jgit.lib.{ObjectDatabase, ObjectId}
 import com.madgag.git.bfg.model._
 import org.eclipse.jgit.diff.RawText
 import java.io.{InputStream, ByteArrayOutputStream}
 import org.eclipse.jgit.lib.Constants._
 import com.madgag.git.bfg.cleaner.TreeBlobsCleaner.Kit
-import util.matching.Regex
-import util.matching.Regex.Match
 import scalaz.Memo
 import com.madgag.git.bfg.MemoUtil
 

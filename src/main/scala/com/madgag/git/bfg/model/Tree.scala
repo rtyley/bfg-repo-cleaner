@@ -127,7 +127,7 @@ case class TreeBlobEntry(filename: FileName, mode: BlobFileMode, objectId: Objec
 
 object TreeBlobs {
   def apply(entries: Traversable[TreeBlobEntry]): TreeBlobs =
-    TreeBlobs(entries.map(e => e.filename -> (e.mode, e.objectId)).toMap)
+    TreeBlobs(entries.map(e => e.filename ->(e.mode, e.objectId)).toMap)
 }
 
 case class TreeBlobs(entryMap: Map[FileName, (BlobFileMode, ObjectId)]) extends Tree.EntryGrouping {

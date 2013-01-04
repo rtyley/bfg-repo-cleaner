@@ -27,10 +27,11 @@ object RegexReplacer {
   implicit def regex2replacer(regex: Regex): RichRegex = new RichRegex(regex)
 
   class RichRegex(regex: Regex) {
-    def -->(replacer: Match => String) : String => String = {
-      s => RegexReplacer(regex , replacer ).replaceAllIn(s)
+    def -->(replacer: Match => String): String => String = {
+      s => RegexReplacer(regex, replacer).replaceAllIn(s)
     }
   }
+
 }
 
 case class RegexReplacer(regex: Regex, replacer: Match => String) {
