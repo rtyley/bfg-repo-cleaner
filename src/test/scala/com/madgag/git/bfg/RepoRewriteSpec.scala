@@ -72,12 +72,26 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
       RawParseUtils.decode(reader.open(cleanedPasswordFile).getCachedBytes)
     }
 
+    class Glob(globPattern : String) {
+      val r = Globs.toUnixRegexPattern(globPattern).r
+      def unapply(str: String) = {
+        r.pattern.matcher(str).matches
+      }
+    }
+
+    object Glob {
+      def apply(globPattern : String): Glob = new Glob(globPattern)
+    }
+
     RepoRewriter.rewrite(repo, treeCleaner = new BlobTextModifier {
 
-      val TxtFiles = Globs.toUnixRegexPattern("*.txt")
+      val TxtFiles = Glob("*.txt")
 
-      override def lineCleanerFor(entry: TreeBlobEntry) = condOpt(entry.filename.string) {
-        case TxtFiles => """(\.password=).*""".r --> (_.group(1) + "*** PASSWORD ***")
+      override def lineCleanerFor(entry: TreeBlobEntry) = {
+        val fs: String = entry.filename.string
+        condOpt(fs) {
+          case _ => """(\.password=).*""".r --> (_.group(1) + "*** PASSWORD ***")
+        }
       }
     })
 
