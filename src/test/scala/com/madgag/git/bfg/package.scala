@@ -24,15 +24,16 @@ import bfg.cleaner.FormerCommitFooter
 import bfg.GitUtil._
 import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.storage.file.FileRepository
-import scalax.file.Path
 import java.io.File._
 import com.madgag.compress.CompressUtil._
 import org.eclipse.jgit.revwalk.RevCommit
 import scala.collection.JavaConversions._
+import java.io.File
+import com.google.common.io.Files
 
 package object bfg {
   def unpackRepo(fileName: String): Repository = {
-    val resolvedGitDir = resolveGitDirFor(unpackRepoAndGetGitDir(fileName).jfile)
+    val resolvedGitDir = resolveGitDirFor(unpackRepoAndGetGitDir(fileName))
     require(resolvedGitDir.exists)
     println("resolvedGitDir=" + resolvedGitDir)
     new FileRepository(resolvedGitDir)
@@ -41,8 +42,11 @@ package object bfg {
   def unpackRepoAndGetGitDir(fileName: String) = {
     val rawZipFileInputStream = getClass.getResource(fileName).openStream()
     assert(rawZipFileInputStream != null, "Stream for " + fileName + " is null.")
-    val repoParentFolder = Path.createTempDirectory(prefix = fileName.replace(separatorChar, '_') + "-unpacked")
-    unzip(rawZipFileInputStream, repoParentFolder.jfile)
+
+    val repoParentFolder = new File(Files.createTempDir(),fileName.replace(separatorChar, '_') + "-unpacked")
+    repoParentFolder.mkdir()
+
+    unzip(rawZipFileInputStream, repoParentFolder)
     rawZipFileInputStream.close
     repoParentFolder
   }
