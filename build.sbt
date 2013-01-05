@@ -6,6 +6,8 @@ organization := "com.madgag"
 
 scalaVersion := "2.10.0"
 
+scalacOptions += "-language:implicitConversions"
+
 assemblySettings
 
 resolvers ++= Seq(
