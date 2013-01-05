@@ -39,13 +39,9 @@ object ObjectId {
 object GitUtil {
   implicit def fileRepository2ObjectDirectory(repo: FileRepository): ObjectDirectory = repo.getObjectDatabase
 
-  implicit def objectIdSweetener(objectId: AnyObjectId): RichObjectId = new RichObjectId(objectId)
-
-  implicit def objectReaderSweetener(reader: ObjectReader): RichObjectReader = new RichObjectReader(reader)
-
   def abbrId(str: String)(implicit reader: ObjectReader): ObjectId = reader.resolveExistingUniqueId(AbbreviatedObjectId.fromString(str)).get
 
-  class RichObjectId(objectId: AnyObjectId) {
+  implicit class RichObjectId(objectId: AnyObjectId) {
     def asRevObject(implicit revWalk: RevWalk) = revWalk.parseAny(objectId)
 
     def asRevCommit(implicit revWalk: RevWalk) = revWalk.parseCommit(objectId)
@@ -53,11 +49,7 @@ object GitUtil {
     lazy val shortName = objectId.getName.take(8)
   }
 
-  class RichRevCommit(commit: RevCommit) {
-    lazy val message = commit.getFullMessage
-  }
-
-  class RichObjectReader(reader: ObjectReader) {
+  implicit class RichObjectReader(reader: ObjectReader) {
     def resolveUniquely(id: AbbreviatedObjectId): Option[ObjectId] = Some(id).map(reader.resolve).filter(_.size == 1).map(_.toSeq.head)
 
     def resolveExistingUniqueId(id: AbbreviatedObjectId) = resolveUniquely(id).filter(reader.has)

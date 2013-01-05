@@ -24,9 +24,8 @@ import util.matching.Regex
 import util.matching.Regex.Match
 
 object RegexReplacer {
-  implicit def regex2replacer(regex: Regex): RichRegex = new RichRegex(regex)
 
-  class RichRegex(regex: Regex) {
+  implicit class RichRegex(regex: Regex) {
     def -->(replacer: Match => String): String => String = {
       s => RegexReplacer(regex, replacer).replaceAllIn(s)
     }
