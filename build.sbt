@@ -4,7 +4,7 @@ name := "bfg-repo-cleaner"
 
 organization := "com.madgag"
 
-scalaVersion := "2.9.2"
+scalaVersion := "2.10.0"
 
 assemblySettings
 
@@ -15,7 +15,6 @@ resolvers ++= Seq(
 
 libraryDependencies ++= Seq(
   "org.scalaz" %% "scalaz-core" % "6.0.4",
-  "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.1",
   "com.google.guava" % "guava" % "13.0.1", "com.google.code.findbugs" % "jsr305" % "2.0.1",
   "com.madgag" % "org.eclipse.jgit" % "2.2.0.0.2-UNOFFICIAL-ROBERTO-RELEASE",
   "com.github.scopt" %% "scopt" % "2.1.0",

@@ -27,12 +27,12 @@ import org.eclipse.jgit.storage.file.{WindowCacheConfig, WindowCache, FileReposi
 import java.io.File
 import GitUtil._
 import collection.SortedSet
-import scalax.file.Path
 import textmatching.RegexReplacer._
 import util.matching.Regex
 import com.madgag.globs.openjdk.Globs
 import scopt.immutable.OptionParser
 import scala.Some
+import io.Source
 
 case class CMDConfig(stripBiggestBlobs: Option[Int] = None,
                      stripBlobsBiggerThan: Option[Int] = None,
@@ -63,10 +63,10 @@ object Main extends App {
         (v: String, c: CMDConfig) => c.copy(filterFiles = fn => Globs.toUnixRegexPattern(v).matches(fn.string))
       },
       opt("rs", "replace-banned-strings", "<banned-strings-file>", "replace strings specified in file, one string per line") {
-        (v: String, c: CMDConfig) => c.copy(replaceBannedStrings = Path.fromString(v).lines())
+        (v: String, c: CMDConfig) => c.copy(replaceBannedStrings = Source.fromFile(v).getLines().toSeq)
       },
       opt("rr", "replace-banned-regex", "<banned-regex-file>", "replace regex specified in file, one regex per line") {
-        (v: String, c: CMDConfig) => c.copy(replaceBannedRegex = Path.fromString(v).lines().map(_.r))
+        (v: String, c: CMDConfig) => c.copy(replaceBannedRegex = Source.fromFile(v).getLines().map(_.r).toSeq)
       },
       arg("<repo>", "repo to clean") {
         (v: String, c: CMDConfig) =>
@@ -95,8 +95,6 @@ object Main extends App {
       implicit val progressMonitor = new TextProgressMonitor()
 
       println("Using repo : " + repo.getDirectory.getAbsolutePath)
-
-      implicit val codec = scalax.io.Codec.UTF8
 
       //      def getBadBlobsFromAdjacentFile(repo: FileRepository): Set[ObjectId] = {
       //        Path.fromString(repo.getDirectory.getAbsolutePath + ".bad").lines().map(line => ObjectId.fromString(line.split(' ')(0))).toSet
