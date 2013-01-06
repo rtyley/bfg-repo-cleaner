@@ -60,7 +60,10 @@ object Main extends App {
         (v: String, c: CMDConfig) => c.copy(protectBlobsFromRevisions = v.split(',').toSet)
       },
       opt("f", "filter-contents-for", "<glob>", "filter only files with the specified names") {
-        (v: String, c: CMDConfig) => c.copy(filterFiles = fn => Globs.toUnixRegexPattern(v).matches(fn.string))
+        (v: String, c: CMDConfig) =>
+        val GlobPattern = Globs.toUnixRegexPattern(v).r
+
+        c.copy(filterFiles = (fn => fn.string match { case GlobPattern() => true ; case _ => false }))
       },
       opt("rs", "replace-banned-strings", "<banned-strings-file>", "replace strings specified in file, one string per line") {
         (v: String, c: CMDConfig) => c.copy(replaceBannedStrings = Source.fromFile(v).getLines().toSeq)
