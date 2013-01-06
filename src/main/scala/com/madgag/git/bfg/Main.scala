@@ -26,13 +26,13 @@ import org.eclipse.jgit.lib._
 import org.eclipse.jgit.storage.file.{WindowCacheConfig, WindowCache, FileRepository}
 import java.io.File
 import GitUtil._
-import collection.SortedSet
 import textmatching.RegexReplacer._
 import util.matching.Regex
 import com.madgag.globs.openjdk.Globs
 import scopt.immutable.OptionParser
 import scala.Some
 import io.Source
+import collection.immutable.SortedSet
 
 case class CMDConfig(stripBiggestBlobs: Option[Int] = None,
                      stripBlobsBiggerThan: Option[Int] = None,
@@ -95,35 +95,44 @@ object Main extends App {
       implicit val progressMonitor = new TextProgressMonitor()
 
       println("Using repo : " + repo.getDirectory.getAbsolutePath)
+      val protectedBlobIds = allBlobsReachableFrom(config.protectBlobsFromRevisions)
+      println("Found " + protectedBlobIds.size + " blobs to protect")
+
+      val blobRemoverOption = {
+
+          val sizeBasedBlobTargetSources = Seq(
+            config.stripBlobsBiggerThan.map(threshold => (s: Stream[SizedObject]) => s.takeWhile(_.size > threshold)),
+            config.stripBiggestBlobs.map(num => (s: Stream[SizedObject]) => s.take(num))
+          ).flatten
+
+          sizeBasedBlobTargetSources match {
+            case sources if sources.size > 0 =>
+              Timing.measureTask("Finding target blobs", ProgressMonitor.UNKNOWN) {
+                val biggestUnprotectedBlobs = biggestBlobs(repo).filterNot(o => protectedBlobIds(o.objectId))
+                val sizedBadIds = SortedSet(sources.flatMap(_(biggestUnprotectedBlobs)): _*)
+                println("Found " + sizedBadIds.size + " blob ids to remove biggest=" + sizedBadIds.max.size + " smallest=" + sizedBadIds.min.size)
+                println("Total size (unpacked)=" + sizedBadIds.map(_.size).sum)
+                Some(new BlobReplacer(sizedBadIds.map(_.objectId)))
+              }
+            case _ => None
+          }
+        }
 
       //      def getBadBlobsFromAdjacentFile(repo: FileRepository): Set[ObjectId] = {
       //        Path.fromString(repo.getDirectory.getAbsolutePath + ".bad").lines().map(line => ObjectId.fromString(line.split(' ')(0))).toSet
       //      }
 
-      val protectedBlobIds: Set[ObjectId] = allBlobsReachableFrom(config.protectBlobsFromRevisions)
-
-      println("Found " + protectedBlobIds.size + " blobs to protect")
-
-      val badIds = Timing.measureTask("Finding target blobs", ProgressMonitor.UNKNOWN) {
-        val biggestUnprotectedBlobs = biggestBlobs(repo).filterNot(o => protectedBlobIds(o.objectId))
-
-        val biggest = config.stripBlobsBiggerThan.map(threshold => biggestUnprotectedBlobs.takeWhile(_.size > threshold))
-        val big = config.stripBiggestBlobs.map(num => biggestUnprotectedBlobs.take(num))
-        SortedSet(Seq(biggest, big).flatMap(_.getOrElse(Set.empty)): _*)
-      }
-
-      println("Found " + badIds.size + " blob ids to remove biggest=" + badIds.max.size + " smallest=" + badIds.min.size)
-      println("Total size (unpacked)=" + badIds.map(_.size).sum)
-
       // RepoRewriter.rewrite(repo, new BlobReplacer(badIds.map(_.objectId).toSet))
-      RepoRewriter.rewrite(repo, new BlobTextModifier {
+      val blobTextModifier = new BlobTextModifier {
         val regexReplacer = """(\.password=).*""".r --> (_.group(1) + "*** PASSWORD ***")
 
         val fileNameFilter = config.filterFiles
 
         override def lineCleanerFor(entry: TreeBlobEntry) =
           if (config.filterFiles(entry.filename)) Some(regexReplacer) else None
-      })
+      }
+
+      RepoRewriter.rewrite(repo, TreeBlobsCleaner.chain(Seq(blobRemoverOption, Some(blobTextModifier)).flatten))
 
   }
 

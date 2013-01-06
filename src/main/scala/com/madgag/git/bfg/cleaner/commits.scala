@@ -31,8 +31,8 @@ object CommitCleaner {
     lazy val objectReader = objectDB.newReader
   }
 
-  def chain(cleaners: Seq[CommitCleaner]): CommitCleaner = new CommitCleaner {
-    def fixer(kit: CommitCleaner.Kit) = Function.chain(cleaners.map(_.fixer(kit)))
+  def chain(cleaners: Seq[CommitCleaner]) = new CommitCleaner {
+    override def fixer(kit: CommitCleaner.Kit) = Function.chain(cleaners.map(_.fixer(kit)))
   }
 }
 

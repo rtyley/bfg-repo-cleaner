@@ -206,13 +206,13 @@ object RepoRewriter {
         case (name, treeId) => (name, memoCleanObjectFor(treeId))
       }.seq)
 
-      val hunterFixedTreeBlobs: TreeBlobs = treeCleaner fix(tree.blobs, new TreeBlobsCleaner.Kit(objectDB))
+      val fixedTreeBlobs = treeCleaner.fixer(new TreeBlobsCleaner.Kit(objectDB))(tree.blobs)
 
-      if (hunterFixedTreeBlobs != tree.blobs || cleanedSubtrees != tree.subtrees) {
+      if (fixedTreeBlobs != tree.blobs || cleanedSubtrees != tree.subtrees) {
 
-        val updatedTree = tree copyWith(cleanedSubtrees, hunterFixedTreeBlobs)
+        val updatedTree = tree copyWith(cleanedSubtrees, fixedTreeBlobs)
 
-        val removedFiles = tree.blobs.entryMap -- hunterFixedTreeBlobs.entryMap.keys
+        val removedFiles = tree.blobs.entryMap -- fixedTreeBlobs.entryMap.keys
         val sizedRemovedFiles = removedFiles.mapValues {
           case (_, objectId) => SizedObject(objectId, reader.getObjectSize(objectId, ObjectReader.OBJ_ANY))
         }

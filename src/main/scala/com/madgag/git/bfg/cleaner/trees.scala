@@ -44,18 +44,21 @@ object TreeBlobsCleaner {
     }
   }
 
+  def chain(cleaners: Seq[TreeBlobsCleaner]) = new TreeBlobsCleaner {
+    override def fixer(kit: TreeBlobsCleaner.Kit) = Function.chain(cleaners.map(_.fixer(kit)))
+  }
 }
 
 trait TreeBlobsCleaner {
-  def fix(treeBlobs: TreeBlobs, kit: Kit): TreeBlobs
+  def fixer(kit: TreeBlobsCleaner.Kit): (TreeBlobs => TreeBlobs)
 }
 
 class BlobRemover(blobIds: Set[ObjectId]) extends TreeBlobsCleaner {
-  def fix(treeBlobs: TreeBlobs, kit: Kit) = treeBlobs.filter(oid => !blobIds.contains(oid))
+  override def fixer(kit: Kit) = _.filter(oid => !blobIds.contains(oid))
 }
 
 class BlobReplacer(badBlobs: Set[ObjectId]) extends TreeBlobsCleaner {
-  def fix(treeBlobs: TreeBlobs, kit: Kit) = {
+  def fixer(kit: Kit) = { treeBlobs =>
     val updatedEntryMap = treeBlobs.entryMap.map {
       case (filename, (mode, oid)) if badBlobs.contains(oid) =>
         FileName(filename + ".REMOVED.git-id") ->(RegularFile, kit.blobInserter.insert(oid.name.getBytes))
@@ -70,7 +73,7 @@ trait TreeBlobModifier extends TreeBlobsCleaner {
 
   val memo: Memo[TreeBlobEntry, TreeBlobEntry] = MemoUtil.concurrentHashMapMemo
 
-  override def fix(treeBlobs: TreeBlobs, kit: Kit) = TreeBlobs(treeBlobs.entries.map(memo {
+  override def fixer(kit: Kit) = treeBlobs => TreeBlobs(treeBlobs.entries.map(memo {
     entry =>
       val (mode, objectId) = fix(entry, kit)
       TreeBlobEntry(entry.filename, mode, objectId)
