@@ -35,6 +35,7 @@ import scala.Some
 import com.madgag.globs.openjdk.Globs
 import textmatching.RegexReplacer._
 import PartialFunction.condOpt
+import org.apache.commons.io.FilenameUtils
 
 class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
 
@@ -72,26 +73,13 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
       RawParseUtils.decode(reader.open(cleanedPasswordFile).getCachedBytes)
     }
 
-    class Glob(globPattern : String) {
-      val r = Globs.toUnixRegexPattern(globPattern).r
-      def unapply(str: String) = {
-        r.pattern.matcher(str).matches
-      }
-    }
-
-    object Glob {
-      def apply(globPattern : String): Glob = new Glob(globPattern)
+    object FileExt {
+      def unapply(boom : String) = Option(FilenameUtils.getExtension(boom))
     }
 
     RepoRewriter.rewrite(repo, treeCleaner = new BlobTextModifier {
-
-      val TxtFiles = Glob("*.txt")
-
-      override def lineCleanerFor(entry: TreeBlobEntry) = {
-        val fs: String = entry.filename.string
-        condOpt(fs) {
-          case _ => """(\.password=).*""".r --> (_.group(1) + "*** PASSWORD ***")
-        }
+      override def lineCleanerFor(entry: TreeBlobEntry) = condOpt(entry.filename.string) {
+        case FileExt("txt") | FileExt("scala") => """(\.password=).*""".r --> (_.group(1) + "*** PASSWORD ***")
       }
     })
 
