@@ -23,7 +23,7 @@ package com.madgag.git.bfg.cleaner
 import org.eclipse.jgit.lib.{ObjectDatabase, ObjectId}
 import com.madgag.git.bfg.model._
 import org.eclipse.jgit.diff.RawText
-import java.io.{InputStream, ByteArrayOutputStream}
+import java.io.{LineNumberInputStream, InputStream, ByteArrayOutputStream}
 import org.eclipse.jgit.lib.Constants._
 import com.madgag.git.bfg.cleaner.TreeBlobsCleaner.Kit
 import scalaz.Memo
@@ -98,13 +98,23 @@ trait BlobTextModifier extends TreeBlobModifier {
         val cachedBytes = objectLoader.getCachedBytes
         val rawText = new RawText(cachedBytes)
 
-        val b = new ByteArrayOutputStream(cachedBytes.length)
+        def isDirty(line: String) = lineCleaner(line) != line
 
-        (0 until rawText.size).map(l => rawText.getString(l, l + 1, false)).map(lineCleaner).foreach(line => b.write(line.getBytes))
+        val originalLines = (0 until rawText.size).view.map(l => rawText.getString(l, l + 1, false))
 
-        val oid = kit.blobInserter.insert(b.toByteArray)
+        val firstDirtyLine = originalLines.indexWhere(isDirty)
 
-        e.copy(objectId = oid)
+        if (firstDirtyLine == -1) {
+          e
+        } else {
+          val b = new ByteArrayOutputStream(cachedBytes.length)
+          // TODO - use firstDirtyLine
+          originalLines.map(lineCleaner).foreach(line => b.write(line.getBytes))
+
+          val oid = kit.blobInserter.insert(b.toByteArray)
+
+          e.copy(objectId = oid)
+        }
       }
     }
 
