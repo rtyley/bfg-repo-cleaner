@@ -121,21 +121,19 @@ object Main extends App {
           }
         }
 
-      //      def getBadBlobsFromAdjacentFile(repo: FileRepository): Set[ObjectId] = {
-      //        Path.fromString(repo.getDirectory.getAbsolutePath + ".bad").lines().map(line => ObjectId.fromString(line.split(' ')(0))).toSet
-      //      }
+      val blobTextModifierOption: Option[BlobTextModifier] = {
+        val replacerOption: Option[String => String] = config.replaceBannedRegex.
+          map(regex => regex --> (_ => "***REMOVED***")).reduceOption((f,g) => Function.chain(Seq(f,g)))
 
-      // RepoRewriter.rewrite(repo, new BlobReplacer(badIds.map(_.objectId).toSet))
-      val blobTextModifier = new BlobTextModifier {
-        val regexReplacer = """(\.password=).*""".r --> (_.group(1) + "*** PASSWORD ***")
+        // val regexReplacer = """package""".r --> (_ => "roberto")
 
-        val fileNameFilter = config.filterFiles
-
-        override def lineCleanerFor(entry: TreeBlobEntry) =
-          if (config.filterFiles(entry.filename)) Some(regexReplacer) else None
+        replacerOption.map(replacer => new BlobTextModifier {
+          def lineCleanerFor(entry: TreeBlobEntry) =
+            if (config.filterFiles(entry.filename)) Some(replacer) else None
+        })
       }
 
-      RepoRewriter.rewrite(repo, TreeBlobsCleaner.chain(Seq(blobRemoverOption, Some(blobTextModifier)).flatten))
+      RepoRewriter.rewrite(repo, TreeBlobsCleaner.chain(Seq(blobRemoverOption, blobTextModifierOption).flatten))
 
   }
 
