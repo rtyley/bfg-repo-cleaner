@@ -4,11 +4,42 @@ name := "bfg-repo-cleaner"
 
 organization := "com.madgag"
 
+version := "0.5-SNAPSHOT"
+
+licenses := Seq("GPLv3" -> url("http://www.gnu.org/licenses/gpl-3.0.html"))
+
+homepage := Some(url("https://github.com/rtyley/bfg-repo-cleaner"))
+
 scalaVersion := "2.10.0"
 
 scalacOptions += "-language:implicitConversions"
 
 assemblySettings
+
+publishMavenStyle := true
+
+publishTo <<= version { (v: String) =>
+  val nexus = "https://oss.sonatype.org/"
+  if (v.trim.endsWith("SNAPSHOT"))
+    Some("snapshots" at nexus + "content/repositories/snapshots")
+  else
+    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+}
+
+pomIncludeRepository := { _ => false }
+
+pomExtra := (
+    <scm>
+      <url>git@github.com:rtyley/bfg-repo-cleaner.git</url>
+      <connection>scm:git:git@github.com:rtyley/bfg-repo-cleaner.git</connection>
+    </scm>
+    <developers>
+      <developer>
+        <id>rtyley</id>
+        <name>Roberto Tyley</name>
+        <url>https://github.com:rtyley</url>
+      </developer>
+    </developers>)
 
 resolvers ++= Seq(
   "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
@@ -24,6 +55,8 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "1.9.1" % "test",
   "com.madgag" % "util-compress" % "1.33" % "test"
 )
+
+jarName in assembly <<= version("bfg-" + _ + ".jar")
 
 artifact in(Compile, assembly) ~= {
   art =>
