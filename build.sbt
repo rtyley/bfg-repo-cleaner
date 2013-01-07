@@ -16,6 +16,8 @@ scalacOptions += "-language:implicitConversions"
 
 assemblySettings
 
+crossPaths := false
+
 publishMavenStyle := true
 
 publishTo <<= version { (v: String) =>
@@ -56,11 +58,6 @@ libraryDependencies ++= Seq(
   "com.madgag" % "util-compress" % "1.33" % "test"
 )
 
-jarName in assembly <<= version("bfg-" + _ + ".jar")
-
-artifact in(Compile, assembly) ~= {
-  art =>
-    art.copy(`classifier` = Some("assembly"))
-}
+artifact in(Compile, assembly) <<= (artifact in(Compile, assembly), version) { (a, v) => a.copy(name = "bfg-" + v) }
 
 addArtifact(artifact in(Compile, assembly), assembly)
