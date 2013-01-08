@@ -4,7 +4,7 @@ name := "bfg-repo-cleaner"
 
 organization := "com.madgag"
 
-version := "0.5-SNAPSHOT"
+version := "0.5.1-SNAPSHOT"
 
 licenses := Seq("GPLv3" -> url("http://www.gnu.org/licenses/gpl-3.0.html"))
 
@@ -58,6 +58,6 @@ libraryDependencies ++= Seq(
   "com.madgag" % "util-compress" % "1.33" % "test"
 )
 
-artifact in(Compile, assembly) <<= (artifact in(Compile, assembly), version) { (a, v) => a.copy(name = "bfg-" + v) }
+artifact in(Compile, assembly) ~= { _.copy(name = "bfg") }
 
 addArtifact(artifact in(Compile, assembly), assembly)
