@@ -50,8 +50,8 @@ object Main extends App {
 
   val parser = new OptionParser[CMDConfig]("bfg") {
     def options = Seq(
-      opt("b", "strip-blobs-bigger-than", "<size>", "strip blobs bigger than X") {
-        (v: String, c: CMDConfig) => c.copy(stripBlobsBiggerThan = Some(byteSizeFrom(v)))
+      opt("b", "strip-blobs-bigger-than", "<size>", "strip blobs bigger than X (eg 128K, 1M, etc)") {
+        (v: String, c: CMDConfig) => c.copy(stripBlobsBiggerThan = Some(ByteSize.parse(v)))
       },
       intOpt("B", "strip-biggest-blobs", "NUM", "strip the top NUM biggest blobs") {
         (v: Int, c: CMDConfig) => c.copy(stripBiggestBlobs = Some(v))
@@ -80,15 +80,8 @@ object Main extends App {
           c.copy(gitdir = Some(gitdir))
       }
     )
-
-    def byteSizeFrom(v: String): Int = {
-      val magnitudeChars = List('B', 'K', 'M', 'G')
-      magnitudeChars.indexOf(v.takeRight(1)(0).toUpper) match {
-        case -1 => throw new IllegalArgumentException("Size unit is missing (ie %s)".format(magnitudeChars.mkString(", ")))
-        case index => v.dropRight(1).toInt << (index * 10)
-      }
-    }
   }
+
 
   parser.parse(args, CMDConfig()) map {
     config =>
@@ -135,6 +128,18 @@ object Main extends App {
 
       RepoRewriter.rewrite(repo, TreeBlobsCleaner.chain(Seq(blobRemoverOption, blobTextModifierOption).flatten))
 
+  }
+
+  object ByteSize {
+    val magnitudeChars = List('B', 'K', 'M', 'G')
+
+    def parse(v: String): Int = {
+
+      magnitudeChars.indexOf(v.takeRight(1)(0).toUpper) match {
+        case -1 => throw new IllegalArgumentException("Size unit is missing (ie %s)".format(magnitudeChars.mkString(", ")))
+        case index => v.dropRight(1).toInt << (index * 10)
+      }
+    }
   }
 
 }
