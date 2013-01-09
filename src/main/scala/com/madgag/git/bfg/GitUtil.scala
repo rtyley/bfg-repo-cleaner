@@ -77,13 +77,11 @@ object GitUtil {
     } reduce (_ ++ _)
   }
 
-  def allBlobsReachableFrom(revObject: RevObject)(implicit repo: Repository): Set[ObjectId] = {
-    revObject match {
-      case commit: RevCommit => allBlobsUnder(commit.getTree)
-      case tree: RevTree => allBlobsUnder(tree)
-      case blob: RevBlob => Set(blob.getId)
-      case tag: RevTag => allBlobsReachableFrom(tag.getObject)
-    }
+  def allBlobsReachableFrom(revObject: RevObject)(implicit repo: Repository): Set[ObjectId] = revObject match {
+    case commit: RevCommit => allBlobsUnder(commit.getTree)
+    case tree: RevTree => allBlobsUnder(tree)
+    case blob: RevBlob => Set(blob)
+    case tag: RevTag => allBlobsReachableFrom(tag.getObject)
   }
 
   case class SizedObject(objectId: ObjectId, size: Long) extends Ordered[SizedObject] {
