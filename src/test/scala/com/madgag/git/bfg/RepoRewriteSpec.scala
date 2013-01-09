@@ -44,7 +44,7 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
     implicit val reader = repo.newObjectReader
 
     val blobsToRemove = Set(abbrId("06d740"))
-    RepoRewriter.rewrite(repo, new BlobRemover(blobsToRemove))
+    RepoRewriter.rewrite(repo, new BlobRemover(blobsToRemove), ObjectProtection(Set("master")))
 
     val allCommits = new Git(repo).log.all.call.toSeq
 
@@ -81,7 +81,7 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
       override def lineCleanerFor(entry: TreeBlobEntry) = condOpt(entry.filename.string) {
         case FileExt("txt") | FileExt("scala") => """(\.password=).*""".r --> (_.group(1) + "*** PASSWORD ***")
       }
-    })
+    }, ObjectProtection(Set("master")))
 
     val allCommits = new Git(repo).log.all.call.toSeq
 

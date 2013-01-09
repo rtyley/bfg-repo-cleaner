@@ -91,8 +91,8 @@ object Main extends App {
       implicit val progressMonitor = new TextProgressMonitor()
 
       println("Using repo : " + repo.getDirectory.getAbsolutePath)
-      val protectedBlobIds = allBlobsReachableFrom(config.protectBlobsFromRevisions)
-      println("Found " + protectedBlobIds.size + " blobs to protect")
+      val objectProtection = ObjectProtection(config.protectBlobsFromRevisions)
+      println("Found " + objectProtection.fixedObjectIds.size + " objects to protect")
 
       val blobRemoverOption = {
 
@@ -104,7 +104,7 @@ object Main extends App {
           sizeBasedBlobTargetSources match {
             case sources if sources.size > 0 =>
               Timing.measureTask("Finding target blobs", ProgressMonitor.UNKNOWN) {
-                val biggestUnprotectedBlobs = biggestBlobs(repo).filterNot(o => protectedBlobIds(o.objectId))
+                val biggestUnprotectedBlobs = biggestBlobs(repo).filterNot(o => objectProtection.blobIds(o.objectId))
                 val sizedBadIds = SortedSet(sources.flatMap(_(biggestUnprotectedBlobs)): _*)
                 println("Found " + sizedBadIds.size + " blob ids to remove biggest=" + sizedBadIds.max.size + " smallest=" + sizedBadIds.min.size)
                 println("Total size (unpacked)=" + sizedBadIds.map(_.size).sum)
@@ -126,7 +126,8 @@ object Main extends App {
         })
       }
 
-      RepoRewriter.rewrite(repo, TreeBlobsCleaner.chain(Seq(blobRemoverOption, blobTextModifierOption).flatten))
+      val treeBlobCleaners = TreeBlobsCleaner.chain(Seq(blobRemoverOption, blobTextModifierOption).flatten)
+      RepoRewriter.rewrite(repo, treeBlobCleaners, objectProtection)
 
   }
 
