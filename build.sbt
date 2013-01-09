@@ -4,8 +4,6 @@ name := "bfg-repo-cleaner"
 
 organization := "com.madgag"
 
-version := "0.5.1-SNAPSHOT"
-
 licenses := Seq("GPLv3" -> url("http://www.gnu.org/licenses/gpl-3.0.html"))
 
 homepage := Some(url("https://github.com/rtyley/bfg-repo-cleaner"))
