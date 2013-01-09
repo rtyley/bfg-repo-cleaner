@@ -37,10 +37,21 @@ import collection.immutable.SortedSet
 case class CMDConfig(stripBiggestBlobs: Option[Int] = None,
                      stripBlobsBiggerThan: Option[Int] = None,
                      protectBlobsFromRevisions: Set[String] = Set("HEAD"),
-                     filterFiles: FileName => Boolean = _ => true,
+                     filterFiles: String = "*",
                      replaceBannedStrings: Traversable[String] = List.empty,
                      replaceBannedRegex: Traversable[Regex] = List.empty,
-                     gitdir: Option[File] = None)
+                     gitdir: Option[File] = None) {
+  lazy val lineModifierOption: Option[String => String] = {
+    val allRegex = replaceBannedRegex ++ replaceBannedStrings.map(Regex.quoteReplacement(_).r)
+    allRegex.map(regex => regex --> (_ => "***REMOVED***")).reduceOption((f,g) => Function.chain(Seq(f,g)))
+  }
+
+  lazy val filterFilesPredicate = {
+    val GlobPattern = Globs.toUnixRegexPattern(filterFiles).r
+
+    (fn:FileName) => fn.string match { case GlobPattern() => true ; case _ => false }
+  }
+}
 
 object Main extends App {
 
@@ -60,10 +71,7 @@ object Main extends App {
         (v: String, c: CMDConfig) => c.copy(protectBlobsFromRevisions = v.split(',').toSet)
       },
       opt("f", "filter-contents-of", "<glob>", "filter only files with the specified names (eg '*.txt', '*.{properties}')") {
-        (v: String, c: CMDConfig) =>
-        val GlobPattern = Globs.toUnixRegexPattern(v).r
-
-        c.copy(filterFiles = (fn => fn.string match { case GlobPattern() => true ; case _ => false }))
+        (v: String, c: CMDConfig) => c.copy(filterFiles = v)
       },
       opt("rs", "replace-banned-strings", "<banned-strings-file>", "replace strings specified in file, one string per line") {
         (v: String, c: CMDConfig) => c.copy(replaceBannedStrings = Source.fromFile(v).getLines().toSeq)
@@ -114,21 +122,12 @@ object Main extends App {
           }
         }
 
-      val blobTextModifierOption: Option[BlobTextModifier] = {
-        val replacerOption: Option[String => String] = config.replaceBannedRegex.
-          map(regex => regex --> (_ => "***REMOVED***")).reduceOption((f,g) => Function.chain(Seq(f,g)))
-
-        // val regexReplacer = """package""".r --> (_ => "roberto")
-
-        replacerOption.map(replacer => new BlobTextModifier {
-          def lineCleanerFor(entry: TreeBlobEntry) =
-            if (config.filterFiles(entry.filename)) Some(replacer) else None
-        })
-      }
+      val blobTextModifierOption: Option[BlobTextModifier] = config.lineModifierOption.map(replacer => new BlobTextModifier {
+        def lineCleanerFor(entry: TreeBlobEntry) = if (config.filterFilesPredicate(entry.filename)) Some(replacer) else None
+      })
 
       val treeBlobCleaners = TreeBlobsCleaner.chain(Seq(blobRemoverOption, blobTextModifierOption).flatten)
       RepoRewriter.rewrite(repo, treeBlobCleaners, objectProtection)
-
   }
 
   object ByteSize {
