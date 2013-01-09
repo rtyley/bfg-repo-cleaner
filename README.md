@@ -1,7 +1,8 @@
-BFG Repo-Cleaner
+BFG Repo-Cleaner [![Build Status](https://travis-ci.org/rtyley/bfg-repo-cleaner.png)](https://travis-ci.org/rtyley/bfg-repo-cleaner)
 ================
+* * *
+_Removes large or troublesome blobs like git-filter-branch does, but faster - and written in Scala_
 
-Removes large or troublesome blobs like git-filter-branch does, but faster. And written in Scala
 
 ```
 $ bfg --strip-biggest-blobs 500 some-big-repo.git
