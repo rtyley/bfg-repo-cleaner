@@ -16,6 +16,8 @@ scalacOptions += "-language:implicitConversions"
 
 assemblySettings
 
+releaseSettings
+
 crossPaths := false
 
 publishMavenStyle := true
