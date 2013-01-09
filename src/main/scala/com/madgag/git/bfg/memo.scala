@@ -33,13 +33,18 @@ object MemoUtil {
    *
    * A caching wrapper for a function (K => V), backed by a ConcurrentHashMap from Google Collections.
    */
-  def concurrentHashMapMemo[V]: Memo[V, V] = {
+  def concurrentCleanerMemo[V](fixedEntries: Set[V] = Set.empty): Memo[V, V] = {
     memo[V, V] {
       (f: (V => V)) =>
         val map: java.util.concurrent.ConcurrentMap[V, V] = new MapMaker().makeComputingMap(f)
+
+        def fix(v: V) = map.put(v, v)
+
+        fixedEntries.foreach(fix)
+
         (k: V) =>
           val v = map.get(k)
-          map.put(v, v) // enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
+          fix(v) // enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
           v
     }
   }

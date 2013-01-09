@@ -73,7 +73,7 @@ trait BlobInserter {
 
 object RepoRewriter {
 
-  def rewrite(repo: org.eclipse.jgit.lib.Repository, treeCleaner: TreeBlobsCleaner) {
+  def rewrite(repo: org.eclipse.jgit.lib.Repository, treeCleaner: TreeBlobsCleaner, objectProtection: ObjectProtection) {
 
     assert(!repo.getAllRefs.isEmpty, "Can't find any refs in repo at " + repo.getDirectory.getAbsolutePath)
     implicit val progressMonitor = new TextProgressMonitor
@@ -81,7 +81,7 @@ object RepoRewriter {
     val objectDB = repo.getObjectDatabase
 
     // want to enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
-    val memo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentHashMapMemo
+    val memo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(objectProtection.fixedObjectIds)
 
 
     implicit val revWalk = new RevWalk(repo)
@@ -156,10 +156,10 @@ object RepoRewriter {
       val originalCommit = getCommit(commitId)
 
       val originalTree = originalCommit.getTree
-      val cleanedTree = memoCleanObjectFor(originalCommit.getTree)
+      val cleanedTree = memoCleanObjectFor(originalCommit.getTree) // add debug about object protection?
 
       val originalParentCommits = originalCommit.getParents.toList
-      val cleanedParentCommits = originalParentCommits.map(memoCleanObjectFor).seq
+      val cleanedParentCommits = originalParentCommits.map(memoCleanObjectFor)
 
       if (cleanedParentCommits != originalParentCommits || cleanedTree != originalTree) {
         val c = new CommitBuilder
@@ -189,7 +189,7 @@ object RepoRewriter {
             case OBJ_COMMIT => cleanCommit(objectId)
             case OBJ_TREE => cleanTree(objectId)
             case OBJ_TAG => cleanTag(objectId)
-            case _ => objectId
+            case _ => objectId // we don't currently clean isolated blobs... only clean within a tree context
           }
       }
 

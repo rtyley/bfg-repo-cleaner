@@ -71,7 +71,7 @@ class BlobReplacer(badBlobs: Set[ObjectId]) extends TreeBlobsCleaner {
 
 trait TreeBlobModifier extends TreeBlobsCleaner {
 
-  val memo: Memo[TreeBlobEntry, TreeBlobEntry] = MemoUtil.concurrentHashMapMemo
+  val memo: Memo[TreeBlobEntry, TreeBlobEntry] = MemoUtil.concurrentCleanerMemo(Set.empty)
 
   override def fixer(kit: Kit) = treeBlobs => TreeBlobs(treeBlobs.entries.map(memo {
     entry =>
