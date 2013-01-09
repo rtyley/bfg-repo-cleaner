@@ -50,7 +50,7 @@ object Main extends App {
 
   val parser = new OptionParser[CMDConfig]("bfg") {
     def options = Seq(
-      opt("b", "strip-blobs-bigger-than", "<size>", "strip blobs bigger than X (eg 128K, 1M, etc)") {
+      opt("b", "strip-blobs-bigger-than", "<size>", "strip blobs bigger than X (eg '128K', '1M', etc)") {
         (v: String, c: CMDConfig) => c.copy(stripBlobsBiggerThan = Some(ByteSize.parse(v)))
       },
       intOpt("B", "strip-biggest-blobs", "NUM", "strip the top NUM biggest blobs") {
@@ -59,7 +59,7 @@ object Main extends App {
       opt("p", "protect-blobs-from", "<refs>", "protect blobs that appear in the most recent versions of the specified refs") {
         (v: String, c: CMDConfig) => c.copy(protectBlobsFromRevisions = v.split(',').toSet)
       },
-      opt("f", "filter-contents-for", "<glob>", "filter only files with the specified names") {
+      opt("f", "filter-contents-of", "<glob>", "filter only files with the specified names (eg '*.txt', '*.{properties}')") {
         (v: String, c: CMDConfig) =>
         val GlobPattern = Globs.toUnixRegexPattern(v).r
 
