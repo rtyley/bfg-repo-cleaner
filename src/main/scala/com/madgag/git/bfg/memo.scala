@@ -20,37 +20,38 @@
 
 package com.madgag.git.bfg
 
+import com.google.common.cache.{CacheLoader, LoadingCache, CacheBuilder}
+
 
 object MemoUtil {
 
-  import com.google.common.base.Function
-  import com.google.common.collect.MapMaker
   import scalaz._
   import Scalaz._
 
   /**
-   * Modified from https://gist.github.com/458558
    *
-   * A caching wrapper for a function (K => V), backed by a ConcurrentHashMap from Google Collections.
+   * A caching wrapper for a function (V => V), backed by a no-eviction LoadingCache from Google Collections.
    */
   def concurrentCleanerMemo[V](fixedEntries: Set[V] = Set.empty): Memo[V, V] = {
     memo[V, V] {
       (f: (V => V)) =>
-        val map: java.util.concurrent.ConcurrentMap[V, V] = new MapMaker().makeComputingMap(f)
+        val permanentCache = loaderCacheFor(f)
 
-        def fix(v: V) = map.put(v, v)
+        def fix(v: V) = permanentCache.put(v, v)
 
-        fixedEntries.foreach(fix)
+        fixedEntries foreach fix
 
         (k: V) =>
-          val v = map.get(k)
+          val v = permanentCache.get(k)
           fix(v) // enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
           v
     }
   }
 
-  implicit def ScalaFunctionToGoogleFuntion[T, R](f: T => R): Function[T, R] = new Function[T, R] {
-    def apply(p1: T) = f(p1)
-  }
+  def loaderCacheFor[K,V](f: K => V): LoadingCache[K, V] = CacheBuilder.newBuilder.asInstanceOf[CacheBuilder[K, V]]
+    .build(new CacheLoader[K, V] {
+      def load(key: K): V = f(key)
+    })
+
 }
 
