@@ -52,7 +52,7 @@
         </section>
 
         <aside id="sidebar">
-          <a class="button latest-download-link" href="http://search.maven.org/remotecontent?filepath=com/madgag/bfg-repo-cleaner/0.6.0/bfg-0.6.0.jar">
+          <a class="button latest-download-link" href="http://repo1.maven.org/maven2/com/madgag/bfg-repo-cleaner/0.6.0/bfg-0.6.0.jar">
             <small>Download</small>
             <span class="latest-version">.jar file</span>
           </a>
@@ -71,7 +71,7 @@ $.ajax({ dataType: "jsonp",
   url: 'http://search.maven.org/solrsearch/select/?q=g:"com.madgag"+AND+a:"bfg-repo-cleaner"&wt=json&json.wrf=?&indent=true'
 }).done(function ( data ) {
     var v = data.response.docs[0].latestVersion;
-    var u = "http://search.maven.org/remotecontent?filepath=com/madgag/bfg-repo-cleaner/"+v+"/bfg-"+v+".jar"
+    var u = "http://repo1.maven.org/maven2/com/madgag/bfg-repo-cleaner/"+v+"/bfg-"+v+".jar"
     $('.latest-version').text('v' + v);
     $('.latest-download-link').prop("href", u);
 });
