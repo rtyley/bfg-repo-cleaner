@@ -28,14 +28,11 @@
     <div id="content-wrapper">
       <div class="inner clearfix">
         <section id="main-content">
-          <h1>BFG Repo-Cleaner</h1>
-
-<hr><p><em>Removes large or troublesome blobs like git-filter-branch does, but faster - and written in Scala</em></p>
-
-<pre><code>$ bfg --strip-biggest-blobs 500 some-big-repo.git
+<pre><code>$ bfg --strip-blobs-bigger-than 1M --replace-banned-strings banned.txt repo.git
 </code></pre>
 
-<p>The BFG isn't a full replacement for the <code>git-filter-branch</code> tool: <code>git-filter-branch</code> is enormously powerful and can do things that the BFG can't - <em>however</em> BFG is <em>much</em> better at these core use-cases:</p>
+<h1>an alternative to git-filter-branch</h1>
+<p>The BFG isn't a <em>full</em> replacement for the <code>git-filter-branch</code> tool: <code>git-filter-branch</code> is enormously powerful and can do things that the BFG can't - <em>however</em> BFG is <em>much</em> better at these core use-cases:</p>
 
 <ul>
 <li>Removing big files from the history of your project, making it smaller - often a problem when someone commits a ridiculously large file by mistake.</li>
@@ -54,7 +51,7 @@
 <pre><code>$ git clone --bare git://example.com/some-big-repo.git
 </code></pre>
 <p>Now you can run the BFG to clean your repository up:</p>
-<pre><code>$ bfg --strip-biggest-blobs 500 some-big-repo.git
+<pre><code>$ java -jar bfg.jar --strip-biggest-blobs 500 some-big-repo.git
 </code></pre>
 <p>The BFG will update your commits and all branches and tags so they are clean, but won't delete the old commits - you can use
 the standard 'git gc' command to strip them out:</p>
@@ -70,6 +67,8 @@ $ git gc --prune=now --aggressive
 <li>Java 6 or above</li>
 </ul>
 <p>That's it - the Scala library and all other dependencies are folded into the <a class="latest-download-link" href="#download">downloadable jar</a>.</p>
+
+
         </section>
 
         <aside id="sidebar">
