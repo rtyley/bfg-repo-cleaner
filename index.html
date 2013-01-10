@@ -52,9 +52,9 @@
         </section>
 
         <aside id="sidebar">
-          <a href="http://search.maven.org/remotecontent?filepath=com/madgag/bfg-repo-cleaner/0.6.0/bfg-0.6.0.jar" class="button">
+          <a class="button latest-download-link" href="http://search.maven.org/remotecontent?filepath=com/madgag/bfg-repo-cleaner/0.6.0/bfg-0.6.0.jar">
             <small>Download</small>
-            .jar file
+            <span class="latest-version">.jar file</span>
           </a>
 
           <p class="repo-owner"><a href="https://github.com/rtyley/bfg-repo-cleaner">BFG Repo-Cleaner</a> is maintained by <a href="https://github.com/rtyley">Roberto Tyley</a>.</p>
@@ -64,6 +64,16 @@
       </div>
     </div>
 
-  
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+<script>
+$.ajax({ dataType: "jsonp",
+  url: 'http://search.maven.org/solrsearch/select/?q=g:"com.madgag"+AND+a:"bfg-repo-cleaner"&wt=json&json.wrf=?&indent=true'
+}).done(function ( data ) {
+    var v = data.response.docs[0].latestVersion;
+    var u = "http://search.maven.org/remotecontent?filepath=com/madgag/bfg-repo-cleaner/"+v+"/bfg-"+v+".jar"
+    $('.latest-version').text('v' + v);
+    $('.latest-download-link').prop("href", u);
+});
+</script>
   </body>
 </html>
