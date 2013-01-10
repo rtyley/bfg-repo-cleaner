@@ -28,8 +28,7 @@
     <div id="content-wrapper">
       <div class="inner clearfix">
         <section id="main-content">
-          <h1>BFG Repo-Cleaner</a>
-</h1>
+          <h1>BFG Repo-Cleaner</h1>
 
 <hr><p><em>Removes large or troublesome blobs like git-filter-branch does, but faster - and written in Scala</em></p>
 
@@ -49,10 +48,32 @@
 <li>Simpler</li>
 <li>Beautiful - If you need to, you can use the beautiful Scala language to customise the BFG. Which has got to be better than Bash scripting at least some of the time.</li>
 </ul>
+
+<h1>Usage</h1>
+<p>First clone a copy of your repo:</p>
+<pre><code>$ git clone --bare git://example.com/some-big-repo.git
+</code></pre>
+<p>Now you can run the BFG to clean your repository up:</p>
+<pre><code>$ bfg --strip-biggest-blobs 500 some-big-repo.git
+</code></pre>
+<p>The BFG will update your commits and all branches and tags so they are clean, but won't delete the old commits - you can use
+the standard 'git gc' command to strip them out:</p>
+<pre><code>$ cd some-big-repo.git
+$ git gc --prune=now --aggressive
+</code></pre>
+<p>Finally, once you're happy with the updated state of your repo, push it back up:</p>
+<pre><code>$ git push --mirror
+</code></pre>
+
+<h1>Requirements</h1>
+<ul>
+<li>Java 6 or above</li>
+</ul>
+<p>That's it - the Scala library and all other dependencies are folded into the <a class="latest-download-link" href="#download">downloadable jar</a>.</p>
         </section>
 
         <aside id="sidebar">
-          <a class="button latest-download-link" href="http://repo1.maven.org/maven2/com/madgag/bfg-repo-cleaner/0.6.0/bfg-0.6.0.jar">
+          <a id="download" class="button latest-download-link" href="http://repo1.maven.org/maven2/com/madgag/bfg-repo-cleaner/0.6.0/bfg-0.6.0.jar">
             <small>Download</small>
             <span class="latest-version">.jar file</span>
           </a>
