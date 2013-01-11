@@ -126,6 +126,9 @@ case class TreeBlobEntry(filename: FileName, mode: BlobFileMode, objectId: Objec
 }
 
 object TreeBlobs {
+
+  implicit def entries2Object(entries: Traversable[TreeBlobEntry]) = TreeBlobs(entries)
+
   def apply(entries: Traversable[TreeBlobEntry]): TreeBlobs =
     TreeBlobs(entries.map(e => e.filename ->(e.mode, e.objectId)).toMap)
 }
@@ -137,12 +140,12 @@ case class TreeBlobs(entryMap: Map[FileName, (BlobFileMode, ObjectId)]) extends 
   }
 
   lazy val treeEntries = entries.map(_.toTreeEntry)
-
-  def filter(p: ObjectId => Boolean): TreeBlobs = {
-    TreeBlobs(entries.filter {
-      case TreeBlobEntry(_, _ , objectId) => p(objectId)
-    })
-  }
+//
+//  def filter(p: ObjectId => Boolean): TreeBlobs = {
+//    TreeBlobs(entries.filter {
+//      case TreeBlobEntry(_, _ , objectId) => p(objectId)
+//    })
+//  }
 
 }
 
