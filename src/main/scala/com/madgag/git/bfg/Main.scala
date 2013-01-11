@@ -45,7 +45,9 @@ case class CMDConfig(stripBiggestBlobs: Option[Int] = None,
                      filterFiles: String = "*",
                      replaceBannedStrings: Traversable[String] = List.empty,
                      replaceBannedRegex: Traversable[Regex] = List.empty,
-                     gitdir: Option[File] = None) {
+                     repoLocation: File = new File(System.getProperty("user.dir"))) {
+
+  lazy val gitdir = resolveGitDirFor(repoLocation) getOrElse(throw new IllegalArgumentException(s"'$repoLocation' is not a valid Git repository."))
 
   lazy val fileDeleterOption: Option[TreeBlobsCleaner] = deleteFiles.map { glob =>
     val filePattern = Globs.toUnixRegexPattern(glob).r
@@ -83,7 +85,7 @@ object Main extends App {
       opt("p", "protect-blobs-from", "<refs>", "protect blobs that appear in the most recent versions of the specified refs") {
         (v: String, c: CMDConfig) => c.copy(protectBlobsFromRevisions = v.split(',').toSet)
       },
-      opt("d", "delete-files", "<glob>", "delete files with the specified names (eg '*.class', '*.{txt,log}' - matches on file name, not path)") {
+      opt("D", "delete-files", "<glob>", "delete files with the specified names (eg '*.class', '*.{txt,log}' - matches on file name, not path)") {
         (v: String, c: CMDConfig) => c.copy(deleteFiles = Some(v))
       },
       opt("f", "filter-contents-of", "<glob>", "filter only files with the specified names (eg '*.txt', '*.{properties}')") {
@@ -95,13 +97,8 @@ object Main extends App {
       opt("rr", "replace-banned-regex", "<banned-regex-file>", "replace regex specified in file, one regex per line") {
         (v: String, c: CMDConfig) => c.copy(replaceBannedRegex = Source.fromFile(v).getLines().map(_.r).toSeq)
       },
-      arg("<repo>", "repo to clean") {
-        (v: String, c: CMDConfig) =>
-          val dir = new File(v).getCanonicalFile
-          val gitdir = resolveGitDirFor(dir)
-          if (gitdir == null || !gitdir.exists)
-            throw new IllegalArgumentException("'%s' is not a valid Git repository.".format(dir.getAbsolutePath))
-          c.copy(gitdir = Some(gitdir))
+      argOpt("<repo>", "repo to clean") {
+        (v: String, c: CMDConfig) => c.copy(repoLocation = new File(v).getCanonicalFile)
       }
     )
   }
@@ -111,7 +108,7 @@ object Main extends App {
     config =>
       println(config)
 
-      implicit val repo = new FileRepository(config.gitdir.get)
+      implicit val repo = new FileRepository(config.gitdir)
       implicit val progressMonitor = new TextProgressMonitor()
 
       println("Using repo : " + repo.getDirectory.getAbsolutePath)

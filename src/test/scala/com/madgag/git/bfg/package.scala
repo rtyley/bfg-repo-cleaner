@@ -33,7 +33,7 @@ import com.google.common.io.Files
 
 package object bfg {
   def unpackRepo(fileName: String): Repository = {
-    val resolvedGitDir = resolveGitDirFor(unpackRepoAndGetGitDir(fileName))
+    val resolvedGitDir = resolveGitDirFor(unpackRepoAndGetGitDir(fileName)).get
     require(resolvedGitDir.exists)
     println("resolvedGitDir=" + resolvedGitDir)
     new FileRepository(resolvedGitDir)
