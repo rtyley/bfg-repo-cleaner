@@ -54,7 +54,7 @@ trait TreeBlobsCleaner {
 }
 
 class BlobRemover(blobIds: Set[ObjectId]) extends TreeBlobsCleaner {
-  override def fixer(kit: Kit) = _.filter(oid => !blobIds.contains(oid))
+  override def fixer(kit: Kit) = _.entries.filter(e => !blobIds.contains(e.objectId))
 }
 
 class BlobReplacer(badBlobs: Set[ObjectId]) extends TreeBlobsCleaner {

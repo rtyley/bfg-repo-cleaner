@@ -23,13 +23,12 @@ package com.madgag.git.bfg.model
 import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.util.RawParseUtils
 
-object ImplicitConversions {
-  implicit def string2FileName(str: String) = new FileName(Constants.encode(str))
-
-  implicit def filename2String(fileName: FileName) = fileName.string
-}
-
 object FileName {
+  object ImplicitConversions {
+    implicit def string2FileName(str: String) = new FileName(Constants.encode(str))
+
+    implicit def filename2String(fileName: FileName) = fileName.string
+  }
 
   def apply(name: String): FileName = {
     require(!name.contains('/'), "File names can not contain '/'.")

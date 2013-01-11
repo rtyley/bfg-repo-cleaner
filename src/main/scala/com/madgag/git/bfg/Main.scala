@@ -36,6 +36,7 @@ import collection.immutable.SortedSet
 import scopt.immutable.OptionParser
 import scala.Some
 import com.madgag.git.bfg.GitUtil.SizedObject
+import FileName.ImplicitConversions._
 
 case class CMDConfig(stripBiggestBlobs: Option[Int] = None,
                      stripBlobsBiggerThan: Option[Int] = None,
@@ -49,7 +50,7 @@ case class CMDConfig(stripBiggestBlobs: Option[Int] = None,
   lazy val fileDeleterOption: Option[TreeBlobsCleaner] = deleteFiles.map { glob =>
     val filePattern = Globs.toUnixRegexPattern(glob).r
     new TreeBlobsCleaner {
-      def fixer(kit: Kit) = tb => TreeBlobs(tb.entries.filterNot(e => filePattern.matches(e.filename.string)))
+      def fixer(kit: Kit) = _.entries.filterNot(e => filePattern.matches(e.filename))
     }
   }
 
@@ -59,9 +60,9 @@ case class CMDConfig(stripBiggestBlobs: Option[Int] = None,
   }
 
   lazy val filterFilesPredicate = {
-    val GlobPattern = Globs.toUnixRegexPattern(filterFiles).r
+    val globPattern = Globs.toUnixRegexPattern(filterFiles).r
 
-    (fn:FileName) => fn.string match { case GlobPattern() => true ; case _ => false }
+    (fn:FileName) => globPattern.matches(fn)
   }
 }
 
