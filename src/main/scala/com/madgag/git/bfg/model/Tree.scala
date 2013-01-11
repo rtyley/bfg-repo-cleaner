@@ -139,8 +139,8 @@ case class TreeBlobs(entryMap: Map[FileName, (BlobFileMode, ObjectId)]) extends 
   lazy val treeEntries = entries.map(_.toTreeEntry)
 
   def filter(p: ObjectId => Boolean): TreeBlobs = {
-    TreeBlobs(entryMap.filter {
-      case (_, (_, objectId)) => p(objectId)
+    TreeBlobs(entries.filter {
+      case TreeBlobEntry(_, _ , objectId) => p(objectId)
     })
   }
 

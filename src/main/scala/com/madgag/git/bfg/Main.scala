@@ -21,7 +21,9 @@
 package com.madgag.git.bfg
 
 import cleaner._
-import model.{TreeBlobEntry, FileName}
+import cleaner.TreeBlobsCleaner.Kit
+import model._
+import model.TreeBlobEntry
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.storage.file.{WindowCacheConfig, WindowCache, FileRepository}
 import java.io.File
@@ -29,18 +31,28 @@ import GitUtil._
 import textmatching.RegexReplacer._
 import util.matching.Regex
 import com.madgag.globs.openjdk.Globs
-import scopt.immutable.OptionParser
-import scala.Some
 import io.Source
 import collection.immutable.SortedSet
+import scopt.immutable.OptionParser
+import scala.Some
+import com.madgag.git.bfg.GitUtil.SizedObject
 
 case class CMDConfig(stripBiggestBlobs: Option[Int] = None,
                      stripBlobsBiggerThan: Option[Int] = None,
                      protectBlobsFromRevisions: Set[String] = Set("HEAD"),
+                     deleteFiles: Option[String] = None,
                      filterFiles: String = "*",
                      replaceBannedStrings: Traversable[String] = List.empty,
                      replaceBannedRegex: Traversable[Regex] = List.empty,
                      gitdir: Option[File] = None) {
+
+  lazy val fileDeleterOption: Option[TreeBlobsCleaner] = deleteFiles.map { glob =>
+    val filePattern = Globs.toUnixRegexPattern(glob).r
+    new TreeBlobsCleaner {
+      def fixer(kit: Kit) = tb => TreeBlobs(tb.entries.filterNot(e => filePattern.matches(e.filename.string)))
+    }
+  }
+
   lazy val lineModifierOption: Option[String => String] = {
     val allRegex = replaceBannedRegex ++ replaceBannedStrings.map(Regex.quoteReplacement(_).r)
     allRegex.map(regex => regex --> (_ => "***REMOVED***")).reduceOption((f,g) => Function.chain(Seq(f,g)))
@@ -69,6 +81,9 @@ object Main extends App {
       },
       opt("p", "protect-blobs-from", "<refs>", "protect blobs that appear in the most recent versions of the specified refs") {
         (v: String, c: CMDConfig) => c.copy(protectBlobsFromRevisions = v.split(',').toSet)
+      },
+      opt("d", "delete-files", "<glob>", "delete files with the specified names (eg '*.class', '*.{txt,log}' - matches on file name, not path)") {
+        (v: String, c: CMDConfig) => c.copy(deleteFiles = Some(v))
       },
       opt("f", "filter-contents-of", "<glob>", "filter only files with the specified names (eg '*.txt', '*.{properties}')") {
         (v: String, c: CMDConfig) => c.copy(filterFiles = v)
@@ -126,7 +141,7 @@ object Main extends App {
         def lineCleanerFor(entry: TreeBlobEntry) = if (config.filterFilesPredicate(entry.filename)) Some(replacer) else None
       })
 
-      val treeBlobCleaners = TreeBlobsCleaner.chain(Seq(blobRemoverOption, blobTextModifierOption).flatten)
+      val treeBlobCleaners = TreeBlobsCleaner.chain(Seq(blobRemoverOption, config.fileDeleterOption, blobTextModifierOption).flatten)
       RepoRewriter.rewrite(repo, treeBlobCleaners, objectProtection)
   }
 
