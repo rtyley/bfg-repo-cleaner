@@ -20,15 +20,8 @@
 
 package com.madgag.git.bfg.cli
 
-import org.eclipse.jgit.lib._
-import org.eclipse.jgit.storage.file.{WindowCacheConfig, WindowCache, FileRepository}
-import collection.immutable.SortedSet
-import com.madgag.git.bfg.GitUtil._
+import org.eclipse.jgit.storage.file.{WindowCacheConfig, WindowCache}
 import com.madgag.git.bfg.cleaner._
-import com.madgag.git.bfg.Timing
-import scala.Some
-import com.madgag.git.bfg.GitUtil.SizedObject
-import com.madgag.git.bfg.model.TreeBlobEntry
 
 object Main extends App {
 
@@ -36,43 +29,17 @@ object Main extends App {
   wcConfig.setStreamFileThreshold(1024 * 1024)
   WindowCache.reconfigure(wcConfig)
 
-  CMDConfig.parser.parse(args, CMDConfig()) map {
+  CLIConfig.parser.parse(args, CLIConfig()) map {
     config =>
       println(config)
 
-      implicit val repo = new FileRepository(config.gitdir)
-      implicit val progressMonitor = new TextProgressMonitor()
+      implicit val repo = config.repo
 
       println("Using repo : " + repo.getDirectory.getAbsolutePath)
-      val objectProtection = ObjectProtection(config.protectBlobsFromRevisions)
-      println("Found " + objectProtection.fixedObjectIds.size + " objects to protect")
 
-      val blobRemoverOption = {
+      println("Found " + config.objectProtection.fixedObjectIds.size + " objects to protect")
 
-          val sizeBasedBlobTargetSources = Seq(
-            config.stripBlobsBiggerThan.map(threshold => (s: Stream[SizedObject]) => s.takeWhile(_.size > threshold)),
-            config.stripBiggestBlobs.map(num => (s: Stream[SizedObject]) => s.take(num))
-          ).flatten
-
-          sizeBasedBlobTargetSources match {
-            case sources if sources.size > 0 =>
-              Timing.measureTask("Finding target blobs", ProgressMonitor.UNKNOWN) {
-                val biggestUnprotectedBlobs = biggestBlobs(repo).filterNot(o => objectProtection.blobIds(o.objectId))
-                val sizedBadIds = SortedSet(sources.flatMap(_(biggestUnprotectedBlobs)): _*)
-                println("Found " + sizedBadIds.size + " blob ids to remove biggest=" + sizedBadIds.max.size + " smallest=" + sizedBadIds.min.size)
-                println("Total size (unpacked)=" + sizedBadIds.map(_.size).sum)
-                Some(new BlobReplacer(sizedBadIds.map(_.objectId)))
-              }
-            case _ => None
-          }
-        }
-
-      val blobTextModifierOption: Option[BlobTextModifier] = config.lineModifierOption.map(replacer => new BlobTextModifier {
-        def lineCleanerFor(entry: TreeBlobEntry) = if (config.filterFilesPredicate(entry.filename)) Some(replacer) else None
-      })
-
-      val treeBlobCleaners = TreeBlobsCleaner.chain(Seq(blobRemoverOption, config.fileDeleterOption, blobTextModifierOption).flatten)
-      RepoRewriter.rewrite(repo, treeBlobCleaners, objectProtection)
+      RepoRewriter.rewrite(repo, config.treeBlobCleaners, config.objectProtection)
   }
 
 }
