@@ -26,6 +26,8 @@ import util.matching.Regex.Match
 object RegexReplacer {
 
   implicit class RichRegex(regex: Regex) {
+    def matches(s: String) = regex.pattern.matcher(s).matches
+
     def -->(replacer: Match => String): String => String = {
       s => RegexReplacer(regex, replacer).replaceAllIn(s)
     }
