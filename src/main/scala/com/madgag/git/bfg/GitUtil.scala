@@ -55,7 +55,7 @@ object GitUtil {
     def resolveExistingUniqueId(id: AbbreviatedObjectId) = resolveUniquely(id).filter(reader.has)
   }
 
-  def resolveGitDirFor(folder: File) = RepositoryCache.FileKey.resolve(folder, FS.detect)
+  def resolveGitDirFor(folder: File) = Option(RepositoryCache.FileKey.resolve(folder, FS.detect)).filter(_.exists())
 
   def allBlobsUnder(tree: RevTree)(implicit repo: Repository): Set[ObjectId] = {
     val treeWalk = new TreeWalk(repo)
