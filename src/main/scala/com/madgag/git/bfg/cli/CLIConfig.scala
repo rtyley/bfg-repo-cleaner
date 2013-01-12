@@ -125,7 +125,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     }
   }
 
-  val treeBlobCleaners = TreeBlobsCleaner.chain(Seq(blobRemover, fileDeletion, blobTextModifier).flatten)
+  lazy val treeBlobCleaners = TreeBlobsCleaner.chain(Seq(blobRemover, fileDeletion, blobTextModifier).flatten)
 
 }
 
