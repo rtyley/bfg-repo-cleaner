@@ -40,24 +40,7 @@ trait CommitCleaner {
   def fixer(kit: CommitCleaner.Kit): (CommitMessage => CommitMessage)
 }
 
-object ObjectIdSubstitutor extends CommitCleaner {
 
-  val hexRegex = """\p{XDigit}{10,40}""".r // choose minimum size based on size of project??
-
-  override def fixer(kit: CommitCleaner.Kit) = cm => cm.copy(message = replaceOldCommitIds(cm.message, kit.objectReader, kit.mapper))
-
-  // slow!
-  def replaceOldCommitIds(message: String, reader: ObjectReader, mapper: CleaningMapper[ObjectId]): String = {
-    ObjectIdSubstitutor.hexRegex.replaceAllIn(message, m => {
-      Some(AbbreviatedObjectId.fromString(m.matched))
-        .flatMap(reader.resolveExistingUniqueId).flatMap(mapper.objectIdSubstitution).map {
-        case (oldId, newId) =>
-          // println("\nSubstituting " + oldId.shortName + " -> " + newId.shortName)
-          reader.abbreviate(newId, m.matched.length).name + " (formerly " + m.matched + ")"
-      }.getOrElse(m.matched)
-    })
-  }
-}
 
 object FormerCommitFooter extends CommitCleaner {
   val Key = "Former-commit-id"
