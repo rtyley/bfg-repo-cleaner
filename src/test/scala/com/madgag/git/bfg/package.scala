@@ -21,7 +21,6 @@
 package com.madgag.git
 
 import bfg.cleaner.FormerCommitFooter
-import bfg.GitUtil._
 import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.storage.file.FileRepository
 import java.io.File._
@@ -30,6 +29,7 @@ import org.eclipse.jgit.revwalk.RevCommit
 import scala.collection.JavaConversions._
 import java.io.File
 import com.google.common.io.Files
+import com.madgag.git.bfg.GitUtil._
 
 package object bfg {
   def unpackRepo(fileName: String): Repository = {
