@@ -22,6 +22,9 @@ package com.madgag.git.bfg.cleaner
 
 import org.scalatest._
 import matchers.ShouldMatchers
+import com.madgag.git.bfg.GitUtil._
+import org.eclipse.jgit.lib.ObjectId
+import com.madgag.git.bfg._
 
 class ObjectIdSubstitutorSpec extends FlatSpec with ShouldMatchers {
 
@@ -38,6 +41,17 @@ class ObjectIdSubstitutorSpec extends FlatSpec with ShouldMatchers {
     "This is Gdecade2001 I say" should not include regex (ObjectIdSubstitutor.hexRegex)
 
     "This is decade2001X I say" should not include regex (ObjectIdSubstitutor.hexRegex)
+  }
+
+  "Object Id" should "be substituted in commit message" in {
+    implicit val repo = unpackRepo("/sample-repos/example.git.zip")
+    implicit val reader = repo.newObjectReader
+
+    val cleanedMessage = ObjectIdSubstitutor.replaceOldCommitIds("See 3699910d2baab1 for backstory", reader, new CleaningMapper[ObjectId] {
+      val clean = (_: ObjectId) => abbrId("06d7405020018d")
+    })
+
+    cleanedMessage should be ("See 06d7405020018d [formerly 3699910d2baab1] for backstory")
   }
 
 }
