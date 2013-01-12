@@ -33,6 +33,8 @@ import com.madgag.git.bfg.GitUtil._
 import org.eclipse.jgit.lib._
 import com.madgag.git.bfg.model.TreeSubtrees
 import com.madgag.git.bfg.model.Tree
+import concurrent.future
+import concurrent.ExecutionContext.Implicits.global
 
 /*
 Encountering a blob ->
@@ -228,11 +230,11 @@ object RepoRewriter {
     }
 
     Timing.measureTask("Cleaning commits", commits.size) {
-      new Thread(new Runnable {
-        override def run() = commits.par.foreach {
+      future {
+        commits.par.foreach {
           commit => memoCleanObjectFor(commit.getTree)
         }
-      }).start
+      }
 
       commits.foreach {
         commit =>
