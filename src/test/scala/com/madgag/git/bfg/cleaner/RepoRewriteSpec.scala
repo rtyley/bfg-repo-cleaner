@@ -18,24 +18,23 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/ .
  */
 
-package com.madgag.git.bfg
+package com.madgag.git.bfg.cleaner
 
-import cleaner._
-import model.TreeBlobEntry
 import org.scalatest._
 import matchers.ShouldMatchers
-import GitUtil._
 import org.eclipse.jgit.api.Git
 import scala.collection.JavaConversions._
 import java.util.Properties
 import org.eclipse.jgit.util.RawParseUtils
 import java.io.StringReader
 import org.eclipse.jgit.lib.ObjectId
-import scala.Some
-import com.madgag.globs.openjdk.Globs
-import textmatching.RegexReplacer._
 import PartialFunction.condOpt
 import org.apache.commons.io.FilenameUtils
+import com.madgag.git.bfg.model.TreeBlobEntry
+import com.madgag.git.bfg.GitUtil._
+import scala.Some
+import com.madgag.git.bfg.textmatching.RegexReplacer._
+import com.madgag.git.bfg._
 
 class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
 
