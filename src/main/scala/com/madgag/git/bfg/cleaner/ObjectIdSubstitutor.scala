@@ -35,8 +35,8 @@ object ObjectIdSubstitutor extends CommitCleaner {
       Some(AbbreviatedObjectId.fromString(m.matched))
         .flatMap(reader.resolveExistingUniqueId).flatMap(mapper.objectIdSubstitution).map {
         case (oldId, newId) =>
-          // println("\nSubstituting " + oldId.shortName + " -> " + newId.shortName)
-          reader.abbreviate(newId, m.matched.length).name + " (formerly " + m.matched + ")"
+          val newName = reader.abbreviate(newId, m.matched.length).name
+          s"$newName [formerly $m]"
       }.getOrElse(m.matched)
     })
   }
