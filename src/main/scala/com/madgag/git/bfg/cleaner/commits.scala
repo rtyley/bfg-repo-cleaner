@@ -41,7 +41,7 @@ trait CommitCleaner {
 }
 
 object ObjectIdSubstititor extends CommitCleaner {
-  val hexRegex = """\p{XDigit}{8,40}""".r
+  val hexRegex = """\p{XDigit}{10,40}""".r // choose minimum size based on size of project??
 
   override def fixer(kit: CommitCleaner.Kit) = cm => cm.copy(message = replaceOldCommitIds(cm.message, kit.objectReader, kit.mapper))
 
