@@ -25,7 +25,7 @@ import com.madgag.git.bfg.GitUtil._
 
 object ObjectIdSubstitutor extends CommitCleaner {
 
-  val hexRegex = """\p{XDigit}{10,40}""".r // choose minimum size based on size of project??
+  val hexRegex = """\b\p{XDigit}{10,40}\b""".r // choose minimum size based on size of project??
 
   override def fixer(kit: CommitCleaner.Kit) = cm => cm.copy(message = replaceOldCommitIds(cm.message, kit.objectReader, kit.mapper))
 
