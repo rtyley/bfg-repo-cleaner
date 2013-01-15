@@ -42,6 +42,8 @@ object GitUtil {
   def abbrId(str: String)(implicit reader: ObjectReader): ObjectId = reader.resolveExistingUniqueId(AbbreviatedObjectId.fromString(str)).get
 
   implicit class RichObjectId(objectId: AnyObjectId) {
+    def open(implicit objectReader: ObjectReader): ObjectLoader = objectReader.open(objectId)
+
     def asRevObject(implicit revWalk: RevWalk) = revWalk.parseAny(objectId)
 
     def asRevCommit(implicit revWalk: RevWalk) = revWalk.parseCommit(objectId)

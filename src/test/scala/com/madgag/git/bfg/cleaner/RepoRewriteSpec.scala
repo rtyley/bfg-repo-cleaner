@@ -35,12 +35,15 @@ import com.madgag.git.bfg.GitUtil._
 import scala.Some
 import com.madgag.git.bfg.textmatching.RegexReplacer._
 import com.madgag.git.bfg._
+import cli.Main.hasBeenProcessedByBFGBefore
 
 class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
 
   "Git repo" should "not explode" in {
     implicit val repo = unpackRepo("/sample-repos/example.git.zip")
     implicit val reader = repo.newObjectReader
+
+    hasBeenProcessedByBFGBefore(repo) should be (false)
 
     val blobsToRemove = Set(abbrId("06d740"))
     RepoRewriter.rewrite(repo, new BlobRemover(blobsToRemove), ObjectProtection(Set("master")))
@@ -55,6 +58,8 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
     unwantedBlobsByCommit should be('empty)
 
     allCommits.head.getFullMessage should include(FormerCommitFooter.Key)
+
+    hasBeenProcessedByBFGBefore(repo) should be (true)
   }
 
   "Git repo" should "have passwords removed" in {
