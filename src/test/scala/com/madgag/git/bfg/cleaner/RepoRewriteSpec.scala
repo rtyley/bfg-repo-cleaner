@@ -76,7 +76,7 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
       def unapply(boom : String) = Option(FilenameUtils.getExtension(boom))
     }
 
-    RepoRewriter.rewrite(repo, treeCleaner = new BlobTextModifier {
+    RepoRewriter.rewrite(repo, new BlobTextModifier {
       override def lineCleanerFor(entry: TreeBlobEntry) = condOpt(entry.filename.string) {
         case FileExt("txt") | FileExt("scala") => """(\.password=).*""".r --> (_.group(1) + "*** PASSWORD ***")
       }

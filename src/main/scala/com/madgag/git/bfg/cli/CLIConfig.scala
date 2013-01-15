@@ -32,7 +32,7 @@ import scopt.immutable.OptionParser
 import io.Source
 import com.madgag.git.bfg.model.TreeBlobEntry
 import com.madgag.git.bfg.Timing
-import org.eclipse.jgit.lib.{TextProgressMonitor, ProgressMonitor}
+import org.eclipse.jgit.lib.{ObjectChecker, TextProgressMonitor, ProgressMonitor}
 import collection.immutable.SortedSet
 import org.eclipse.jgit.storage.file.FileRepository
 
@@ -60,6 +60,9 @@ object CLIConfig {
       opt("rr", "replace-banned-regex", "<banned-regex-file>", "replace regex specified in file, one regex per line") {
         (v: String, c: CLIConfig) => c.copy(replaceBannedRegex = Source.fromFile(v).getLines().map(_.r).toSeq)
       },
+      flag("strict-object-checking", "perform additional checks on integrity of consumed & created objects") {
+        (c: CLIConfig) => c.copy(strictObjectChecking = true)
+      },
       argOpt("<repo>", "repo to clean") {
         (v: String, c: CLIConfig) => c.copy(repoLocation = new File(v).getCanonicalFile)
       }
@@ -74,6 +77,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      filterFiles: String = "*",
                      replaceBannedStrings: Traversable[String] = List.empty,
                      replaceBannedRegex: Traversable[Regex] = List.empty,
+                     strictObjectChecking: Boolean = false,
                      repoLocation: File = new File(System.getProperty("user.dir"))) {
 
   lazy val gitdir = resolveGitDirFor(repoLocation) getOrElse (throw new IllegalArgumentException(s"'$repoLocation' is not a valid Git repository."))
@@ -81,6 +85,8 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
   implicit lazy val repo = new FileRepository(gitdir)
 
   lazy val objectProtection = ObjectProtection(protectBlobsFromRevisions)
+
+  lazy val objectChecker = if (strictObjectChecking) Some(new ObjectChecker()) else None
 
   lazy val fileDeletion = deleteFiles.map {
     glob =>

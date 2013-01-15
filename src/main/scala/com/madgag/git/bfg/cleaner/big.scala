@@ -75,11 +75,13 @@ trait BlobInserter {
 
 object RepoRewriter {
 
-  def rewrite(repo: org.eclipse.jgit.lib.Repository, treeCleaner: TreeBlobsCleaner, objectProtection: ObjectProtection) {
+  def rewrite(repo: org.eclipse.jgit.lib.Repository,
+              treeCleaner: TreeBlobsCleaner,
+              objectProtection: ObjectProtection,
+              objectChecker: Option[ObjectChecker] = None) {
 
     assert(!repo.getAllRefs.isEmpty, "Can't find any refs in repo at " + repo.getDirectory.getAbsolutePath)
     implicit val progressMonitor = new TextProgressMonitor
-    val objectChecker = new ObjectChecker()
     val objectDB = repo.getObjectDatabase
 
     // want to enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
@@ -140,6 +142,7 @@ object RepoRewriter {
         tb.setTagger(originalTag.getTaggerIdent)
         tb.setMessage(originalTag.getFullMessage)
         val cleanTag: ObjectId = newInserter.insert(tb)
+        objectChecker.foreach(_.checkTag(tb.toByteArray))
         cleanTag
       } else {
         originalTag
@@ -174,8 +177,10 @@ object RepoRewriter {
         c.setAuthor(updatedCommit.author)
         c.setCommitter(updatedCommit.committer)
         c.setMessage(updatedCommit.message)
-        val cleanCommit = newInserter.insert(c)
-        // objectChecker.checkCommit(c.toByteArray)
+
+        val commitBytes = c.toByteArray
+        val cleanCommit = newInserter.insert(Constants.OBJ_COMMIT, commitBytes)
+        objectChecker.foreach(_.checkCommit(commitBytes))
         cleanCommit
       } else {
         originalCommit
@@ -219,9 +224,10 @@ object RepoRewriter {
           case (_, objectId) => SizedObject(objectId, reader.getObjectSize(objectId, ObjectReader.OBJ_ANY))
         }
         allRemovedFiles ++= sizedRemovedFiles
-        // objectChecker.checkTree(updatedTree.formatter.toByteArray) // throws exception if bad
 
-        val updatedTreeId = updatedTree.formatter.insertTo(newInserter)
+        val treeFormatter = updatedTree.formatter
+        objectChecker.foreach(_.checkTree(treeFormatter.toByteArray))
+        val updatedTreeId = treeFormatter.insertTo(newInserter)
 
         updatedTreeId
       } else {
