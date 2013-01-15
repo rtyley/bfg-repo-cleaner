@@ -45,21 +45,24 @@ object Main extends App {
 
   CLIConfig.parser.parse(args, CLIConfig()) map {
     config =>
-      println(config)
+      if (config.definesNoWork) {
+        Console.err.println("Please specify tasks for The BFG :")
+        CLIConfig.parser.showUsage
+      } else {
+        implicit val repo = config.repo
 
-      implicit val repo = config.repo
+        println("Using repo : " + repo.getDirectory.getAbsolutePath)
 
-      println("Using repo : " + repo.getDirectory.getAbsolutePath)
+        if (hasBeenProcessedByBFGBefore(repo)) {
+          println("\nThis repo has been processed by The BFG before! Will prune repo before proceeding to avoid unnecessary cleaning work on unused objects.")
+          new Git(repo).gc.setProgressMonitor(new TextProgressMonitor()).call()
+          println("Completed prune of old objects - will now proceed with the main job!\n")
+        }
 
-      if (hasBeenProcessedByBFGBefore(repo)) {
-        println("\nThis repo has been processed by The BFG before! Will prune repo before proceeding to avoid unnecessary cleaning work on unused objects.")
-        new Git(repo).gc.setProgressMonitor(new TextProgressMonitor()).call()
-        println("Completed prune of old objects - will now proceed with the main job!\n")
+        println("Found " + config.objectProtection.fixedObjectIds.size + " objects to protect")
+
+        RepoRewriter.rewrite(repo, config.treeBlobCleaner, config.objectProtection, config.objectChecker)
       }
-
-      println("Found " + config.objectProtection.fixedObjectIds.size + " objects to protect")
-
-      RepoRewriter.rewrite(repo, config.treeBlobCleaners, config.objectProtection, config.objectChecker)
   }
 
 }
