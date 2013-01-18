@@ -58,13 +58,14 @@ class BlobRemover(blobIds: Set[ObjectId]) extends TreeBlobsCleaner {
 }
 
 class BlobReplacer(badBlobs: Set[ObjectId]) extends TreeBlobsCleaner {
-  def fixer(kit: Kit) = { treeBlobs =>
-    val updatedEntryMap = treeBlobs.entryMap.map {
-      case (filename, (mode, oid)) if badBlobs.contains(oid) =>
-        FileName(filename + ".REMOVED.git-id") ->(RegularFile, kit.blobInserter.insert(oid.name.getBytes))
-      case e => e
-    }
-    TreeBlobs(updatedEntryMap)
+  def fixer(kit: Kit) = {
+    treeBlobs =>
+      val updatedEntryMap = treeBlobs.entryMap.map {
+        case (filename, (mode, oid)) if badBlobs.contains(oid) =>
+          FileName(filename + ".REMOVED.git-id") ->(RegularFile, kit.blobInserter.insert(oid.name.getBytes))
+        case e => e
+      }
+      TreeBlobs(updatedEntryMap)
   }
 }
 
