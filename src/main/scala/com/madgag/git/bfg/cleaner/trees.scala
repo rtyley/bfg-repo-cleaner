@@ -20,14 +20,21 @@
 
 package com.madgag.git.bfg.cleaner
 
-import org.eclipse.jgit.lib.{ObjectDatabase, ObjectId}
+import org.eclipse.jgit.lib.{ObjectStream, ObjectDatabase, ObjectId}
 import com.madgag.git.bfg.model._
 import org.eclipse.jgit.diff.RawText
-import java.io.{LineNumberInputStream, InputStream, ByteArrayOutputStream}
+import java.io._
 import org.eclipse.jgit.lib.Constants._
 import com.madgag.git.bfg.cleaner.TreeBlobsCleaner.Kit
 import scalaz.Memo
 import com.madgag.git.bfg.MemoUtil
+import scalax.io.Resource
+import com.ibm.icu.text.CharsetDetector
+import java.nio.charset.Charset
+import scala.Some
+import com.madgag.git.bfg.model.TreeBlobEntry
+import BlobTextModifier._
+import scalax.io.managed.InputStreamResource
 
 
 object TreeBlobsCleaner {
@@ -83,40 +90,64 @@ trait TreeBlobModifier extends TreeBlobsCleaner {
   def fix(entry: TreeBlobEntry, kit: Kit): (BlobFileMode, ObjectId) // implementing code can not safely know valid filename
 }
 
+trait BlobCharsetDetector {
+  // should return None if this is a binary file that can not be converted to text
+  def charsetFor(entry: TreeBlobEntry, streamResource: InputStreamResource[ObjectStream]): Option[Charset]
+}
+
+object ICU4JBlobCharsetDetector {
+  private val cd = new CharsetDetector() // instances of CharsetDetector are not thread-safe!
+}
+
+class ICU4JBlobCharsetDetector extends BlobCharsetDetector {
+
+  def charsetFor(entry: TreeBlobEntry, streamResource: InputStreamResource[ObjectStream]): Option[Charset] = {
+    Some(streamResource.bytes.take(8000).toArray).filterNot(RawText.isBinary).flatMap { sampleBytes =>
+      ICU4JBlobCharsetDetector.cd.synchronized {
+        Option(ICU4JBlobCharsetDetector.cd.setText(sampleBytes).detect).map(cm => Charset.forName(cm.getName))
+      }
+    }
+  }
+}
+
+object BlobTextModifier {
+
+  val DefaultSizeThreshold = 1024 * 1024
+
+}
 
 trait BlobTextModifier extends TreeBlobModifier {
 
   def lineCleanerFor(entry: TreeBlobEntry): Option[String => String]
 
+  val charsetDetector: BlobCharsetDetector
+
+  val sizeThreshold = DefaultSizeThreshold
+
   override def fix(entry: TreeBlobEntry, kit: Kit) = {
 
     def filterTextIn(e: TreeBlobEntry, lineCleaner: String => String): TreeBlobEntry = {
-      val objectLoader = kit.objectReader.open(e.objectId)
-      if (objectLoader.isLarge) {
-        println("LARGE")
-        e
-      } else {
-        val cachedBytes = objectLoader.getCachedBytes
-        val rawText = new RawText(cachedBytes)
+      def isDirty(line: String) = lineCleaner(line) != line
 
-        def isDirty(line: String) = lineCleaner(line) != line
+      Some(kit.objectReader.open(e.objectId)).filter(_.getSize < sizeThreshold).flatMap {
+        loader =>
+          Some(Resource.fromInputStream(loader.openStream())).flatMap {
+            streamResource =>
+              charsetDetector.charsetFor(e, streamResource).flatMap {
+                charset =>
+                  Some(streamResource.reader(charset)).map(_.lines(includeTerminator = true)).filter(_.exists(isDirty)).map {
+                    lines =>
+                      val b = new ByteArrayOutputStream(loader.getSize.toInt)
 
-        val originalLines = (0 until rawText.size).view.map(l => rawText.getString(l, l + 1, false))
+                      lines.view.map(lineCleaner).foreach(line => b.write(line.getBytes(charset)))
 
-        val firstDirtyLine = originalLines.indexWhere(isDirty)
+                      val oid = kit.blobInserter.insert(b.toByteArray)
 
-        if (firstDirtyLine == -1) {
-          e
-        } else {
-          val b = new ByteArrayOutputStream(cachedBytes.length)
-          // TODO - use firstDirtyLine
-          originalLines.map(lineCleaner).foreach(line => b.write(line.getBytes))
-
-          val oid = kit.blobInserter.insert(b.toByteArray)
-
-          e.copy(objectId = oid)
-        }
-      }
+                      e.copy(objectId = oid)
+                  }
+              }
+          }
+      }.getOrElse(e)
     }
 
     lineCleanerFor(entry) match {

@@ -36,6 +36,7 @@ import scala.Some
 import com.madgag.git.bfg.textmatching.RegexReplacer._
 import com.madgag.git.bfg._
 import cli.Main.hasBeenProcessedByBFGBefore
+import java.util.regex.Pattern._
 
 class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
 
@@ -85,6 +86,8 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
       override def lineCleanerFor(entry: TreeBlobEntry) = condOpt(entry.filename.string) {
         case FileExt("txt") | FileExt("scala") => """(\.password=).*""".r --> (_.group(1) + "*** PASSWORD ***")
       }
+
+      val charsetDetector = new ICU4JBlobCharsetDetector
     }, ObjectProtection(Set("master")))
 
     val allCommits = new Git(repo).log.all.call.toSeq
@@ -102,7 +105,30 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
     cleanedContents should not include ("correcthorse")
 
     propertiesIn(cleanedContents) should have size (propertiesIn(originalContents).size)
+  }
 
+  "Text modifier" should "handle the short UTF-8" in textReplacementOf("UTF-8","bushhidthefacts", "txt","facts","toffee")
+
+  "Text modifier" should "handle the long UTF-8" in textReplacementOf("UTF-8","big", "scala","good","blessed")
+
+  "Text modifier" should "handle the SHIFT JIS" in textReplacementOf("SHIFT-JIS","japanese", "txt","EUC","BOOM")
+
+  "Text modifier" should "handle the ISO-8859-1" in textReplacementOf("ISO-8859-1","laparabla", "txt", "palpitando","buscando")
+
+  def textReplacementOf(parentPath: String, fileNamePrefix: String, fileNamePostfix: String, before: String, after: String) {
+    implicit val repo = unpackRepo("/sample-repos/encodings.git.zip")
+
+    RepoRewriter.rewrite(repo, new BlobTextModifier {
+      def lineCleanerFor(entry: TreeBlobEntry) = Some(quote(before).r --> (_ => after))
+
+      val charsetDetector = new ICU4JBlobCharsetDetector
+    }, ObjectProtection(Set.empty))
+
+    val cleanedFile  = repo.resolve(s"master:$parentPath/$fileNamePrefix-ORIGINAL.$fileNamePostfix")
+    val expectedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-MODIFIED-$before-$after.$fileNamePostfix")
+
+    expectedFile should not be null
+    cleanedFile should be(expectedFile)
   }
 }
 

@@ -54,9 +54,16 @@ libraryDependencies ++= Seq(
   "com.madgag" % "org.eclipse.jgit" % "2.2.0.0.2-UNOFFICIAL-ROBERTO-RELEASE",
   "com.github.scopt" %% "scopt" % "2.1.0",
   "com.madgag" % "globs-for-java" % "0.2",
+  "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.1",
+  "com.ibm.icu" % "icu4j" % "50.1.1",
   "org.scalatest" %% "scalatest" % "1.9.1" % "test",
   "com.madgag" % "util-compress" % "1.33" % "test"
 )
+
+//recommended by https://github.com/jesseeichar/scala-io/issues/77#issuecomment-11991815
+moduleConfigurations += ModuleConfiguration("com.github.scala-incubator.io", DefaultMavenRepository)
+
+moduleConfigurations += ModuleConfiguration("com.jsuereth", DefaultMavenRepository)
 
 artifact in(Compile, assembly) ~= { _.copy(name = "bfg") }
 
