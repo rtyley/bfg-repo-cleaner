@@ -235,6 +235,12 @@ object RepoRewriter {
       }
     }
 
+    def cut[A](xs: Seq[A], n: Int) = {
+      val avgSize = xs.size.toFloat / n
+      def startOf(unit: Int): Int = math.round(unit * avgSize)
+      (0 until n).view.map(u => xs.slice(startOf(u), startOf(u + 1)))
+    }
+
     Timing.measureTask("Cleaning commits", commits.size) {
       future {
         commits.par.foreach {
@@ -247,7 +253,21 @@ object RepoRewriter {
           memoCleanObjectFor(commit)
           progressMonitor update 1
       }
+
+
     }
+
+    def title(text: String) = s"\n$text\n"+("-" * text.size) + "\n"
+    val dirtHistoryElements = 60
+    val treeDirtHistory = cut(commits, dirtHistoryElements).map(_.exists(c => memoCleanObjectFor(c.getTree)!=c.getTree)).map(if (_) 'D' else '.').mkString
+    def leftRight(markers: Seq[String]) = markers.mkString(" " * (dirtHistoryElements-markers.map(_.size).sum))
+    println(title("Commit Tree-Dirt History"))
+    println("\t"+leftRight(Seq("Earliest", "Latest")))
+    println("\t"+leftRight(Seq("|", "|")))
+    println("\t"+treeDirtHistory)
+    println("\n\tD = dirty commits (file tree fixed)")
+    println("\t. = clean commits (no changes to file tree)\n")
+
 
     println("\nRefs\n")
 
