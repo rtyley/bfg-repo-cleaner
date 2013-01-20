@@ -54,7 +54,7 @@ object Main extends App {
         println("Using repo : " + repo.getDirectory.getAbsolutePath)
 
         if (hasBeenProcessedByBFGBefore(repo)) {
-          println("\nThis repo has been processed by The BFG before! Will prune repo before proceeding to avoid unnecessary cleaning work on unused objects.")
+          println("\nThis repo has been processed by The BFG before! Will prune repo before proceeding - to avoid unnecessary cleaning work on unused objects.")
           new Git(repo).gc.setProgressMonitor(new TextProgressMonitor()).call()
           println("Completed prune of old objects - will now proceed with the main job!\n")
         }
