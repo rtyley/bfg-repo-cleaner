@@ -20,21 +20,18 @@
 
 package com.madgag.git.bfg.cleaner
 
-import org.eclipse.jgit.revwalk.{RevTag, RevWalk, RevCommit}
-import org.eclipse.jgit.treewalk.CanonicalTreeParser
-import scalaz.Memo
-import org.eclipse.jgit.lib.Constants.{OBJ_TREE, OBJ_COMMIT, OBJ_TAG}
+import org.eclipse.jgit.revwalk.{RevSort, RevWalk, RevCommit}
+import org.eclipse.jgit.lib.Constants.OBJ_COMMIT
 import java.io.InputStream
 import org.eclipse.jgit.transport.ReceiveCommand
-import org.eclipse.jgit.revwalk.RevSort.TOPO
+import org.eclipse.jgit.revwalk.RevSort._
 import com.madgag.git.bfg.model._
-import com.madgag.git.bfg.{Timing, MemoUtil}
+import com.madgag.git.bfg.Timing
 import com.madgag.git.bfg.GitUtil._
 import org.eclipse.jgit.lib._
-import com.madgag.git.bfg.model.TreeSubtrees
-import com.madgag.git.bfg.model.Tree
 import concurrent.future
 import concurrent.ExecutionContext.Implicits.global
+import scala.collection.JavaConversions._
 
 /*
 Encountering a blob ->
@@ -64,7 +61,7 @@ possible other use-case: fixing committer names - and possibly removing password
 Why else would you want to rewrite HISTORY? Many other changes (ie putting a directory one down) need only be applied
 in a new commit, we don't care about history.
 
-When updaing a Tree, the User has no right to muck with sub-trees. They can only alter the blob contents.
+When updating a Tree, the User has no right to muck with sub-trees. They can only alter the blob contents.
  */
 
 trait BlobInserter {
@@ -75,25 +72,16 @@ trait BlobInserter {
 
 object RepoRewriter {
 
-  def rewrite(repo: org.eclipse.jgit.lib.Repository,
-              treeCleaner: TreeBlobsCleaner,
-              objectProtection: ObjectProtection,
-              objectChecker: Option[ObjectChecker] = None) {
-
+  def rewrite(repo: org.eclipse.jgit.lib.Repository, objectIdCleanerConfig: ObjectIdCleaner.Config) {
     assert(!repo.getAllRefs.isEmpty, "Can't find any refs in repo at " + repo.getDirectory.getAbsolutePath)
     implicit val progressMonitor = new TextProgressMonitor
     val objectDB = repo.getObjectDatabase
 
-    // want to enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
-    val memo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(objectProtection.fixedObjectIds)
+    def createRevWalk: RevWalk = {
 
-
-    implicit val revWalk = new RevWalk(repo)
-    revWalk.sort(TOPO) // crucial to ensure we visit parents BEFORE children, otherwise blow stack
-
-    val commits = {
-      import scala.collection.JavaConversions._
-
+      val revWalk = new RevWalk(repo)
+      revWalk.sort(TOPO) // crucial to ensure we visit parents BEFORE children, otherwise blow stack
+      revWalk.sort(REVERSE, true) // we want to start with the earliest commits and work our way up...
       val objReader = objectDB.newReader
 
       val refsByObjType = repo.getAllRefs.values.groupBy {
@@ -104,170 +92,36 @@ object RepoRewriter {
         case (typ, refs) => println("Found " + refs.size + " " + Constants.typeString(typ) + "-pointing refs")
       }
 
-      revWalk.markStart(refsByObjType(OBJ_COMMIT).map(ref => ref.getObjectId.asRevCommit))
+      revWalk.markStart(refsByObjType(OBJ_COMMIT).map(ref => ref.getObjectId.asRevCommit(revWalk)))
       // revWalk.markStart(refsByObjType(OBJ_TAG).map(_.getPeeledObjectId).filter(id=>objectDB.open(id).getType==OBJ_COMMIT).map(revWalk.lookupCommit(_)))
-
-      println("Getting full commit list:")
-      revWalk.toList.reverse // we want to start with the earliest commits and work our way up...
+      revWalk
     }
 
+    implicit val revWalk = createRevWalk
+
+    println("Getting full commit list:")
+    val commits = revWalk.toList
     println("Found " + commits.size + " commits")
 
+    val objectIdCleaner = new ObjectIdCleaner(objectIdCleanerConfig, repo.getObjectDatabase , revWalk)
 
-    def getCommit(commitId: AnyObjectId): RevCommit = {
-      revWalk.synchronized {
-        revWalk.parseCommit(commitId)
-      }
-    }
-
-    def getTag(tagId: AnyObjectId): RevTag = {
-      revWalk.synchronized {
-        revWalk.parseTag(tagId)
-      }
-    }
-
-    def newInserter = objectDB.newInserter
-
-    def cleanTag(id: ObjectId): ObjectId = {
-      val originalTag = getTag(id)
-
-      val originalObj = originalTag.getObject
-
-      val cleanedObj = memoCleanObjectFor(originalObj)
-
-      if (cleanedObj != originalObj) {
-        val tb = new TagBuilder
-        tb.setTag(originalTag.getTagName)
-        tb.setObjectId(cleanedObj, originalTag.getObject.getType)
-        tb.setTagger(originalTag.getTaggerIdent)
-        tb.setMessage(originalTag.getFullMessage)
-        val cleanTag: ObjectId = newInserter.insert(tb)
-        objectChecker.foreach(_.checkTag(tb.toByteArray))
-        cleanTag
-      } else {
-        originalTag
-      }
-    }
-
-    lazy val commitMessageCleaner = CommitCleaner.chain(Seq(ObjectIdSubstitutor, FormerCommitFooter))
-
-    lazy val mapper = new CleaningMapper[ObjectId] {
-      lazy val clean = memoCleanObjectFor
-    }
-
-    def cleanCommit(commitId: ObjectId): ObjectId = {
-      import scala.collection.JavaConversions._
-
-      val originalCommit = getCommit(commitId)
-
-      val originalTree = originalCommit.getTree
-      val cleanedTree = memoCleanObjectFor(originalCommit.getTree) // add debug about object protection?
-
-      val originalParentCommits = originalCommit.getParents.toList
-      val cleanedParentCommits = originalParentCommits.map(memoCleanObjectFor)
-
-      if (cleanedParentCommits != originalParentCommits || cleanedTree != originalTree) {
-        val c = new CommitBuilder
-        c.setEncoding(originalCommit.getEncoding)
-        c.setParentIds(cleanedParentCommits)
-        c.setTreeId(cleanedTree)
-        val kit = new CommitCleaner.Kit(objectDB, originalCommit, mapper)
-        val updatedCommit = commitMessageCleaner.fixer(kit)(CommitMessage(originalCommit))
-
-        c.setAuthor(updatedCommit.author)
-        c.setCommitter(updatedCommit.committer)
-        c.setMessage(updatedCommit.message)
-
-        val commitBytes = c.toByteArray
-        val cleanCommit = newInserter.insert(Constants.OBJ_COMMIT, commitBytes)
-        objectChecker.foreach(_.checkCommit(commitBytes))
-        cleanCommit
-      } else {
-        originalCommit
-      }
-    }
-
-    lazy val memoCleanObjectFor: (ObjectId) => ObjectId =
-      memo {
-        objectId =>
-        // print(".")
-        // pass reader through to cleaners?
-          objectDB.newReader.open(objectId).getType match {
-            case OBJ_COMMIT => cleanCommit(objectId)
-            case OBJ_TREE => cleanTree(objectId)
-            case OBJ_TAG => cleanTag(objectId)
-            case _ => objectId // we don't currently clean isolated blobs... only clean within a tree context
-          }
-      }
-
-    lazy val allRemovedFiles = collection.mutable.Map[FileName, SizedObject]()
-
-    def cleanTree(originalObjectId: ObjectId): ObjectId = {
-      val parser = new CanonicalTreeParser
-      val reader = objectDB.newReader
-      parser.reset(reader, originalObjectId)
-
-      val tree = Tree(parser)
-
-      val cleanedSubtrees = TreeSubtrees(tree.subtrees.entryMap.map {
-        case (name, treeId) => (name, memoCleanObjectFor(treeId))
-      }.seq)
-
-      val fixedTreeBlobs = treeCleaner.fixer(new TreeBlobsCleaner.Kit(objectDB))(tree.blobs)
-
-      if (fixedTreeBlobs != tree.blobs || cleanedSubtrees != tree.subtrees) {
-
-        val updatedTree = tree copyWith(cleanedSubtrees, fixedTreeBlobs)
-
-        val removedFiles = tree.blobs.entryMap -- fixedTreeBlobs.entryMap.keys
-        val sizedRemovedFiles = removedFiles.mapValues {
-          case (_, objectId) => SizedObject(objectId, reader.getObjectSize(objectId, ObjectReader.OBJ_ANY))
-        }
-        allRemovedFiles ++= sizedRemovedFiles
-
-        val treeFormatter = updatedTree.formatter
-        objectChecker.foreach(_.checkTree(treeFormatter.toByteArray))
-        val updatedTreeId = treeFormatter.insertTo(newInserter)
-
-        updatedTreeId
-      } else {
-        originalObjectId
-      }
-    }
-
-    def cut[A](xs: Seq[A], n: Int) = {
-      val avgSize = xs.size.toFloat / n
-      def startOf(unit: Int): Int = math.round(unit * avgSize)
-      (0 until n).view.map(u => xs.slice(startOf(u), startOf(u + 1)))
-    }
+    // lazy val allRemovedFiles = collection.mutable.Map[FileName, SizedObject]()
 
     Timing.measureTask("Cleaning commits", commits.size) {
       future {
         commits.par.foreach {
-          commit => memoCleanObjectFor(commit.getTree)
+          commit => objectIdCleaner(commit.getTree)
         }
       }
 
       commits.foreach {
         commit =>
-          memoCleanObjectFor(commit)
+          objectIdCleaner(commit)
           progressMonitor update 1
       }
-
-
     }
 
-    def title(text: String) = s"\n$text\n"+("-" * text.size) + "\n"
-    val dirtHistoryElements = 60
-    val treeDirtHistory = cut(commits, dirtHistoryElements).map(_.exists(c => memoCleanObjectFor(c.getTree)!=c.getTree)).map(if (_) 'D' else '.').mkString
-    def leftRight(markers: Seq[String]) = markers.mkString(" " * (dirtHistoryElements-markers.map(_.size).sum))
-    println(title("Commit Tree-Dirt History"))
-    println("\t"+leftRight(Seq("Earliest", "Latest")))
-    println("\t"+leftRight(Seq("|", "|")))
-    println("\t"+treeDirtHistory)
-    println("\n\tD = dirty commits (file tree fixed)")
-    println("\t. = clean commits (no changes to file tree)\n")
-
+    reportTreeDirtHistory(commits, objectIdCleaner)
 
     println("\nRefs\n")
 
@@ -275,15 +129,33 @@ object RepoRewriter {
       import scala.collection.JavaConversions._
 
       val refUpdateCommands = for (ref <- repo.getAllRefs.values if !ref.isSymbolic;
-                                   (oldId, newId) <- mapper.objectIdSubstitution(ref.getObjectId)
+                                   (oldId, newId) <- objectIdCleaner.substitution(ref.getObjectId)
       ) yield (new ReceiveCommand(oldId, newId, ref.getName))
 
       repo.getRefDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(revWalk, progressMonitor)
     }
 
-    println("\nPost-update allRemovedFiles.size=" + allRemovedFiles.size)
+    // ("\nPost-update allRemovedFiles.size=" + allRemovedFiles.size)
 
     // allRemovedFiles.toSeq.sortBy(_._2).foreach { case (name,SizedObject(id,size)) => println(id.shortName+"\t"+size+"\t"+name) }
+  }
+
+  def reportTreeDirtHistory(commits: List[RevCommit], objectIdCleaner: ObjectId => ObjectId) {
+    def title(text: String) = s"\n$text\n" + ("-" * text.size) + "\n"
+    val dirtHistoryElements = 60
+    def cut[A](xs: Seq[A], n: Int) = {
+      val avgSize = xs.size.toFloat / n
+      def startOf(unit: Int): Int = math.round(unit * avgSize)
+      (0 until n).view.map(u => xs.slice(startOf(u), startOf(u + 1)))
+    }
+    val treeDirtHistory = cut(commits, dirtHistoryElements).map(_.exists(c => objectIdCleaner(c.getTree) != c.getTree)).map(if (_) 'D' else '.').mkString
+    def leftRight(markers: Seq[String]) = markers.mkString(" " * (dirtHistoryElements - markers.map(_.size).sum))
+    println(title("Commit Tree-Dirt History"))
+    println("\t" + leftRight(Seq("Earliest", "Latest")))
+    println("\t" + leftRight(Seq("|", "|")))
+    println("\t" + treeDirtHistory)
+    println("\n\tD = dirty commits (file tree fixed)")
+    println("\t. = clean commits (no changes to file tree)\n")
   }
 
 }

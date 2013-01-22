@@ -22,7 +22,6 @@ package com.madgag.git.bfg
 
 import com.google.common.cache.{CacheLoader, LoadingCache, CacheBuilder}
 
-
 object MemoUtil {
 
   import scalaz._

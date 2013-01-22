@@ -22,21 +22,38 @@ package com.madgag.git.bfg.cleaner
 
 import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId, ObjectReader}
 import com.madgag.git.bfg.GitUtil._
+import com.madgag.git.bfg.cleaner.ObjectIdSubstitutor._
 
-object ObjectIdSubstitutor extends CommitCleaner {
+class CommitMessageObjectIdsUpdater(objectIdSubstitutor: ObjectIdSubstitutor) extends CommitMessageCleaner {
+
+  override def fixer(kit: CommitMessageCleaner.Kit) = cm => cm.copy(message = objectIdSubstitutor.replaceOldIds(cm.message, kit.objectReader, kit.mapper))
+
+}
+
+object ObjectIdSubstitutor {
+
+  object OldIdsPrivate extends ObjectIdSubstitutor {
+    def format(oldIdText: String, newIdText: String) = newIdText
+  }
+
+  object OldIdsPublic extends ObjectIdSubstitutor {
+    def format(oldIdText: String, newIdText: String) = s"$newIdText [formerly $oldIdText]"
+  }
 
   val hexRegex = """\b\p{XDigit}{10,40}\b""".r // choose minimum size based on size of project??
 
-  override def fixer(kit: CommitCleaner.Kit) = cm => cm.copy(message = replaceOldCommitIds(cm.message, kit.objectReader, kit.mapper))
+}
+
+trait ObjectIdSubstitutor {
+
+  def format(oldIdText: String, newIdText: String): String
 
   // slow!
-  def replaceOldCommitIds(message: String, reader: ObjectReader, mapper: CleaningMapper[ObjectId]): String = {
-    ObjectIdSubstitutor.hexRegex.replaceAllIn(message, m => {
-      Some(AbbreviatedObjectId.fromString(m.matched))
-        .flatMap(reader.resolveExistingUniqueId).flatMap(mapper.objectIdSubstitution).map {
+  def replaceOldIds(message: String, reader: ObjectReader, mapper: ObjectId=>ObjectId): String = {
+    hexRegex.replaceAllIn(message, m => {
+      Some(AbbreviatedObjectId.fromString(m.matched)).flatMap(reader.resolveExistingUniqueId).flatMap(mapper.substitution).map {
         case (oldId, newId) =>
-          val newName = reader.abbreviate(newId, m.matched.length).name
-          s"$newName [formerly $m]"
+          format(m.matched, reader.abbreviate(newId, m.matched.length).name)
       }.getOrElse(m.matched)
     })
   }

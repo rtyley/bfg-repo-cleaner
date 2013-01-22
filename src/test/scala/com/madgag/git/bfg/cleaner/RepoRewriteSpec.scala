@@ -37,6 +37,7 @@ import com.madgag.git.bfg.textmatching.RegexReplacer._
 import com.madgag.git.bfg._
 import cli.Main.hasBeenProcessedByBFGBefore
 import java.util.regex.Pattern._
+import ObjectIdSubstitutor._
 
 class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
 
@@ -47,7 +48,7 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
     hasBeenProcessedByBFGBefore(repo) should be (false)
 
     val blobsToRemove = Set(abbrId("06d740"))
-    RepoRewriter.rewrite(repo, new BlobRemover(blobsToRemove), ObjectProtection(Set("master")))
+    RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set("HEAD")), OldIdsPublic, Seq(FormerCommitFooter), Seq(new BlobRemover(blobsToRemove))))
 
     val allCommits = new Git(repo).log.all.call.toSeq
 
@@ -82,13 +83,14 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
       def unapply(boom : String) = Option(FilenameUtils.getExtension(boom))
     }
 
-    RepoRewriter.rewrite(repo, new BlobTextModifier {
+    val blobTextModifier = new BlobTextModifier {
       override def lineCleanerFor(entry: TreeBlobEntry) = condOpt(entry.filename.string) {
         case FileExt("txt") | FileExt("scala") => """(\.password=).*""".r --> (_.group(1) + "*** PASSWORD ***")
       }
 
       val charsetDetector = new ICU4JBlobCharsetDetector
-    }, ObjectProtection(Set("master")))
+    }
+    RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set("HEAD")), OldIdsPublic, Seq(FormerCommitFooter),  Seq(blobTextModifier)))
 
     val allCommits = new Git(repo).log.all.call.toSeq
 
@@ -118,11 +120,13 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
   def textReplacementOf(parentPath: String, fileNamePrefix: String, fileNamePostfix: String, before: String, after: String) {
     implicit val repo = unpackRepo("/sample-repos/encodings.git.zip")
 
-    RepoRewriter.rewrite(repo, new BlobTextModifier {
+
+    val blobTextModifier = new BlobTextModifier {
       def lineCleanerFor(entry: TreeBlobEntry) = Some(quote(before).r --> (_ => after))
 
       val charsetDetector = new ICU4JBlobCharsetDetector
-    }, ObjectProtection(Set.empty))
+    }
+    RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set.empty), OldIdsPrivate, treeBlobsCleaners = Seq(blobTextModifier)))
 
     val cleanedFile  = repo.resolve(s"master:$parentPath/$fileNamePrefix-ORIGINAL.$fileNamePostfix")
     val expectedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-MODIFIED-$before-$after.$fileNamePostfix")

@@ -25,7 +25,7 @@ import org.eclipse.jgit.lib._
 import org.eclipse.jgit.lib.ObjectReader.OBJ_ANY
 import org.eclipse.jgit.treewalk.TreeWalk
 import collection.mutable
-import org.eclipse.jgit.storage.file.{ObjectDirectory, FileRepository}
+import org.eclipse.jgit.storage.file.{WindowCache, WindowCacheConfig, ObjectDirectory, FileRepository}
 import scala.collection.JavaConversions._
 import java.io.File
 import scala.{Long, Some}
@@ -36,7 +36,32 @@ object ObjectId {
   def apply(str: String) = org.eclipse.jgit.lib.ObjectId.fromString(str)
 }
 
+trait CleaningMapper[V] extends (V=> V) {
+  def isDirty(v: V) = apply(v) != v
+
+  def substitution(oldId: V): Option[(V, V)] = {
+    val newId = apply(oldId)
+    if (newId == oldId) None else Some((oldId, newId))
+  }
+
+  def replacement(oldId: V): Option[V] = {
+    val newId = apply(oldId)
+    if (newId == oldId) None else Some(newId)
+  }
+}
+
 object GitUtil {
+
+  def tweakStaticJGitConfig {
+    val wcConfig: WindowCacheConfig = new WindowCacheConfig()
+    wcConfig.setStreamFileThreshold(1024 * 1024)
+    WindowCache.reconfigure(wcConfig)
+  }
+
+  implicit def endo2CleaningMapper[V](f: (V=> V)): CleaningMapper[V] = new CleaningMapper[V] {
+    def apply(v1: V) = f(v1)
+  }
+
   implicit def fileRepository2ObjectDirectory(repo: FileRepository): ObjectDirectory = repo.getObjectDatabase
 
   def abbrId(str: String)(implicit reader: ObjectReader): ObjectId = reader.resolveExistingUniqueId(AbbreviatedObjectId.fromString(str)).get
@@ -47,6 +72,8 @@ object GitUtil {
     def asRevObject(implicit revWalk: RevWalk) = revWalk.parseAny(objectId)
 
     def asRevCommit(implicit revWalk: RevWalk) = revWalk.parseCommit(objectId)
+
+    def asRevTag(implicit revWalk: RevWalk) = revWalk.parseTag(objectId)
 
     lazy val shortName = objectId.getName.take(8)
   }

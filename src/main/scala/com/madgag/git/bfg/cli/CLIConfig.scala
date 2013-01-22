@@ -68,6 +68,9 @@ object CLIConfig {
       flag("strict-object-checking", "perform additional checks on integrity of consumed & created objects") {
         (c: CLIConfig) => c.copy(strictObjectChecking = true)
       },
+      flag("private", "treat this repo-rewrite as removing private data, eg. omit old commit ids from Commit messages") {
+        (c: CLIConfig) => c.copy(sensitiveData = Some(true))
+      },
       argOpt("<repo>", "repo to clean") {
         (v: String, c: CLIConfig) => c.copy(repoLocation = new File(v).getCanonicalFile)
       }
@@ -84,6 +87,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      replaceBannedStrings: Traversable[String] = List.empty,
                      replaceBannedRegex: Traversable[Regex] = List.empty,
                      strictObjectChecking: Boolean = false,
+                     sensitiveData: Option[Boolean] = None,
                      repoLocation: File = new File(System.getProperty("user.dir"))) {
 
   lazy val gitdir = resolveGitDirFor(repoLocation) getOrElse (throw new IllegalArgumentException(s"'$repoLocation' is not a valid Git repository."))
@@ -141,12 +145,34 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     }
   }
 
+  lazy val privateDataRemoval = sensitiveData.getOrElse(Seq(fileDeletion, blobTextModifier).flatten.nonEmpty)
+
+  lazy val objectIdSubstitutor = if (privateDataRemoval) ObjectIdSubstitutor.OldIdsPrivate else ObjectIdSubstitutor.OldIdsPublic
+
+  lazy val formerCommitFooter = if (privateDataRemoval) None else Some(FormerCommitFooter)
+
+  lazy val commitMessageCleaners = Seq(new CommitMessageObjectIdsUpdater(objectIdSubstitutor)) ++ formerCommitFooter
+
   lazy val treeBlobCleaners = Seq(blobRemover, fileDeletion, blobTextModifier).flatten
 
   lazy val definesNoWork = treeBlobCleaners.isEmpty
 
-  lazy val treeBlobCleaner = TreeBlobsCleaner.chain(treeBlobCleaners)
+  def objectIdCleanerConfig: ObjectIdCleaner.Config =
+    ObjectIdCleaner.Config(
+      objectProtection,
+      objectIdSubstitutor,
+      commitMessageCleaners,
+      treeBlobCleaners,
+      objectChecker
+    )
 
+  def describe = {
+    if (privateDataRemoval) {
+      "is removing private data, so the '"+FormerCommitFooter.Key+"' footer will not be added to commit messages."
+    } else {
+      "is only removing non-private data (eg, blobs that are just big, not private) : '"+FormerCommitFooter.Key+"' footer will be added to commit messages."
+    }
+  }
 }
 
 object ByteSize {

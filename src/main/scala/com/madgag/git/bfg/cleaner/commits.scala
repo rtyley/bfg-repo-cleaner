@@ -25,27 +25,27 @@ import com.madgag.git.bfg.GitUtil._
 import org.eclipse.jgit.revwalk.RevCommit
 import scala.Some
 
-object CommitCleaner {
+object CommitMessageCleaner {
 
-  class Kit(objectDB: ObjectDatabase, val originalCommit: RevCommit, val mapper: CleaningMapper[ObjectId]) {
+  class Kit(objectDB: ObjectDatabase, val originalCommit: RevCommit, val mapper: ObjectId => ObjectId) {
     lazy val objectReader = objectDB.newReader
   }
 
-  def chain(cleaners: Seq[CommitCleaner]) = new CommitCleaner {
-    override def fixer(kit: CommitCleaner.Kit) = Function.chain(cleaners.map(_.fixer(kit)))
+  def chain(cleaners: Seq[CommitMessageCleaner]) = new CommitMessageCleaner {
+    override def fixer(kit: CommitMessageCleaner.Kit) = Function.chain(cleaners.map(_.fixer(kit)))
   }
 }
 
-trait CommitCleaner {
-  def fixer(kit: CommitCleaner.Kit): (CommitMessage => CommitMessage)
+trait CommitMessageCleaner {
+  def fixer(kit: CommitMessageCleaner.Kit): CommitMessage => CommitMessage
 }
 
 
 
-object FormerCommitFooter extends CommitCleaner {
+object FormerCommitFooter extends CommitMessageCleaner {
   val Key = "Former-commit-id"
 
-  override def fixer(kit: CommitCleaner.Kit) = _ add Footer(Key, kit.originalCommit.name)
+  override def fixer(kit: CommitMessageCleaner.Kit) = _ add Footer(Key, kit.originalCommit.name)
 }
 
 //case class CommitStructure(parentIds: Seq[ObjectId], treeId: ObjectId)

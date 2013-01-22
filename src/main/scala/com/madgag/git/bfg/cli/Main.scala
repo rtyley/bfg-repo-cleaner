@@ -30,9 +30,7 @@ import org.eclipse.jgit.revwalk.RevWalk
 
 object Main extends App {
 
-  val wcConfig: WindowCacheConfig = new WindowCacheConfig()
-  wcConfig.setStreamFileThreshold(1024 * 1024)
-  WindowCache.reconfigure(wcConfig)
+  tweakStaticJGitConfig
 
   def hasBeenProcessedByBFGBefore(repo: Repository): Boolean = {
     // This method just checks the tips of all refs - a good-enough indicator for our purposes...
@@ -53,6 +51,9 @@ object Main extends App {
 
         println("Using repo : " + repo.getDirectory.getAbsolutePath)
 
+//        println("From the supplied parameters, The BFG:")
+//        println(config.describe+"\n\n")
+
         if (hasBeenProcessedByBFGBefore(repo)) {
           println("\nThis repo has been processed by The BFG before! Will prune repo before proceeding - to avoid unnecessary cleaning work on unused objects.")
           new Git(repo).gc.setProgressMonitor(new TextProgressMonitor()).call()
@@ -61,7 +62,7 @@ object Main extends App {
 
         println("Found " + config.objectProtection.fixedObjectIds.size + " objects to protect")
 
-        RepoRewriter.rewrite(repo, config.treeBlobCleaner, config.objectProtection, config.objectChecker)
+        RepoRewriter.rewrite(repo, config.objectIdCleanerConfig)
       }
   }
 
