@@ -47,9 +47,7 @@ class ObjectIdSubstitutorSpec extends FlatSpec with ShouldMatchers {
     implicit val repo = unpackRepo("/sample-repos/example.git.zip")
     implicit val reader = repo.newObjectReader
 
-    val cleanedMessage = ObjectIdSubstitutor.replaceOldCommitIds("See 3699910d2baab1 for backstory", reader, new CleaningMapper[ObjectId] {
-      val clean = (_: ObjectId) => abbrId("06d7405020018d")
-    })
+    val cleanedMessage = ObjectIdSubstitutor.OldIdsPublic.replaceOldIds("See 3699910d2baab1 for backstory", reader, (_: ObjectId) => abbrId("06d7405020018d"))
 
     cleanedMessage should be ("See 06d7405020018d [formerly 3699910d2baab1] for backstory")
   }
