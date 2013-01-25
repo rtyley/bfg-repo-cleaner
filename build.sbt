@@ -10,7 +10,7 @@ homepage := Some(url("https://github.com/rtyley/bfg-repo-cleaner"))
 
 scalaVersion := "2.10.0"
 
-scalacOptions += "-language:implicitConversions"
+scalacOptions ++= Seq("-feature", "-language:implicitConversions", "-language:postfixOps")
 
 assemblySettings
 
