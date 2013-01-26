@@ -61,7 +61,18 @@ $ git gc --prune=now --aggressive
 <p>Finally, once you're happy with the updated state of your repo, push it back up:</p>
 <pre><code>$ git push --mirror</code></pre>
 <p>At this point, you're ready for everyone to ditch their old copies of the repo and do fresh clones of the nice, new pristine data.</p>
-</code></pre>
+
+<h1 id="examples">Examples</h1>
+<p>In all these examples <code>bfg</code> is an alias for <code>java -jar bfg.jar</code>.</p>
+
+<p>Delete all files named 'id_rsa' or 'id_dsa' :</p>
+<pre><code>$ <a class="latest-download-link" href="#download">bfg</a> <strong>--delete-files id_{dsa,rsa}</strong>  my-repo.git</code></pre>
+
+<p>Remove all blobs bigger than 1 megabyte :</p>
+<pre><code>$ <a class="latest-download-link" href="#download">bfg</a> <strong>--strip-blobs-bigger-than 1M</strong>  my-repo.git</code></pre>
+
+<p>Replace all passwords (listed in a file 'passwords.txt') with <code>***REMOVED***</code> :</p>
+<pre><code>$ <a class="latest-download-link" href="#download">bfg</a> <strong>--replace-banned-strings passwords.txt</strong>  my-repo.git</code></pre>
 
 <h1>Requirements</h1>
 <ul>
