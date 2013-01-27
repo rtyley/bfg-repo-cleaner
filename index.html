@@ -66,13 +66,13 @@ $ git gc --prune=now --aggressive
 <p>In all these examples <code>bfg</code> is an alias for <code>java -jar bfg.jar</code>.</p>
 
 <p>Delete all files named 'id_rsa' or 'id_dsa' :</p>
-<pre><code>$ <a class="latest-download-link" href="#download">bfg</a> <strong>--delete-files id_{dsa,rsa}</strong>  my-repo.git</code></pre>
+<pre><code>$ bfg <strong>--delete-files id_{dsa,rsa}</strong>  my-repo.git</code></pre>
 
 <p>Remove all blobs bigger than 1 megabyte :</p>
-<pre><code>$ <a class="latest-download-link" href="#download">bfg</a> <strong>--strip-blobs-bigger-than 1M</strong>  my-repo.git</code></pre>
+<pre><code>$ bfg <strong>--strip-blobs-bigger-than 1M</strong>  my-repo.git</code></pre>
 
 <p>Replace all passwords (listed in a file 'passwords.txt') with <code>***REMOVED***</code> :</p>
-<pre><code>$ <a class="latest-download-link" href="#download">bfg</a> <strong>--replace-banned-strings passwords.txt</strong>  my-repo.git</code></pre>
+<pre><code>$ bfg <strong>--replace-banned-strings passwords.txt</strong>  my-repo.git</code></pre>
 
 <h1 id="speed">Faster...</h1>
 <p>The BFG is 10 - 50x faster than <code>git-filter-branch</code>, turning an <em>overnight</em> job into one that takes <em>less than ten minutes</em>. BFG's performance advantage is due to these factors:</p>
