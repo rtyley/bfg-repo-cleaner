@@ -37,6 +37,7 @@ import scopt.immutable.OptionParser
 import scala.Some
 import com.madgag.git.bfg.GitUtil.SizedObject
 import com.madgag.git.bfg.model.TreeBlobEntry
+import com.madgag.git.bfg.textmatching.{Glob, Literal, TextMatcher}
 
 object CLIConfig {
   val parser = new OptionParser[CLIConfig]("bfg") {
@@ -47,31 +48,28 @@ object CLIConfig {
       intOpt("B", "strip-biggest-blobs", "NUM", "strip the top NUM biggest blobs") {
         (v: Int, c: CLIConfig) => c.copy(stripBiggestBlobs = Some(v))
       },
-      opt("p", "protect-blobs-from", "<refs>", "protect blobs that appear in the most recent versions of the specified refs") {
-        (v: String, c: CLIConfig) => c.copy(protectBlobsFromRevisions = v.split(',').toSet)
+      opt("D", "delete-files", "<glob>", "delete files with the specified names (eg '*.class', '*.{txt,log}' - matches on file name, not path within repo)") {
+        (v: String, c: CLIConfig) => c.copy(deleteFiles = Some(TextMatcher(v, defaultType = Glob)))
       },
-      opt("D", "delete-files", "<glob>", "delete files with the specified names (eg '*.class', '*.{txt,log}' - matches on file name, not path)") {
-        (v: String, c: CLIConfig) => c.copy(deleteFiles = Some(v))
-      },
-      opt("f", "filter-contents-of", "<glob>", "only do file-content filtering on files with names that match the specified expression (eg '*.txt', '*.{properties}')") {
-        (v: String, c: CLIConfig) => c.copy(filterFiles = v)
-      },
-      opt("fst","filter-size-threshold", "<size>", "only do file-content filtering on files smaller than <size> (default is %1$d bytes)".format(CLIConfig().filterSizeThreshold)) {
-        (v: String, c: CLIConfig) => c.copy(filterSizeThreshold = ByteSize.parse(v))
-      },
-      opt("rs", "replace-banned-strings", "<banned-strings-file>", "replace strings specified in file, one string per line") {
+      opt("rt", "replace-banned-text", "<banned-text-file>", "remove banned text from files and replace it with '***REMOVED***'. Banned expressions are in the specified file, one expression per line.") {
         (v: String, c: CLIConfig) => c.copy(replaceBannedStrings = Source.fromFile(v).getLines().toSeq)
       },
-      opt("rr", "replace-banned-regex", "<banned-regex-file>", "replace regex specified in file, one regex per line") {
-        (v: String, c: CLIConfig) => c.copy(replaceBannedRegex = Source.fromFile(v).getLines().map(_.r).toSeq)
+      opt("f", "filter-contents-of", "<glob>", "only do file-content filtering on files with names that match the specified expression (eg '*.txt', '*.{properties}')") {
+        (v: String, c: CLIConfig) => c.copy(filterFiles = TextMatcher(v, defaultType = Glob))
       },
-      flag("strict-object-checking", "perform additional checks on integrity of consumed & created objects") {
-        (c: CLIConfig) => c.copy(strictObjectChecking = true)
+      opt("fs","filter-size-threshold", "<size>", "only do file-content filtering on files smaller than <size> (default is %1$d bytes)".format(CLIConfig().filterSizeThreshold)) {
+        (v: String, c: CLIConfig) => c.copy(filterSizeThreshold = ByteSize.parse(v))
       },
-      flag("private", "treat this repo-rewrite as removing private data, eg. omit old commit ids from Commit messages") {
+      opt("p", "protect-blobs-from", "<refs>", "protect blobs that appear in the most recent versions of the specified refs (default is 'HEAD')") {
+        (v: String, c: CLIConfig) => c.copy(protectBlobsFromRevisions = v.split(',').toSet)
+      },
+//      flag("strict-object-checking", "perform additional checks on integrity of consumed & created objects") {
+//        (c: CLIConfig) => c.copy(strictObjectChecking = true)
+//      },
+      flag("private", "treat this repo-rewrite as removing private data (for example: omit old commit ids from commit messages)") {
         (c: CLIConfig) => c.copy(sensitiveData = Some(true))
       },
-      argOpt("<repo>", "repo to clean") {
+      argOpt("<repo>", "file path for Git repository to clean") {
         (v: String, c: CLIConfig) => c.copy(repoLocation = new File(v).getCanonicalFile)
       }
     )
@@ -81,11 +79,10 @@ object CLIConfig {
 case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      stripBlobsBiggerThan: Option[Int] = None,
                      protectBlobsFromRevisions: Set[String] = Set("HEAD"),
-                     deleteFiles: Option[String] = None,
-                     filterFiles: String = "*",
+                     deleteFiles: Option[TextMatcher] = None,
+                     filterFiles: TextMatcher = Glob("*"),
                      filterSizeThreshold: Int = BlobTextModifier.DefaultSizeThreshold,
                      replaceBannedStrings: Traversable[String] = List.empty,
-                     replaceBannedRegex: Traversable[Regex] = List.empty,
                      strictObjectChecking: Boolean = false,
                      sensitiveData: Option[Boolean] = None,
                      repoLocation: File = new File(System.getProperty("user.dir"))) {
@@ -99,26 +96,24 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
   lazy val objectChecker = if (strictObjectChecking) Some(new ObjectChecker()) else None
 
   lazy val fileDeletion = deleteFiles.map {
-    glob =>
-      val filePattern = Globs.toUnixRegexPattern(glob).r
+    textMatcher =>
+      val filePattern = textMatcher.r
       new TreeBlobsCleaner {
         def fixer(kit: Kit) = _.entries.filterNot(e => filePattern.matches(e.filename))
       }
   }
 
   lazy val lineModifier: Option[String => String] = {
-    val allRegex = replaceBannedRegex ++ replaceBannedStrings.map(Regex.quoteReplacement(_).r)
+    val allRegex = replaceBannedStrings.map(TextMatcher(_, defaultType = Literal).r)
     allRegex.map(regex => regex --> (_ => "***REMOVED***")).reduceOption((f, g) => Function.chain(Seq(f, g)))
   }
 
   lazy val blobTextModifier: Option[BlobTextModifier] = lineModifier.map {
     replacer =>
-      val globPattern = Globs.toUnixRegexPattern(filterFiles).r
-
       new BlobTextModifier {
         override val sizeThreshold = filterSizeThreshold
 
-        def lineCleanerFor(entry: TreeBlobEntry) = if (globPattern.matches(entry.filename)) Some(replacer) else None
+        def lineCleanerFor(entry: TreeBlobEntry) = if (filterFiles.r.matches(entry.filename)) Some(replacer) else None
 
         val charsetDetector = new ICU4JBlobCharsetDetector
       }
