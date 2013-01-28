@@ -66,6 +66,9 @@ object CLIConfig {
 //      flag("strict-object-checking", "perform additional checks on integrity of consumed & created objects") {
 //        (c: CLIConfig) => c.copy(strictObjectChecking = true)
 //      },
+      flag("slow-charset-detection", "detect file-encodings using the slower & more extensive ICU4J library") {
+        (c: CLIConfig) => c.copy(blobCharsetDetector = new ICU4JBlobCharsetDetector)
+      },
       flag("private", "treat this repo-rewrite as removing private data (for example: omit old commit ids from commit messages)") {
         (c: CLIConfig) => c.copy(sensitiveData = Some(true))
       },
@@ -83,6 +86,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      filterFiles: TextMatcher = Glob("*"),
                      filterSizeThreshold: Int = BlobTextModifier.DefaultSizeThreshold,
                      replaceBannedStrings: Traversable[String] = List.empty,
+                     blobCharsetDetector: BlobCharsetDetector = QuickBlobCharsetDetector,
                      strictObjectChecking: Boolean = false,
                      sensitiveData: Option[Boolean] = None,
                      repoLocation: File = new File(System.getProperty("user.dir"))) {
@@ -115,7 +119,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
         def lineCleanerFor(entry: TreeBlobEntry) = if (filterFiles.r.matches(entry.filename)) Some(replacer) else None
 
-        val charsetDetector = new ICU4JBlobCharsetDetector
+        val charsetDetector = blobCharsetDetector
       }
   }
 

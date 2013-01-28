@@ -109,31 +109,36 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
     propertiesIn(cleanedContents) should have size (propertiesIn(originalContents).size)
   }
 
-  "Text modifier" should "handle the short UTF-8" in textReplacementOf("UTF-8","bushhidthefacts", "txt","facts","toffee")
 
-  "Text modifier" should "handle the long UTF-8" in textReplacementOf("UTF-8","big", "scala","good","blessed")
+  Seq(QuickBlobCharsetDetector, new ICU4JBlobCharsetDetector).foreach { charDetector =>
+    val thing = "Text modifier with "+charDetector.getClass.getSimpleName
+    thing should "handle the short UTF-8" in textReplacementOf("UTF-8","bushhidthefacts", "txt","facts","toffee")
 
-  "Text modifier" should "handle the SHIFT JIS" in textReplacementOf("SHIFT-JIS","japanese", "txt","EUC","BOOM")
+    thing should "handle the long UTF-8" in textReplacementOf("UTF-8","big", "scala","good","blessed")
 
-  "Text modifier" should "handle the ISO-8859-1" in textReplacementOf("ISO-8859-1","laparabla", "txt", "palpitando","buscando")
+    thing should "handle ASCII in SHIFT JIS" in textReplacementOf("SHIFT-JIS","japanese", "txt","EUC","BOOM")
 
-  def textReplacementOf(parentPath: String, fileNamePrefix: String, fileNamePostfix: String, before: String, after: String) {
-    implicit val repo = unpackRepo("/sample-repos/encodings.git.zip")
+    thing should "handle ASCII in ISO-8859-1" in textReplacementOf("ISO-8859-1","laparabla", "txt", "palpitando","buscando")
 
+    def textReplacementOf(parentPath: String, fileNamePrefix: String, fileNamePostfix: String, before: String, after: String) {
+      implicit val repo = unpackRepo("/sample-repos/encodings.git.zip")
 
-    val blobTextModifier = new BlobTextModifier {
-      def lineCleanerFor(entry: TreeBlobEntry) = Some(quote(before).r --> (_ => after))
+      val blobTextModifier = new BlobTextModifier {
+        def lineCleanerFor(entry: TreeBlobEntry) = Some(quote(before).r --> (_ => after))
 
-      val charsetDetector = new ICU4JBlobCharsetDetector
+        val charsetDetector = charDetector
+      }
+      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set.empty), OldIdsPrivate, treeBlobsCleaners = Seq(blobTextModifier)))
+
+      val cleanedFile  = repo.resolve(s"master:$parentPath/$fileNamePrefix-ORIGINAL.$fileNamePostfix")
+      val expectedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-MODIFIED-$before-$after.$fileNamePostfix")
+
+      expectedFile should not be null
+      cleanedFile should be(expectedFile)
     }
-    RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set.empty), OldIdsPrivate, treeBlobsCleaners = Seq(blobTextModifier)))
-
-    val cleanedFile  = repo.resolve(s"master:$parentPath/$fileNamePrefix-ORIGINAL.$fileNamePostfix")
-    val expectedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-MODIFIED-$before-$after.$fileNamePostfix")
-
-    expectedFile should not be null
-    cleanedFile should be(expectedFile)
   }
+
+
 }
 
 

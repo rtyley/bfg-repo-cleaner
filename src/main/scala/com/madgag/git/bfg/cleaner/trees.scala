@@ -35,7 +35,9 @@ import scala.Some
 import com.madgag.git.bfg.model.TreeBlobEntry
 import BlobTextModifier._
 import scalax.io.managed.InputStreamResource
-
+import java.nio.ByteBuffer
+import util.Try
+import java.nio.charset.CodingErrorAction._
 
 object TreeBlobsCleaner {
 
@@ -95,19 +97,36 @@ trait BlobCharsetDetector {
   def charsetFor(entry: TreeBlobEntry, streamResource: InputStreamResource[ObjectStream]): Option[Charset]
 }
 
+
+object QuickBlobCharsetDetector extends BlobCharsetDetector {
+
+  val charSets = Seq(Charset.forName("UTF-8"), Charset.defaultCharset(), Charset.forName("ISO-8859-1")).distinct
+
+  def charsetFor(entry: TreeBlobEntry, streamResource: InputStreamResource[ObjectStream]): Option[Charset] =
+    Some(streamResource.bytes.take(8000).toArray).filterNot(RawText.isBinary).flatMap {
+      sampleBytes =>
+        val b = ByteBuffer.wrap(sampleBytes)
+        charSets.find(cs => Try(decode(b, cs)).isSuccess)
+    }
+
+  private def decode(b: ByteBuffer, charset: Charset) {
+    charset.newDecoder.onMalformedInput(REPORT).onUnmappableCharacter(REPORT).decode(b)
+  }
+}
+
 object ICU4JBlobCharsetDetector {
   private val cd = new CharsetDetector() // instances of CharsetDetector are not thread-safe!
 }
 
 class ICU4JBlobCharsetDetector extends BlobCharsetDetector {
 
-  def charsetFor(entry: TreeBlobEntry, streamResource: InputStreamResource[ObjectStream]): Option[Charset] = {
-    Some(streamResource.bytes.take(8000).toArray).filterNot(RawText.isBinary).flatMap { sampleBytes =>
-      ICU4JBlobCharsetDetector.cd.synchronized {
-        Option(ICU4JBlobCharsetDetector.cd.setText(sampleBytes).detect).map(cm => Charset.forName(cm.getName))
-      }
+  def charsetFor(entry: TreeBlobEntry, streamResource: InputStreamResource[ObjectStream]): Option[Charset] =
+    Some(streamResource.bytes.take(8000).toArray).filterNot(RawText.isBinary).flatMap {
+      sampleBytes =>
+        ICU4JBlobCharsetDetector.cd.synchronized {
+          Option(ICU4JBlobCharsetDetector.cd.setText(sampleBytes).detect).map(cm => Charset.forName(cm.getName))
+        }
     }
-  }
 }
 
 object BlobTextModifier {
