@@ -74,6 +74,32 @@ $ git gc --prune=now --aggressive
 <p>Replace all passwords (listed in a file 'passwords.txt') with <code>***REMOVED***</code> :</p>
 <pre><code>$ bfg <strong>--replace-banned-strings passwords.txt</strong>  my-repo.git</code></pre>
 
+<h1 id="protected-commits">Your <em>current</em> files are sacred...</h1>
+
+<p>
+The BFG treats you like a reformed alcoholic: you've made some mistakes in the past, but now you've cleaned up your act. Thus the BFG assumes that
+your latest commit is a <em>good</em> one, with none of the dirty files you want removing from your history still in it. This assumption by the BFG
+protects your work, and gives you peace of mind knowing that the BFG is <em>only</em> changing your repo history, not meddling with the
+<em>current</em> files of your project.
+</p>
+
+<p>By default the <code>HEAD</code> branch is protected, and while it's history will be cleaned, the very latest commit
+(the 'tip') is a <strong>protected commit</strong> and it's file-hierarchy won't be changed at all.</p>
+
+<p>If you want to protect the tips of several branches or tags (not just HEAD), just name them for the BFG:</p>
+
+<pre><code>$ bfg --strip-biggest-blobs 100<strong> --protect-blobs-from master,maint,next</strong> repo.git</code></pre>
+
+<p>Note:</p>
+<ul>
+
+<li>The BFG is about <em>completely</em> removing bad stuff from the history of your repo. If something questionable - like a 10MB file, when you're telling The BFG to strip out everying over 5MB - is in a protected commit, it <em>won't</em> be removed, and because it's still there, there's no point deleting it from earlier commits either. If you want the BFG to delete something <strong>you need to make sure your current commits are 
+<em>clean</em></strong>.
+
+<li>Note that although the files in those protected commits won't be changed, when those commits follow on from earlier dirty commits, their commit 
+ids <strong>will</strong> change, to reflect the changed history - only the SHA-1 id of the filesystem-tree will remain the same.
+</ul>
+
 <h1 id="speed">Faster...</h1>
 <p>The BFG is 10 - 50x faster than <code>git-filter-branch</code>, turning an <em>overnight</em> job into one that takes <em>less than ten minutes</em>. BFG's performance advantage is due to these factors:</p>
 
@@ -93,7 +119,7 @@ $ git gc --prune=now --aggressive
         </section>
 
         <aside id="sidebar">
-          <a id="download" class="button latest-download-link" href="http://repo1.maven.org/maven2/com/madgag/bfg-repo-cleaner/0.11.0/bfg-0.11.0.jar">
+          <a id="download" class="button latest-download-link" href="http://repo1.maven.org/maven2/com/madgag/bfg-repo-cleaner/0.12.0/bfg-0.12.0.jar">
             <small>Download</small>
             <span class="latest-version">.jar file</span>
           </a>
