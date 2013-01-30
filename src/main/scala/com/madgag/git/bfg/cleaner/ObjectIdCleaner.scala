@@ -75,17 +75,19 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     val originalParentCommits = originalCommit.getParents.toList
     val cleanedParentCommits = originalParentCommits.map(apply)
 
-    if (cleanedParentCommits != originalParentCommits || cleanedTree != originalTree) {
+    val kit = new CommitMessageCleaner.Kit(objectDB, originalCommit, apply)
+    val oldCommitMessage = CommitMessage(originalCommit)
+    val updatedCommitMessage = commitMessageCleaner.fixer(kit)(oldCommitMessage)
+
+    if (cleanedParentCommits != originalParentCommits || cleanedTree != originalTree || updatedCommitMessage != oldCommitMessage) {
       val c = new CommitBuilder
       c.setEncoding(originalCommit.getEncoding)
       c.setParentIds(cleanedParentCommits)
       c.setTreeId(cleanedTree)
-      val kit = new CommitMessageCleaner.Kit(objectDB, originalCommit, apply)
-      val updatedCommit = commitMessageCleaner.fixer(kit)(CommitMessage(originalCommit))
 
-      c.setAuthor(updatedCommit.author)
-      c.setCommitter(updatedCommit.committer)
-      c.setMessage(updatedCommit.message)
+      c.setAuthor(updatedCommitMessage.author)
+      c.setCommitter(updatedCommitMessage.committer)
+      c.setMessage(updatedCommitMessage.message)
 
       val commitBytes = c.toByteArray
       objectChecker.foreach(_.checkCommit(commitBytes))
