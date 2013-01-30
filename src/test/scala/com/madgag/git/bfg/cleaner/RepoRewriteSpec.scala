@@ -35,9 +35,11 @@ import com.madgag.git.bfg.GitUtil._
 import scala.Some
 import com.madgag.git.bfg.textmatching.RegexReplacer._
 import com.madgag.git.bfg._
+import cleaner.TreeBlobsCleaner.Kit
 import cli.Main.hasBeenProcessedByBFGBefore
 import java.util.regex.Pattern._
 import ObjectIdSubstitutor._
+import org.eclipse.jgit.revwalk.RevWalk
 
 class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
 
@@ -62,6 +64,19 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
     allCommits.head.getFullMessage should include(FormerCommitFooter.Key)
 
     hasBeenProcessedByBFGBefore(repo) should be (true)
+  }
+
+  "Repo rewriter" should "clean commit messages even on clean branches, because they may reference commits from dirty ones" in {
+    implicit val repo = unpackRepo("/sample-repos/taleOfTwoBranches.git.zip")
+    implicit val revWalk = new RevWalk(repo)
+
+    repo.getRef("pure").getObjectId.asRevCommit.getFullMessage should include("6e76960ede2addbbe7e")
+
+    RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set.empty), OldIdsPrivate, Seq(new CommitMessageObjectIdsUpdater(OldIdsPrivate)), Seq(new TreeBlobsCleaner {
+      def fixer(kit: Kit) = _.entries.filterNot(_.filename.string == "sin")
+    })))
+
+    repo.getRef("pure").getObjectId.asRevCommit.getFullMessage should not include("6e76960ede2addbbe7e")
   }
 
   "Git repo" should "have passwords removed" in {
