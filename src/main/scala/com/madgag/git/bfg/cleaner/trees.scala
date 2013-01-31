@@ -59,7 +59,7 @@ object TreeBlobsCleaner {
 }
 
 trait TreeBlobsCleaner {
-  def fixer(kit: TreeBlobsCleaner.Kit): (TreeBlobs => TreeBlobs)
+  def fixer(kit: TreeBlobsCleaner.Kit): Cleaner[TreeBlobs]
 }
 
 class BlobRemover(blobIds: Set[ObjectId]) extends TreeBlobsCleaner {

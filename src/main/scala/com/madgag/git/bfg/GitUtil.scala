@@ -31,12 +31,13 @@ import java.io.File
 import scala.{Long, Some}
 import org.eclipse.jgit.util.FS
 import org.eclipse.jgit.lib.Constants.OBJ_BLOB
+import com.madgag.git.bfg.cleaner._
 
 object ObjectId {
   def apply(str: String) = org.eclipse.jgit.lib.ObjectId.fromString(str)
 }
 
-trait CleaningMapper[V] extends (V=> V) {
+trait CleaningMapper[V] extends Cleaner[V] {
   def isDirty(v: V) = apply(v) != v
 
   def substitution(oldId: V): Option[(V, V)] = {
@@ -58,8 +59,8 @@ object GitUtil {
     WindowCache.reconfigure(wcConfig)
   }
 
-  implicit def endo2CleaningMapper[V](f: (V=> V)): CleaningMapper[V] = new CleaningMapper[V] {
-    def apply(v1: V) = f(v1)
+  implicit def cleaner2CleaningMapper[V](f: Cleaner[V]): CleaningMapper[V] = new CleaningMapper[V] {
+    def apply(v: V) = f(v)
   }
 
   implicit def fileRepository2ObjectDirectory(repo: FileRepository): ObjectDirectory = repo.getObjectDatabase
