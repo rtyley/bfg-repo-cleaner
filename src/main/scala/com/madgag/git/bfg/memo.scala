@@ -21,6 +21,7 @@
 package com.madgag.git.bfg
 
 import com.google.common.cache.{CacheLoader, LoadingCache, CacheBuilder}
+import com.madgag.git.bfg.cleaner._
 
 object MemoUtil {
 
@@ -33,7 +34,7 @@ object MemoUtil {
    */
   def concurrentCleanerMemo[V](fixedEntries: Set[V] = Set.empty): Memo[V, V] = {
     memo[V, V] {
-      (f: (V => V)) =>
+      (f: Cleaner[V]) =>
         val permanentCache = loaderCacheFor(f)
 
         def fix(v: V) = permanentCache.put(v, v)

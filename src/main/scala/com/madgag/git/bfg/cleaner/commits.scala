@@ -27,7 +27,7 @@ import scala.Some
 
 object CommitMessageCleaner {
 
-  class Kit(objectDB: ObjectDatabase, val originalCommit: RevCommit, val mapper: ObjectId => ObjectId) {
+  class Kit(objectDB: ObjectDatabase, val originalCommit: RevCommit, val mapper: Cleaner[ObjectId]) {
     lazy val objectReader = objectDB.newReader
   }
 
@@ -37,7 +37,7 @@ object CommitMessageCleaner {
 }
 
 trait CommitMessageCleaner {
-  def fixer(kit: CommitMessageCleaner.Kit): CommitMessage => CommitMessage
+  def fixer(kit: CommitMessageCleaner.Kit): Cleaner[CommitMessage]
 }
 
 
