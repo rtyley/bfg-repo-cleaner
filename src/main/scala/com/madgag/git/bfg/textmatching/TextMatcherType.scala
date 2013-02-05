@@ -23,6 +23,8 @@ package com.madgag.git.bfg.textmatching
 import util.matching.Regex
 import com.madgag.globs.openjdk.Globs
 
+import RegexReplacer._
+
 object TextMatcher {
 
   private val allPrefixes = TextMatcherTypes.all.keys mkString("|")
@@ -35,8 +37,10 @@ object TextMatcher {
   }
 }
 
-case class TextMatcher(typ: TextMatcherType, expression: String) {
+case class TextMatcher(typ: TextMatcherType, expression: String) extends (String => Boolean) {
   lazy val r = typ.regexFor(expression)
+
+  override def apply(s: String) = r.matches(s)
 }
 
 object TextMatcherTypes {
