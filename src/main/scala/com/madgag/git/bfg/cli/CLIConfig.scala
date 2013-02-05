@@ -20,11 +20,9 @@
 
 package com.madgag.git.bfg.cli
 
-import util.matching.Regex
 import java.io.File
 import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.cleaner._
-import com.madgag.globs.openjdk.Globs
 import com.madgag.git.bfg.cleaner.TreeBlobsCleaner.Kit
 import com.madgag.git.bfg.textmatching.RegexReplacer._
 import com.madgag.git.bfg.model.FileName.ImplicitConversions._
@@ -36,8 +34,10 @@ import org.eclipse.jgit.storage.file.FileRepository
 import scopt.immutable.OptionParser
 import scala.Some
 import com.madgag.git.bfg.GitUtil.SizedObject
-import com.madgag.git.bfg.model.TreeBlobEntry
+import com.madgag.git.bfg.model.{FileName, TreeBlobEntry}
 import com.madgag.git.bfg.textmatching.{Glob, Literal, TextMatcher}
+import com.madgag.inclusion._
+
 
 object CLIConfig {
   val parser = new OptionParser[CLIConfig]("bfg") {
@@ -54,10 +54,13 @@ object CLIConfig {
       opt("rt", "replace-banned-text", "<banned-text-file>", "remove banned text from files and replace it with '***REMOVED***'. Banned expressions are in the specified file, one expression per line.") {
         (v: String, c: CLIConfig) => c.copy(replaceBannedStrings = Source.fromFile(v).getLines().toSeq)
       },
-      opt("f", "filter-contents-of", "<glob>", "only do file-content filtering on files with names that match the specified expression (eg '*.txt', '*.{properties}')") {
-        (v: String, c: CLIConfig) => c.copy(filterFiles = TextMatcher(v, defaultType = Glob))
+      opt("fi", "filter-content-including", "<glob>", "do file-content filtering on files that match the specified expression (eg '*.{txt|properties}')") {
+        (v: String, c: CLIConfig) => c.copy(filenameFilters = c.filenameFilters :+ Include(TextMatcher(v, defaultType = Glob)))
       },
-      opt("fs","filter-size-threshold", "<size>", "only do file-content filtering on files smaller than <size> (default is %1$d bytes)".format(CLIConfig().filterSizeThreshold)) {
+      opt("fe", "filter-content-excluding", "<glob>", "don't do file-content filtering on files that match the specified expression (eg '*.{xml|pdf}')") {
+        (v: String, c: CLIConfig) => c.copy(filenameFilters = c.filenameFilters :+ Exclude(TextMatcher(v, defaultType = Glob)))
+      },
+      opt("fs","filter-content-size-threshold", "<size>", "only do file-content filtering on files smaller than <size> (default is %1$d bytes)".format(CLIConfig().filterSizeThreshold)) {
         (v: String, c: CLIConfig) => c.copy(filterSizeThreshold = ByteSize.parse(v))
       },
       opt("p", "protect-blobs-from", "<refs>", "protect blobs that appear in the most recent versions of the specified refs (default is 'HEAD')") {
@@ -83,7 +86,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      stripBlobsBiggerThan: Option[Int] = None,
                      protectBlobsFromRevisions: Set[String] = Set("HEAD"),
                      deleteFiles: Option[TextMatcher] = None,
-                     filterFiles: TextMatcher = Glob("*"),
+                     filenameFilters: Seq[Filter[String]] = Nil,
                      filterSizeThreshold: Int = BlobTextModifier.DefaultSizeThreshold,
                      replaceBannedStrings: Traversable[String] = List.empty,
                      blobCharsetDetector: BlobCharsetDetector = QuickBlobCharsetDetector,
@@ -112,12 +115,14 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     allRegex.map(regex => regex --> (_ => "***REMOVED***")).reduceOption((f, g) => Function.chain(Seq(f, g)))
   }
 
+  lazy val filterContentPredicate: (FileName => Boolean) = f => IncExcExpression(filenameFilters) includes(f.string)
+
   lazy val blobTextModifier: Option[BlobTextModifier] = lineModifier.map {
     replacer =>
       new BlobTextModifier {
         override val sizeThreshold = filterSizeThreshold
 
-        def lineCleanerFor(entry: TreeBlobEntry) = if (filterFiles.r.matches(entry.filename)) Some(replacer) else None
+        def lineCleanerFor(entry: TreeBlobEntry) = if (filterContentPredicate(entry.filename)) Some(replacer) else None
 
         val charsetDetector = blobCharsetDetector
       }
