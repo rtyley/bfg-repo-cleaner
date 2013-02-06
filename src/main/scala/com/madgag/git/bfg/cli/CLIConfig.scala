@@ -139,9 +139,8 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     sizeBasedBlobTargetSources match {
       case sources if sources.size > 0 =>
         Timing.measureTask("Finding target blobs", ProgressMonitor.UNKNOWN) {
-          val biggestUnprotectedBlobs = biggestBlobs(repo).filterNot(o => objectProtection.blobIds(o.objectId))
-          val sizedBadIds = SortedSet(sources.flatMap(_(biggestUnprotectedBlobs)): _*)
-          println("Found " + sizedBadIds.size + " blob ids to remove biggest=" + sizedBadIds.max.size + " smallest=" + sizedBadIds.min.size)
+          val sizedBadIds = SortedSet(sources.flatMap(_(biggestBlobs(repo))): _*)
+          println("Found " + sizedBadIds.size + " blob ids to for large blobs - biggest=" + sizedBadIds.max.size + " smallest=" + sizedBadIds.min.size)
           println("Total size (unpacked)=" + sizedBadIds.map(_.size).sum)
           Some(new BlobReplacer(sizedBadIds.map(_.objectId)))
         }
