@@ -67,27 +67,22 @@ class BlobRemover(blobIds: Set[ObjectId]) extends TreeBlobsCleaner {
 }
 
 class BlobReplacer(badBlobs: Set[ObjectId]) extends TreeBlobsCleaner {
-  def fixer(kit: Kit) = {
-    treeBlobs =>
-      val updatedEntryMap = treeBlobs.entryMap.map {
-        case (filename, (mode, oid)) if badBlobs.contains(oid) =>
-          FileName(filename + ".REMOVED.git-id") ->(RegularFile, kit.blobInserter.insert(oid.name.getBytes))
-        case e => e
-      }
-      TreeBlobs(updatedEntryMap)
+  def fixer(kit: Kit) = _.entries.map {
+    case e if badBlobs.contains(e.objectId) =>
+      TreeBlobEntry(FileName(e.filename + ".REMOVED.git-id"), RegularFile, kit.blobInserter.insert(e.objectId.name.getBytes))
+    case e => e
   }
 }
-
 
 trait TreeBlobModifier extends TreeBlobsCleaner {
 
   val memo: Memo[TreeBlobEntry, TreeBlobEntry] = MemoUtil.concurrentCleanerMemo(Set.empty)
 
-  override def fixer(kit: Kit) = treeBlobs => TreeBlobs(treeBlobs.entries.map(memo {
+  override def fixer(kit: Kit) = _.entries.map(memo {
     entry =>
       val (mode, objectId) = fix(entry, kit)
       TreeBlobEntry(entry.filename, mode, objectId)
-  }))
+  })
 
   def fix(entry: TreeBlobEntry, kit: Kit): (BlobFileMode, ObjectId) // implementing code can not safely know valid filename
 }
