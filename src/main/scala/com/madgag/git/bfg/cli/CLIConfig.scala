@@ -60,15 +60,15 @@ object CLIConfig {
       opt("fe", "filter-content-excluding", "<glob>", "don't do file-content filtering on files that match the specified expression (eg '*.{xml|pdf}')") {
         (v: String, c: CLIConfig) => c.copy(filenameFilters = c.filenameFilters :+ Exclude(TextMatcher(v, defaultType = Glob)))
       },
-      opt("fs","filter-content-size-threshold", "<size>", "only do file-content filtering on files smaller than <size> (default is %1$d bytes)".format(CLIConfig().filterSizeThreshold)) {
+      opt("fs", "filter-content-size-threshold", "<size>", "only do file-content filtering on files smaller than <size> (default is %1$d bytes)".format(CLIConfig().filterSizeThreshold)) {
         (v: String, c: CLIConfig) => c.copy(filterSizeThreshold = ByteSize.parse(v))
       },
       opt("p", "protect-blobs-from", "<refs>", "protect blobs that appear in the most recent versions of the specified refs (default is 'HEAD')") {
         (v: String, c: CLIConfig) => c.copy(protectBlobsFromRevisions = v.split(',').toSet)
       },
-//      flag("strict-object-checking", "perform additional checks on integrity of consumed & created objects") {
-//        (c: CLIConfig) => c.copy(strictObjectChecking = true)
-//      },
+      //      flag("strict-object-checking", "perform additional checks on integrity of consumed & created objects") {
+      //        (c: CLIConfig) => c.copy(strictObjectChecking = true)
+      //      },
       flag("slow-charset-detection", "detect file-encodings using the slower & more extensive ICU4J library") {
         (c: CLIConfig) => c.copy(blobCharsetDetector = new ICU4JBlobCharsetDetector)
       },
@@ -94,9 +94,9 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      sensitiveData: Option[Boolean] = None,
                      repoLocation: File = new File(System.getProperty("user.dir"))) {
 
-  lazy val gitdir = resolveGitDirFor(repoLocation) getOrElse (throw new IllegalArgumentException(s"'$repoLocation' is not a valid Git repository."))
+  lazy val gitdir = resolveGitDirFor(repoLocation)
 
-  implicit lazy val repo = new FileRepository(gitdir)
+  implicit lazy val repo = new FileRepository(gitdir.get)
 
   lazy val objectProtection = ObjectProtection(protectBlobsFromRevisions)
 
@@ -115,7 +115,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     allRegex.map(regex => regex --> (_ => "***REMOVED***")).reduceOption((f, g) => Function.chain(Seq(f, g)))
   }
 
-  lazy val filterContentPredicate: (FileName => Boolean) = f => IncExcExpression(filenameFilters) includes(f.string)
+  lazy val filterContentPredicate: (FileName => Boolean) = f => IncExcExpression(filenameFilters) includes (f.string)
 
   lazy val blobTextModifier: Option[BlobTextModifier] = lineModifier.map {
     replacer =>
@@ -171,9 +171,9 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   def describe = {
     if (privateDataRemoval) {
-      "is removing private data, so the '"+FormerCommitFooter.Key+"' footer will not be added to commit messages."
+      "is removing private data, so the '" + FormerCommitFooter.Key + "' footer will not be added to commit messages."
     } else {
-      "is only removing non-private data (eg, blobs that are just big, not private) : '"+FormerCommitFooter.Key+"' footer will be added to commit messages."
+      "is only removing non-private data (eg, blobs that are just big, not private) : '" + FormerCommitFooter.Key + "' footer will be added to commit messages."
     }
   }
 }

@@ -67,6 +67,11 @@ object GitUtil {
 
   def abbrId(str: String)(implicit reader: ObjectReader): ObjectId = reader.resolveExistingUniqueId(AbbreviatedObjectId.fromString(str)).get
 
+  implicit class RichRevObject(revObject: RevObject) {
+
+    lazy val typeString = Constants.typeString(revObject.getType)
+  }
+
   implicit class RichObjectId(objectId: AnyObjectId) {
     def open(implicit objectReader: ObjectReader): ObjectLoader = objectReader.open(objectId)
 
@@ -75,6 +80,8 @@ object GitUtil {
     def asRevCommit(implicit revWalk: RevWalk) = revWalk.parseCommit(objectId)
 
     def asRevTag(implicit revWalk: RevWalk) = revWalk.parseTag(objectId)
+
+    def asRevTree(implicit revWalk: RevWalk) = revWalk.parseTree(objectId)
 
     lazy val shortName = objectId.getName.take(8)
   }
@@ -85,7 +92,15 @@ object GitUtil {
     def resolveExistingUniqueId(id: AbbreviatedObjectId) = resolveUniquely(id).filter(reader.has)
   }
 
+
   def resolveGitDirFor(folder: File) = Option(RepositoryCache.FileKey.resolve(folder, FS.detect)).filter(_.exists())
+
+  def treeOrBlobPointedToBy(revObject: RevObject)(implicit revWalk: RevWalk): Either[RevBlob, RevTree] = revObject match {
+    case commit: RevCommit => Right(commit.getTree)
+    case tree: RevTree => Right(tree)
+    case blob: RevBlob => Left(blob)
+    case tag: RevTag => treeOrBlobPointedToBy(tag.getObject)
+  }
 
   def allBlobsUnder(tree: RevTree)(implicit repo: Repository): Set[ObjectId] = {
     val treeWalk = new TreeWalk(repo)

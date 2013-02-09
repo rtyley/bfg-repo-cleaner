@@ -27,7 +27,7 @@ import RegexReplacer._
 
 object TextMatcher {
 
-  private val allPrefixes = TextMatcherTypes.all.keys mkString("|")
+  private val allPrefixes = TextMatcherTypes.all.keys mkString ("|")
 
   val prefixedExpression = s"($allPrefixes):(.*)".r
 
@@ -49,8 +49,10 @@ object TextMatcherTypes {
 
 sealed trait TextMatcherType {
   val expressionPrefix: String
+
   def apply(expression: String) = TextMatcher(this, expression)
-  def regexFor(expression: String):Regex
+
+  def regexFor(expression: String): Regex
 }
 
 object Glob extends TextMatcherType {

@@ -48,10 +48,10 @@ object MemoUtil {
     }
   }
 
-  def loaderCacheFor[K,V](f: K => V): LoadingCache[K, V] = CacheBuilder.newBuilder.asInstanceOf[CacheBuilder[K, V]]
+  def loaderCacheFor[K, V](f: K => V): LoadingCache[K, V] = CacheBuilder.newBuilder.asInstanceOf[CacheBuilder[K, V]]
     .build(new CacheLoader[K, V] {
-      def load(key: K): V = f(key)
-    })
+    def load(key: K): V = f(key)
+  })
 
 }
 

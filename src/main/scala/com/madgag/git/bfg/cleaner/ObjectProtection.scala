@@ -61,13 +61,6 @@ object ObjectProtection {
 
     implicit val revWalk = new RevWalk(repo)
 
-    def treeOrBlobPointedToBy(revObject: RevObject)(implicit revWalk: RevWalk): Either[RevBlob,RevTree] = revObject match {
-      case commit: RevCommit => Right(commit.getTree)
-      case tree: RevTree => Right(tree)
-      case blob: RevBlob => Left(blob)
-      case tag: RevTag => treeOrBlobPointedToBy(tag.getObject)
-    }
-
     val objectProtection = revisions.groupBy(repo.resolve(_).asRevObject)
 
     // blobs come from direct blob references and tag references
@@ -75,8 +68,12 @@ object ObjectProtection {
 
     val treeAndBlobProtection = objectProtection.keys.groupBy(treeOrBlobPointedToBy).mapValues(_.toSet) // use Either?
 
-    val directBlobProtection = treeAndBlobProtection collect { case (Left(blob), p) => blob.getId -> p }
-    val treeProtection = treeAndBlobProtection collect { case (Right(tree), p) => tree -> p }
+    val directBlobProtection = treeAndBlobProtection collect {
+      case (Left(blob), p) => blob.getId -> p
+    }
+    val treeProtection = treeAndBlobProtection collect {
+      case (Right(tree), p) => tree -> p
+    }
     val indirectBlobProtection = treeProtection.keys.flatMap(tree => allBlobsUnder(tree).map(_ -> tree)).groupBy(_._1).mapValues(_.map(_._2).toSet)
 
     ObjectProtection(objectProtection, treeProtection, directBlobProtection, indirectBlobProtection)
@@ -84,9 +81,9 @@ object ObjectProtection {
 }
 
 case class ObjectProtection(objectProtection: Map[RevObject, Set[String]],
-                      treeProtection: Map[RevTree, Set[RevObject]],
-                      directBlobProtection: Map[ObjectId, Set[RevObject]],
-                      indirectBlobProtection: Map[ObjectId, Set[RevTree]]) {
+                            treeProtection: Map[RevTree, Set[RevObject]],
+                            directBlobProtection: Map[ObjectId, Set[RevObject]],
+                            indirectBlobProtection: Map[ObjectId, Set[RevTree]]) {
 
   lazy val blobIds: Set[ObjectId] = directBlobProtection.keySet ++ indirectBlobProtection.keySet
 

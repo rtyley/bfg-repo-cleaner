@@ -20,18 +20,22 @@
 
 package com.madgag.git.bfg.cleaner
 
-import org.eclipse.jgit.revwalk.{RevSort, RevWalk, RevCommit}
+import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
 import org.eclipse.jgit.lib.Constants.OBJ_COMMIT
 import java.io.InputStream
 import org.eclipse.jgit.transport.ReceiveCommand
 import org.eclipse.jgit.revwalk.RevSort._
-import com.madgag.git.bfg.model._
-import com.madgag.git.bfg.Timing
+import com.madgag.git.bfg.{Text, Timing}
 import com.madgag.git.bfg.GitUtil._
 import org.eclipse.jgit.lib._
 import concurrent.future
 import concurrent.ExecutionContext.Implicits.global
 import scala.collection.JavaConversions._
+import org.eclipse.jgit.treewalk.TreeWalk
+import org.eclipse.jgit.treewalk.filter.TreeFilter
+import org.eclipse.jgit.diff.DiffEntry
+import org.eclipse.jgit.diff.DiffEntry.ChangeType.ADD
+import Text._
 
 /*
 Encountering a blob ->
@@ -89,7 +93,7 @@ object RepoRewriter {
       } withDefault Seq.empty
 
       refsByObjType.foreach {
-        case (typ, refs) => println("Found " + refs.size + " " + Constants.typeString(typ) + "-pointing refs")
+        case (typ, refs) => println("Found " + refs.size + " " + Constants.typeString(typ) + "-pointing refs : " + abbreviate(refs.map(_.getName).toSeq, "...").mkString(","))
       }
 
       revWalk.markStart(refsByObjType(OBJ_COMMIT).map(ref => ref.getObjectId.asRevCommit(revWalk)))
@@ -99,13 +103,41 @@ object RepoRewriter {
 
     implicit val revWalk = createRevWalk
 
-    println("Getting full commit list:")
+    val objectIdCleaner = new ObjectIdCleaner(objectIdCleanerConfig, repo.getObjectDatabase, revWalk)
+
+    println(title("Protected commits"))
+    println("These are your latest commits, and so their contents will NOT be altered:\n")
+    objectIdCleanerConfig.objectProtection.objectProtection.foreach {
+      case (revObj, refNames) =>
+        val originalRevObject = treeOrBlobPointedToBy(revObj).merge
+        val objectTitle = " * " + revObj.typeString + " " + revObj.shortName + " (protected by '" + refNames.mkString("', '") + "')"
+
+        val diffEntries = objectIdCleaner.uncachedClean.substitution(originalRevObject) map {
+          case (oldId, newId) =>
+            val tw = new TreeWalk(revWalk.getObjectReader)
+            tw.setRecursive(true)
+            tw.reset
+
+            tw.addTree(oldId.asRevTree)
+            tw.addTree(newId.asRevTree)
+            tw.setFilter(TreeFilter.ANY_DIFF)
+            DiffEntry.scan(tw).filterNot(_.getChangeType == ADD).map(_.getOldPath)
+        }
+
+        diffEntries match {
+          case Some(diffs) if diffs.isEmpty => println(objectTitle + " - dirty")
+          case Some(diffs) => println(objectTitle + " - contains " + plural(diffs, "dirty file") + " : ")
+          abbreviate(diffs, "...").foreach {
+            dirtyFile => println("\t- " + dirtyFile)
+          }
+          case _ => println(objectTitle)
+        }
+    }
+    // lazy val allRemovedFiles = collection.mutable.Map[FileName, SizedObject]()
+
+    println(title("Cleaning"))
     val commits = revWalk.toList
     println("Found " + commits.size + " commits")
-
-    val objectIdCleaner = new ObjectIdCleaner(objectIdCleanerConfig, repo.getObjectDatabase , revWalk)
-
-    // lazy val allRemovedFiles = collection.mutable.Map[FileName, SizedObject]()
 
     Timing.measureTask("Cleaning commits", commits.size) {
       future {
@@ -123,7 +155,7 @@ object RepoRewriter {
 
     reportTreeDirtHistory(commits, objectIdCleaner)
 
-    println("\nRefs\n")
+    println(title("Updating Refs"))
 
     {
       import scala.collection.JavaConversions._
@@ -131,6 +163,10 @@ object RepoRewriter {
       val refUpdateCommands = for (ref <- repo.getAllRefs.values if !ref.isSymbolic;
                                    (oldId, newId) <- objectIdCleaner.substitution(ref.getObjectId)
       ) yield (new ReceiveCommand(oldId, newId, ref.getName))
+
+      abbreviate(refUpdateCommands.toSeq, "...") foreach {
+        println
+      }
 
       repo.getRefDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(revWalk, progressMonitor)
     }
@@ -141,21 +177,32 @@ object RepoRewriter {
   }
 
   def reportTreeDirtHistory(commits: List[RevCommit], objectIdCleaner: ObjectId => ObjectId) {
-    def title(text: String) = s"\n$text\n" + ("-" * text.size) + "\n"
+
     val dirtHistoryElements = 60
     def cut[A](xs: Seq[A], n: Int) = {
       val avgSize = xs.size.toFloat / n
       def startOf(unit: Int): Int = math.round(unit * avgSize)
       (0 until n).view.map(u => xs.slice(startOf(u), startOf(u + 1)))
     }
-    val treeDirtHistory = cut(commits, dirtHistoryElements).map(_.exists(c => objectIdCleaner(c.getTree) != c.getTree)).map(if (_) 'D' else '.').mkString
+    val treeDirtHistory = cut(commits, dirtHistoryElements).map {
+      case commits if (commits.exists(c => objectIdCleaner.isDirty(c.getTree))) => 'D'
+      case commits if (commits.exists(objectIdCleaner.isDirty)) => 'm'
+      case _ => '.'
+    }.mkString
     def leftRight(markers: Seq[String]) = markers.mkString(" " * (dirtHistoryElements - markers.map(_.size).sum))
     println(title("Commit Tree-Dirt History"))
     println("\t" + leftRight(Seq("Earliest", "Latest")))
     println("\t" + leftRight(Seq("|", "|")))
     println("\t" + treeDirtHistory)
     println("\n\tD = dirty commits (file tree fixed)")
+    println("\tm = modified commits (commit message or parents changed)")
     println("\t. = clean commits (no changes to file tree)\n")
+
+    commits.find(objectIdCleaner.isDirty).foreach {
+      c =>
+        println("First modified commit : " + c.shortName + " -> " + objectIdCleaner(c).shortName + "\n")
+    }
   }
 
+  def title(text: String) = s"\n$text\n" + ("-" * text.size) + "\n"
 }

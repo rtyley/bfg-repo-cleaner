@@ -25,7 +25,7 @@ import scala.Function.const
 case class IncExcExpression[-A](filters: Seq[Filter[A]]) {
   lazy val searchPath = (filters.headOption.map(_.impliedPredecessor).getOrElse(Include.everything) +: filters).reverse
 
-  def includes(a: A) : Boolean = searchPath.find(_.predicate(a)).get.included
+  def includes(a: A): Boolean = searchPath.find(_.predicate(a)).get.included
 }
 
 sealed trait Filter[-A] {

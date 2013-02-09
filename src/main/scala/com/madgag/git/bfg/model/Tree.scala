@@ -142,12 +142,12 @@ case class TreeBlobs(entryMap: Map[FileName, (BlobFileMode, ObjectId)]) extends 
   }
 
   lazy val treeEntries = entries.map(_.toTreeEntry)
-//
-//  def filter(p: ObjectId => Boolean): TreeBlobs = {
-//    TreeBlobs(entries.filter {
-//      case TreeBlobEntry(_, _ , objectId) => p(objectId)
-//    })
-//  }
+  //
+  //  def filter(p: ObjectId => Boolean): TreeBlobs = {
+  //    TreeBlobs(entries.filter {
+  //      case TreeBlobEntry(_, _ , objectId) => p(objectId)
+  //    })
+  //  }
 
 }
 

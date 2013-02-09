@@ -29,6 +29,7 @@ import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.model.{TreeSubtrees, Tree}
 
 object ObjectIdCleaner {
+
   case class Config(objectProtection: ObjectProtection,
                     objectIdSubstitutor: ObjectIdSubstitutor,
                     commitMessageCleaners: Seq[CommitMessageCleaner] = Seq.empty,
@@ -39,6 +40,7 @@ object ObjectIdCleaner {
 
     lazy val treeBlobsCleaner = TreeBlobsCleaner.chain(treeBlobsCleaners)
   }
+
 }
 
 class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, implicit val revWalk: RevWalk) extends CleaningMapper[ObjectId] {
@@ -51,6 +53,11 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
   def apply(objectId: ObjectId): ObjectId = memoClean(objectId)
 
   val memoClean = memo {
+    uncachedClean
+  }
+
+
+  def uncachedClean: (ObjectId) => ObjectId = {
     objectId =>
       objectDB.newReader.open(objectId).getType match {
         case OBJ_COMMIT => cleanCommit(objectId)
@@ -111,9 +118,9 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
       val updatedTree = tree copyWith(cleanedSubtrees, fixedTreeBlobs)
 
       val removedFiles = tree.blobs.entryMap -- fixedTreeBlobs.entryMap.keys
-//      val sizedRemovedFiles = removedFiles.mapValues {
-//        case (_, objectId) => SizedObject(objectId, objectDB.newReader.getObjectSize(objectId, ObjectReader.OBJ_ANY))
-//      }
+      //      val sizedRemovedFiles = removedFiles.mapValues {
+      //        case (_, objectId) => SizedObject(objectId, objectDB.newReader.getObjectSize(objectId, ObjectReader.OBJ_ANY))
+      //      }
       // allRemovedFiles ++= sizedRemovedFiles
 
       val treeFormatter = updatedTree.formatter

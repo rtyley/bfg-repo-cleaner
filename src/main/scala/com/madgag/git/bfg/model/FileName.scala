@@ -24,6 +24,7 @@ import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.util.RawParseUtils
 
 object FileName {
+
   object ImplicitConversions {
     implicit def string2FileName(str: String) = new FileName(Constants.encode(str))
 

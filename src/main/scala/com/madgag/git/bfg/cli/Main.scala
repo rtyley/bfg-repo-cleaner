@@ -20,7 +20,6 @@
 
 package com.madgag.git.bfg.cli
 
-import org.eclipse.jgit.storage.file.{WindowCacheConfig, WindowCache}
 import com.madgag.git.bfg.cleaner._
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.{Constants, Repository, TextProgressMonitor}
@@ -29,9 +28,6 @@ import com.madgag.git.bfg.GitUtil._
 import org.eclipse.jgit.revwalk.RevWalk
 
 object Main extends App {
-
-  tweakStaticJGitConfig
-
   def hasBeenProcessedByBFGBefore(repo: Repository): Boolean = {
     // This method just checks the tips of all refs - a good-enough indicator for our purposes...
     implicit val revWalk = new RevWalk(repo)
@@ -41,29 +37,38 @@ object Main extends App {
       .map(_.asRevCommit).exists(_.getFooterLines(FormerCommitFooter.Key).nonEmpty)
   }
 
-  CLIConfig.parser.parse(args, CLIConfig()) map {
-    config =>
-      if (config.definesNoWork) {
-        Console.err.println("Please specify tasks for The BFG :")
-        CLIConfig.parser.showUsage
-      } else {
-        implicit val repo = config.repo
+  if (args.isEmpty) {
+    CLIConfig.parser.showUsage
+  } else {
+    tweakStaticJGitConfig
 
-        println("Using repo : " + repo.getDirectory.getAbsolutePath)
+    CLIConfig.parser.parse(args, CLIConfig()) map {
+      config =>
+        if (config.gitdir.isEmpty) {
+          CLIConfig.parser.showUsage
+          Console.err.println("Aborting : " + config.repoLocation + " is not a valid Git repository.\n")
+        } else {
+          implicit val repo = config.repo
 
-//        println("From the supplied parameters, The BFG:")
-//        println(config.describe+"\n\n")
+          println("\nUsing repo : " + repo.getDirectory.getAbsolutePath + "\n")
 
-        if (hasBeenProcessedByBFGBefore(repo)) {
-          println("\nThis repo has been processed by The BFG before! Will prune repo before proceeding - to avoid unnecessary cleaning work on unused objects.")
-          new Git(repo).gc.setProgressMonitor(new TextProgressMonitor()).call()
-          println("Completed prune of old objects - will now proceed with the main job!\n")
+          if (config.definesNoWork) {
+            Console.err.println("Please specify tasks for The BFG :")
+            CLIConfig.parser.showUsage
+          } else {
+
+            if (hasBeenProcessedByBFGBefore(repo)) {
+              println("\nThis repo has been processed by The BFG before! Will prune repo before proceeding - to avoid unnecessary cleaning work on unused objects.")
+              new Git(repo).gc.setProgressMonitor(new TextProgressMonitor()).call()
+              println("Completed prune of old objects - will now proceed with the main job!\n")
+            }
+
+            println("Found " + config.objectProtection.fixedObjectIds.size + " objects to protect")
+
+            RepoRewriter.rewrite(repo, config.objectIdCleanerConfig)
+          }
         }
-
-        println("Found " + config.objectProtection.fixedObjectIds.size + " objects to protect")
-
-        RepoRewriter.rewrite(repo, config.objectIdCleanerConfig)
-      }
+    }
   }
 
 }

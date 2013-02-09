@@ -21,7 +21,6 @@
 package com.madgag.git.bfg.cleaner
 
 import org.eclipse.jgit.lib._
-import com.madgag.git.bfg.GitUtil._
 import org.eclipse.jgit.revwalk.RevCommit
 import scala.Some
 
@@ -39,7 +38,6 @@ object CommitMessageCleaner {
 trait CommitMessageCleaner {
   def fixer(kit: CommitMessageCleaner.Kit): Cleaner[CommitMessage]
 }
-
 
 
 object FormerCommitFooter extends CommitMessageCleaner {

@@ -49,7 +49,7 @@ trait ObjectIdSubstitutor {
   def format(oldIdText: String, newIdText: String): String
 
   // slow!
-  def replaceOldIds(message: String, reader: ObjectReader, mapper: ObjectId=>ObjectId): String = {
+  def replaceOldIds(message: String, reader: ObjectReader, mapper: ObjectId => ObjectId): String = {
     hexRegex.replaceAllIn(message, m => {
       Some(AbbreviatedObjectId.fromString(m.matched)).flatMap(reader.resolveExistingUniqueId).flatMap(mapper.substitution).map {
         case (oldId, newId) =>
