@@ -23,30 +23,82 @@ package com.madgag.git.bfg.cleaner
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.RevCommit
 import scala.Some
+import java.nio.charset.Charset
 
-object CommitMessageCleaner {
+object CommitNodeCleaner {
 
-  class Kit(objectDB: ObjectDatabase, val originalCommit: RevCommit, val mapper: Cleaner[ObjectId]) {
+  class Kit(objectDB: ObjectDatabase,
+            val originalRevCommit: RevCommit,
+            val originalCommit: Commit,
+            val updatedArcs: CommitArcs,
+            val mapper: Cleaner[ObjectId]) {
     lazy val objectReader = objectDB.newReader
+
+    val arcsChanged = originalCommit.arcs != updatedArcs
+
+    def isCommitChangedWith(node: CommitNode) = arcsChanged || originalCommit.node != node
   }
 
-  def chain(cleaners: Seq[CommitMessageCleaner]) = new CommitMessageCleaner {
-    override def fixer(kit: CommitMessageCleaner.Kit) = Function.chain(cleaners.map(_.fixer(kit)))
+  def chain(cleaners: Seq[CommitNodeCleaner]) = new CommitNodeCleaner {
+    override def fixer(kit: CommitNodeCleaner.Kit) = Function.chain(cleaners.map(_.fixer(kit)))
   }
 }
 
-trait CommitMessageCleaner {
-  def fixer(kit: CommitMessageCleaner.Kit): Cleaner[CommitMessage]
+trait CommitNodeCleaner {
+  def fixer(kit: CommitNodeCleaner.Kit): Cleaner[CommitNode]
 }
 
-
-object FormerCommitFooter extends CommitMessageCleaner {
+object FormerCommitFooter extends CommitNodeCleaner {
   val Key = "Former-commit-id"
 
-  override def fixer(kit: CommitMessageCleaner.Kit) = _ add Footer(Key, kit.originalCommit.name)
+  override def fixer(kit: CommitNodeCleaner.Kit) = message =>
+    if (kit.isCommitChangedWith(message)) {
+      message add Footer(Key, kit.originalRevCommit.name)
+    } else message
 }
 
-//case class CommitStructure(parentIds: Seq[ObjectId], treeId: ObjectId)
+object Commit {
+  def apply(revCommit: RevCommit): Commit = Commit(CommitNode(revCommit), CommitArcs(revCommit))
+}
+
+case class Commit(node: CommitNode, arcs: CommitArcs) {
+  def toBytes: Array[Byte] = {
+    import scala.collection.JavaConversions._
+
+    val c = new CommitBuilder
+    c.setParentIds(arcs.parents)
+    c.setTreeId(arcs.tree)
+
+    c.setAuthor(node.author)
+    c.setCommitter(node.committer)
+    c.setEncoding(node.encoding)
+    c.setMessage(node.message)
+
+    c.toByteArray
+  }
+}
+
+object CommitArcs {
+  def apply(revCommit: RevCommit): CommitArcs = CommitArcs(revCommit.getParents, revCommit.getTree)
+}
+
+case class CommitArcs(parents: Seq[ObjectId], tree: ObjectId) {
+  def cleanWith(cleaner: Cleaner[ObjectId]) = CommitArcs(parents map cleaner, cleaner(tree))
+}
+
+object CommitNode {
+  def apply(c: RevCommit): CommitNode = CommitNode(c.getAuthorIdent, c.getCommitterIdent, c.getFullMessage, c.getEncoding)
+}
+
+case class CommitNode(author: PersonIdent, committer: PersonIdent, message: String, encoding: Charset = Constants.CHARSET) {
+  lazy val lastParagraphBreak = message.lastIndexOf("\n\n")
+  lazy val messageWithoutFooters = if (footers.isEmpty) message else (message take lastParagraphBreak)
+  lazy val footers: List[Footer] = message.drop(lastParagraphBreak).lines.collect {
+    case Footer.FooterPattern(key, value) => Footer(key, value)
+  }.toList
+
+  def add(footer: Footer) = copy(message = message + "\n" + (if (footers.isEmpty) "\n" else "") + footer.toString)
+}
 
 object Footer {
   // ^[A-Za-z0-9-]+:
@@ -60,19 +112,4 @@ object Footer {
 
 case class Footer(key: String, value: String) {
   override lazy val toString = key + ": " + value
-}
-
-object CommitMessage {
-  def apply(c: RevCommit): CommitMessage = CommitMessage(c.getAuthorIdent, c.getCommitterIdent, c.getFullMessage)
-}
-
-case class CommitMessage(author: PersonIdent, committer: PersonIdent, message: String) {
-  lazy val lastParagraphBreak = message.lastIndexOf("\n\n")
-  lazy val messageWithoutFooters = if (footers.isEmpty) message else (message take lastParagraphBreak)
-  lazy val footers: List[Footer] = message.drop(lastParagraphBreak).lines.collect {
-    case Footer.FooterPattern(key, value) => Footer(key, value)
-  }.toList
-
-  def add(footer: Footer) = copy(message = message + "\n" + (if (footers.isEmpty) "\n" else "") + footer.toString)
-
 }

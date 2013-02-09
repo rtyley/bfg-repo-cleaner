@@ -32,11 +32,11 @@ object ObjectIdCleaner {
 
   case class Config(objectProtection: ObjectProtection,
                     objectIdSubstitutor: ObjectIdSubstitutor,
-                    commitMessageCleaners: Seq[CommitMessageCleaner] = Seq.empty,
+                    commitNodeCleaners: Seq[CommitNodeCleaner] = Seq.empty,
                     treeBlobsCleaners: Seq[TreeBlobsCleaner] = Seq.empty,
                     objectChecker: Option[ObjectChecker] = None) {
 
-    lazy val commitMessageCleaner = CommitMessageCleaner.chain(commitMessageCleaners)
+    lazy val commitNodeCleaner = CommitNodeCleaner.chain(commitNodeCleaners)
 
     lazy val treeBlobsCleaner = TreeBlobsCleaner.chain(treeBlobsCleaners)
   }
@@ -72,36 +72,20 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
   def getTag(tagId: AnyObjectId): RevTag = revWalk synchronized (tagId asRevTag)
 
   def cleanCommit(commitId: ObjectId): ObjectId = {
-    import scala.collection.JavaConversions._
+    val originalRevCommit = getCommit(commitId)
+    val originalCommit = Commit(originalRevCommit)
 
-    val originalCommit = getCommit(commitId)
+    val cleanedArcs = originalCommit.arcs cleanWith this
+    val kit = new CommitNodeCleaner.Kit(objectDB, originalRevCommit, originalCommit, cleanedArcs, apply)
+    val updatedCommitNode = commitNodeCleaner.fixer(kit)(originalCommit.node)
+    val updatedCommit = Commit(updatedCommitNode, cleanedArcs)
 
-    val originalTree = originalCommit.getTree
-    val cleanedTree = apply(originalCommit.getTree) // add debug about object protection?
-
-    val originalParentCommits = originalCommit.getParents.toList
-    val cleanedParentCommits = originalParentCommits.map(apply)
-
-    val kit = new CommitMessageCleaner.Kit(objectDB, originalCommit, apply)
-    val oldCommitMessage = CommitMessage(originalCommit)
-    val updatedCommitMessage = commitMessageCleaner.fixer(kit)(oldCommitMessage)
-
-    if (cleanedParentCommits != originalParentCommits || cleanedTree != originalTree || updatedCommitMessage != oldCommitMessage) {
-      val c = new CommitBuilder
-      c.setEncoding(originalCommit.getEncoding)
-      c.setParentIds(cleanedParentCommits)
-      c.setTreeId(cleanedTree)
-
-      c.setAuthor(updatedCommitMessage.author)
-      c.setCommitter(updatedCommitMessage.committer)
-      c.setMessage(updatedCommitMessage.message)
-
-      val commitBytes = c.toByteArray
+    if (updatedCommit != originalCommit) {
+      val commitBytes = updatedCommit.toBytes
       objectChecker.foreach(_.checkCommit(commitBytes))
-      val cleanCommit = objectDB.newInserter.insert(Constants.OBJ_COMMIT, commitBytes)
-      cleanCommit
+      objectDB.newInserter.insert(OBJ_COMMIT, commitBytes)
     } else {
-      originalCommit
+      originalRevCommit
     }
   }
 

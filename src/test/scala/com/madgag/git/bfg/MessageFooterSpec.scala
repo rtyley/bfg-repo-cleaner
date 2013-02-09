@@ -20,7 +20,7 @@
 
 package com.madgag.git.bfg
 
-import cleaner.{Footer, CommitMessage}
+import cleaner.{Footer, CommitNode}
 import org.scalatest._
 import matchers.ShouldMatchers
 import org.eclipse.jgit.lib.PersonIdent
@@ -29,7 +29,7 @@ class MessageFooterSpec extends FlatSpec with ShouldMatchers {
 
   val p = new PersonIdent("Dave Eg", "dave@e.com")
 
-  def commit(m: String) = CommitMessage(p, p, m)
+  def commit(m: String) = CommitNode(p, p, m)
 
   "Message footers" should "append footer without new paragraph if footers already present" in {
 

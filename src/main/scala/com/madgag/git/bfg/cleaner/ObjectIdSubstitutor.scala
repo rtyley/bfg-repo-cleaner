@@ -24,9 +24,9 @@ import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId, ObjectReader}
 import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.cleaner.ObjectIdSubstitutor._
 
-class CommitMessageObjectIdsUpdater(objectIdSubstitutor: ObjectIdSubstitutor) extends CommitMessageCleaner {
+class CommitMessageObjectIdsUpdater(objectIdSubstitutor: ObjectIdSubstitutor) extends CommitNodeCleaner {
 
-  override def fixer(kit: CommitMessageCleaner.Kit) = cm => cm.copy(message = objectIdSubstitutor.replaceOldIds(cm.message, kit.objectReader, kit.mapper))
+  override def fixer(kit: CommitNodeCleaner.Kit) = commitNode => commitNode.copy(message = objectIdSubstitutor.replaceOldIds(commitNode.message, kit.objectReader, kit.mapper))
 
 }
 
