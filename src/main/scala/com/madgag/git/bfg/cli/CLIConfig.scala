@@ -140,9 +140,14 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
       case sources if sources.size > 0 =>
         Timing.measureTask("Finding target blobs", ProgressMonitor.UNKNOWN) {
           val sizedBadIds = SortedSet(sources.flatMap(_(biggestBlobs(repo))): _*)
-          println("Found " + sizedBadIds.size + " blob ids to for large blobs - biggest=" + sizedBadIds.max.size + " smallest=" + sizedBadIds.min.size)
-          println("Total size (unpacked)=" + sizedBadIds.map(_.size).sum)
-          Some(new BlobReplacer(sizedBadIds.map(_.objectId)))
+          if (sizedBadIds.isEmpty) {
+            println("Warning : no large blobs matching criteria found in packfiles - does the repo need to be packed?")
+            None
+          } else {
+            println("Found " + sizedBadIds.size + " blob ids for large blobs - biggest=" + sizedBadIds.max.size + " smallest=" + sizedBadIds.min.size)
+            println("Total size (unpacked)=" + sizedBadIds.map(_.size).sum)
+            Some(new BlobReplacer(sizedBadIds.map(_.objectId)))
+          }
         }
       case _ => None
     }
