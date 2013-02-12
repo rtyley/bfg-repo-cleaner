@@ -93,7 +93,7 @@ object RepoRewriter {
       } withDefault Seq.empty
 
       refsByObjType.foreach {
-        case (typ, refs) => println("Found " + refs.size + " " + Constants.typeString(typ) + "-pointing refs : " + abbreviate(refs.map(_.getName).toSeq, "...").mkString(","))
+        case (typ, refs) => println("Found " + refs.size + " " + Constants.typeString(typ) + "-pointing refs : " + abbreviate(refs.map(_.getName).toSeq, "...", 4).mkString(", "))
       }
 
       revWalk.markStart(refsByObjType(OBJ_COMMIT).map(ref => ref.getObjectId.asRevCommit(revWalk)))
