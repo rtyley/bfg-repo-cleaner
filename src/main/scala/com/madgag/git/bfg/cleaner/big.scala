@@ -36,6 +36,7 @@ import org.eclipse.jgit.treewalk.filter.TreeFilter
 import org.eclipse.jgit.diff.DiffEntry
 import org.eclipse.jgit.diff.DiffEntry.ChangeType.ADD
 import Text._
+import com.madgag.git.bfg.cli.Tables
 
 /*
 Encountering a blob ->
@@ -155,25 +156,30 @@ object RepoRewriter {
 
     reportTreeDirtHistory(commits, objectIdCleaner)
 
-    println(title("Updating Refs"))
-
     {
       import scala.collection.JavaConversions._
 
       val refUpdateCommands = for (ref <- repo.getAllRefs.values if !ref.isSymbolic;
                                    (oldId, newId) <- objectIdCleaner.substitution(ref.getObjectId)
-      ) yield (new ReceiveCommand(oldId, newId, ref.getName))
+      ) yield new ReceiveCommand(oldId, newId, ref.getName)
 
-      abbreviate(refUpdateCommands.toSeq, "...") foreach {
-        println
-      }
+      println(title("Updating "+plural(refUpdateCommands, "Ref")))
 
+      val summaryTableCells = refUpdateCommands.map(update=> (update.getRefName, update.getOldId.shortName, update.getNewId.shortName))
+
+      Tables.formatTable(("Ref", "Before","After"),summaryTableCells.toSeq).map("\t"+_).foreach(println)
+
+      println
       repo.getRefDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(revWalk, progressMonitor)
     }
+
+
 
     // ("\nPost-update allRemovedFiles.size=" + allRemovedFiles.size)
 
     // allRemovedFiles.toSeq.sortBy(_._2).foreach { case (name,SizedObject(id,size)) => println(id.shortName+"\t"+size+"\t"+name) }
+
+    println("\nBFG run is complete!")
   }
 
   def reportTreeDirtHistory(commits: List[RevCommit], objectIdCleaner: ObjectId => ObjectId) {
@@ -200,7 +206,7 @@ object RepoRewriter {
 
     commits.find(objectIdCleaner.isDirty).foreach {
       c =>
-        println("First modified commit : " + c.shortName + " -> " + objectIdCleaner(c).shortName + "\n")
+        println("First modified commit : " + c.shortName + " -> " + objectIdCleaner(c).shortName)
     }
   }
 
