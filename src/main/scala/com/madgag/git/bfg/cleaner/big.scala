@@ -154,48 +154,51 @@ object RepoRewriter {
       }
     }
 
-    reportTreeDirtHistory(commits, objectIdCleaner)
+    if (!commits.exists(objectIdCleaner.isDirty)) {
+      println("\nBFG aborting: No unprotected dirty commits found - has this repo already been cleaned?\n")
+    } else {
+      reportTreeDirtHistory(commits, objectIdCleaner)
 
-    {
-      import scala.collection.JavaConversions._
+      {
+        import scala.collection.JavaConversions._
 
-      val refUpdateCommands = for (ref <- repo.getAllRefs.values if !ref.isSymbolic;
-                                   (oldId, newId) <- objectIdCleaner.substitution(ref.getObjectId)
-      ) yield new ReceiveCommand(oldId, newId, ref.getName)
+        val refUpdateCommands = for (ref <- repo.getAllRefs.values if !ref.isSymbolic;
+                                     (oldId, newId) <- objectIdCleaner.substitution(ref.getObjectId)
+        ) yield new ReceiveCommand(oldId, newId, ref.getName)
 
-      println(title("Updating "+plural(refUpdateCommands, "Ref")))
+        println(title("Updating "+plural(refUpdateCommands, "Ref")))
 
-      val summaryTableCells = refUpdateCommands.map(update=> (update.getRefName, update.getOldId.shortName, update.getNewId.shortName))
+        if (refUpdateCommands.isEmpty) {
+          println("WARNING: No refs to update - no dirty commits found??")
+        } else {
+          val summaryTableCells = refUpdateCommands.map(update=> (update.getRefName, update.getOldId.shortName, update.getNewId.shortName))
 
-      Tables.formatTable(("Ref", "Before","After"),summaryTableCells.toSeq).map("\t"+_).foreach(println)
+          Tables.formatTable(("Ref", "Before","After"),summaryTableCells.toSeq).map("\t"+_).foreach(println)
 
-      println
-      repo.getRefDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(revWalk, progressMonitor)
+          println
+          repo.getRefDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(revWalk, progressMonitor)
+        }
+      }
+
+      println("\nBFG run is complete!")
     }
-
-
-
-    // ("\nPost-update allRemovedFiles.size=" + allRemovedFiles.size)
-
-    // allRemovedFiles.toSeq.sortBy(_._2).foreach { case (name,SizedObject(id,size)) => println(id.shortName+"\t"+size+"\t"+name) }
-
-    println("\nBFG run is complete!")
   }
 
   def reportTreeDirtHistory(commits: List[RevCommit], objectIdCleaner: ObjectId => ObjectId) {
 
-    val dirtHistoryElements = 60
+    val dirtHistoryElements = math.max(20, math.min(60, commits.size))
     def cut[A](xs: Seq[A], n: Int) = {
       val avgSize = xs.size.toFloat / n
       def startOf(unit: Int): Int = math.round(unit * avgSize)
       (0 until n).view.map(u => xs.slice(startOf(u), startOf(u + 1)))
     }
     val treeDirtHistory = cut(commits, dirtHistoryElements).map {
+      case commits if commits.isEmpty => ' '
       case commits if (commits.exists(c => objectIdCleaner.isDirty(c.getTree))) => 'D'
       case commits if (commits.exists(objectIdCleaner.isDirty)) => 'm'
       case _ => '.'
-    }.mkString
-    def leftRight(markers: Seq[String]) = markers.mkString(" " * (dirtHistoryElements - markers.map(_.size).sum))
+    }.mkString.trim
+    def leftRight(markers: Seq[String]) = markers.mkString(" " * (treeDirtHistory.length - markers.map(_.size).sum))
     println(title("Commit Tree-Dirt History"))
     println("\t" + leftRight(Seq("Earliest", "Latest")))
     println("\t" + leftRight(Seq("|", "|")))
@@ -204,10 +207,12 @@ object RepoRewriter {
     println("\tm = modified commits (commit message or parents changed)")
     println("\t. = clean commits (no changes to file tree)\n")
 
-    commits.find(objectIdCleaner.isDirty).foreach {
-      c =>
-        println("First modified commit : " + c.shortName + " -> " + objectIdCleaner(c).shortName)
-    }
+    val firstModifiedCommit = ("First modified commit", commits.find(objectIdCleaner.isDirty).get)
+    val lastDirtyCommit = ("Last dirty commit", commits.reverse.find(c=>objectIdCleaner.isDirty(c.getTree)).get)
+    val items = for ((desc,commit) <- Seq(firstModifiedCommit,lastDirtyCommit);
+                    (before, after) <- objectIdCleaner.substitution(commit)
+                ) yield (desc, before.shortName, after.shortName)
+    Tables.formatTable(("", "Before","After"),items).map("\t"+_).foreach(println)
   }
 
   def title(text: String) = s"\n$text\n" + ("-" * text.size) + "\n"
