@@ -197,7 +197,7 @@ object RepoRewriter {
       case commits if (commits.exists(c => objectIdCleaner.isDirty(c.getTree))) => 'D'
       case commits if (commits.exists(objectIdCleaner.isDirty)) => 'm'
       case _ => '.'
-    }.mkString.trim
+    }.mkString
     def leftRight(markers: Seq[String]) = markers.mkString(" " * (treeDirtHistory.length - markers.map(_.size).sum))
     println(title("Commit Tree-Dirt History"))
     println("\t" + leftRight(Seq("Earliest", "Latest")))
