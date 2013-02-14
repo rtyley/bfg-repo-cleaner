@@ -52,17 +52,17 @@ object Main extends App {
 
           println("\nUsing repo : " + repo.getDirectory.getAbsolutePath + "\n")
 
+          // do this before implicitly initiating big-blob search
+          if (hasBeenProcessedByBFGBefore(repo)) {
+            println("\nThis repo has been processed by The BFG before! Will prune repo before proceeding - to avoid unnecessary cleaning work on unused objects.")
+            new Git(repo).gc.setProgressMonitor(new TextProgressMonitor()).call()
+            println("Completed prune of old objects - will now proceed with the main job!\n")
+          }
+
           if (config.definesNoWork) {
             Console.err.println("Please specify tasks for The BFG :")
             CLIConfig.parser.showUsage
           } else {
-
-            if (hasBeenProcessedByBFGBefore(repo)) {
-              println("\nThis repo has been processed by The BFG before! Will prune repo before proceeding - to avoid unnecessary cleaning work on unused objects.")
-              new Git(repo).gc.setProgressMonitor(new TextProgressMonitor()).call()
-              println("Completed prune of old objects - will now proceed with the main job!\n")
-            }
-
             println("Found " + config.objectProtection.fixedObjectIds.size + " objects to protect")
 
             RepoRewriter.rewrite(repo, config.objectIdCleanerConfig)
