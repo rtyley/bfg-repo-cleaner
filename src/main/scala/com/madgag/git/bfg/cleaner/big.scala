@@ -168,14 +168,14 @@ object RepoRewriter {
                                      (oldId, newId) <- objectIdCleaner.substitution(ref.getObjectId)
         ) yield new ReceiveCommand(oldId, newId, ref.getName)
 
-        println(title("Updating "+plural(refUpdateCommands, "Ref")))
+        println(title("Updating " + plural(refUpdateCommands, "Ref")))
 
         if (refUpdateCommands.isEmpty) {
           println("WARNING: No refs to update - no dirty commits found??")
         } else {
-          val summaryTableCells = refUpdateCommands.map(update=> (update.getRefName, update.getOldId.shortName, update.getNewId.shortName))
+          val summaryTableCells = refUpdateCommands.map(update => (update.getRefName, update.getOldId.shortName, update.getNewId.shortName))
 
-          Tables.formatTable(("Ref", "Before","After"),summaryTableCells.toSeq).map("\t"+_).foreach(println)
+          Tables.formatTable(("Ref", "Before", "After"), summaryTableCells.toSeq).map("\t" + _).foreach(println)
 
           println
           repo.getRefDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(revWalk, progressMonitor)
@@ -210,11 +210,11 @@ object RepoRewriter {
     println("\t. = clean commits (no changes to file tree)\n")
 
     val firstModifiedCommit = ("First modified commit", commits.find(objectIdCleaner.isDirty).get)
-    val lastDirtyCommit = ("Last dirty commit", commits.reverse.find(c=>objectIdCleaner.isDirty(c.getTree)).get)
-    val items = for ((desc,commit) <- Seq(firstModifiedCommit,lastDirtyCommit);
-                    (before, after) <- objectIdCleaner.substitution(commit)
-                ) yield (desc, before.shortName, after.shortName)
-    Tables.formatTable(("", "Before","After"),items).map("\t"+_).foreach(println)
+    val lastDirtyCommit = ("Last dirty commit", commits.reverse.find(c => objectIdCleaner.isDirty(c.getTree)).get)
+    val items = for ((desc, commit) <- Seq(firstModifiedCommit, lastDirtyCommit);
+                     (before, after) <- objectIdCleaner.substitution(commit)
+    ) yield (desc, before.shortName, after.shortName)
+    Tables.formatTable(("", "Before", "After"), items).map("\t" + _).foreach(println)
   }
 
   def title(text: String) = s"\n$text\n" + ("-" * text.size) + "\n"
