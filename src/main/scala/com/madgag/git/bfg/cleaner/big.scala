@@ -20,7 +20,7 @@
 
 package com.madgag.git.bfg.cleaner
 
-import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
+import org.eclipse.jgit.revwalk.{RevObject, RevWalk, RevCommit}
 import org.eclipse.jgit.lib.Constants.OBJ_COMMIT
 import java.io.InputStream
 import org.eclipse.jgit.transport.ReceiveCommand
@@ -36,7 +36,7 @@ import org.eclipse.jgit.treewalk.filter.TreeFilter
 import org.eclipse.jgit.diff.DiffEntry
 import org.eclipse.jgit.diff.DiffEntry.ChangeType.ADD
 import Text._
-import com.madgag.git.bfg.cli.Tables
+import com.madgag.git.bfg.cli.{ByteSize, Tables}
 
 /*
 Encountering a blob ->
@@ -110,19 +110,21 @@ object RepoRewriter {
     println("These are your latest commits, and so their contents will NOT be altered:\n")
     objectIdCleanerConfig.objectProtection.objectProtection.foreach {
       case (revObj, refNames) =>
+        implicit val reader = revWalk.getObjectReader
+
         val originalRevObject = treeOrBlobPointedToBy(revObj).merge
         val objectTitle = " * " + revObj.typeString + " " + revObj.shortName + " (protected by '" + refNames.mkString("', '") + "')"
 
         val diffEntries = objectIdCleaner.uncachedClean.substitution(originalRevObject) map {
           case (oldId, newId) =>
-            val tw = new TreeWalk(revWalk.getObjectReader)
+            val tw = new TreeWalk(reader)
             tw.setRecursive(true)
             tw.reset
 
             tw.addTree(oldId.asRevTree)
             tw.addTree(newId.asRevTree)
             tw.setFilter(TreeFilter.ANY_DIFF)
-            DiffEntry.scan(tw).filterNot(_.getChangeType == ADD).map(_.getOldPath)
+            DiffEntry.scan(tw).filterNot(_.getChangeType == ADD).map(d => d.getOldPath + " ("+ByteSize.format(d.getOldId.toObjectId.open.getSize)+")")
         }
 
         diffEntries match {

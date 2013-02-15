@@ -184,7 +184,10 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 }
 
 object ByteSize {
-  val magnitudeChars = List('B', 'K', 'M', 'G')
+  import math._
+
+  val magnitudeChars = List('K', 'M', 'G', 'T', 'P)
+  val unit = 1024
 
   def parse(v: String): Int = {
 
@@ -193,4 +196,15 @@ object ByteSize {
       case index => v.dropRight(1).toInt << (index * 10)
     }
   }
+
+  def format(bytes: Long): String = {
+    if (bytes < unit) {
+      bytes + " B"
+    } else {
+      val exp = (log(bytes) / log(unit)).toInt
+      val pre = "KMGTPE".charAt(exp-1)
+      "%.1f %sB".format(bytes / pow(unit, exp), pre)
+    }
+  }
+
 }
