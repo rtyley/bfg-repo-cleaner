@@ -18,7 +18,7 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/ .
  */
 
-package com.madgag.git.bfg.cleaner
+package com.madgag.git.bfg.cleaner.protection
 
 import org.eclipse.jgit.revwalk._
 import org.eclipse.jgit.lib.{Repository, ObjectId}

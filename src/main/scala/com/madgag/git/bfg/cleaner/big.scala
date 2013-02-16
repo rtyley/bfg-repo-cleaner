@@ -30,6 +30,7 @@ import com.madgag.git.bfg.GitUtil._
 import org.eclipse.jgit.lib._
 import concurrent.future
 import concurrent.ExecutionContext.Implicits.global
+import protection.ProtectedObjectDirtReport
 import scala.collection.JavaConversions._
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.TreeFilter
@@ -108,34 +109,17 @@ object RepoRewriter {
 
     println(title("Protected commits"))
     println("These are your latest commits, and so their contents will NOT be altered:\n")
-    objectIdCleanerConfig.objectProtection.objectProtection.foreach {
+
+    val reports = objectIdCleanerConfig.objectProtection.objectProtection.map {
       case (revObj, refNames) =>
         implicit val reader = revWalk.getObjectReader
 
-        val originalRevObject = treeOrBlobPointedToBy(revObj).merge
-        val objectTitle = " * " + revObj.typeString + " " + revObj.shortName + " (protected by '" + refNames.mkString("', '") + "')"
+        val originalContentObject = treeOrBlobPointedToBy(revObj).merge
+        val replacementTreeOrBlob = objectIdCleaner.uncachedClean.replacement(originalContentObject)
+        ProtectedObjectDirtReport(revObj, originalContentObject, replacementTreeOrBlob)
+    }.toList
 
-        val diffEntries = objectIdCleaner.uncachedClean.substitution(originalRevObject) map {
-          case (oldId, newId) =>
-            val tw = new TreeWalk(reader)
-            tw.setRecursive(true)
-            tw.reset
-
-            tw.addTree(oldId.asRevTree)
-            tw.addTree(newId.asRevTree)
-            tw.setFilter(TreeFilter.ANY_DIFF)
-            DiffEntry.scan(tw).filterNot(_.getChangeType == ADD).map(d => d.getOldPath + " ("+ByteSize.format(d.getOldId.toObjectId.open.getSize)+")")
-        }
-
-        diffEntries match {
-          case Some(diffs) if diffs.isEmpty => println(objectTitle + " - dirty")
-          case Some(diffs) => println(objectTitle + " - contains " + plural(diffs, "dirty file") + " : ")
-          abbreviate(diffs, "...").foreach {
-            dirtyFile => println("\t- " + dirtyFile)
-          }
-          case _ => println(objectTitle)
-        }
-    }
+    protection.Reporter.reportProtectedCommitsAndTheirDirt(reports, objectIdCleanerConfig)
     // lazy val allRemovedFiles = collection.mutable.Map[FileName, SizedObject]()
 
     println(title("Cleaning"))

@@ -23,6 +23,7 @@ package com.madgag.git.bfg.cleaner
 import org.scalatest._
 import matchers.ShouldMatchers
 import org.eclipse.jgit.api.Git
+import protection.ObjectProtection
 import scala.collection.JavaConversions._
 import java.util.Properties
 import org.eclipse.jgit.util.RawParseUtils

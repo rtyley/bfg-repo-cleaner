@@ -31,6 +31,7 @@ import com.madgag.git.bfg.Timing
 import org.eclipse.jgit.lib.{ObjectChecker, TextProgressMonitor, ProgressMonitor}
 import collection.immutable.SortedSet
 import org.eclipse.jgit.storage.file.FileRepository
+import protection.ObjectProtection
 import scopt.immutable.OptionParser
 import scala.Some
 import com.madgag.git.bfg.GitUtil.SizedObject

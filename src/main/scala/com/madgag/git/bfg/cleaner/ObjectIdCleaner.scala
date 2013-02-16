@@ -23,6 +23,7 @@ package com.madgag.git.bfg.cleaner
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.{RevWalk, RevTag, RevCommit}
 import org.eclipse.jgit.lib.Constants._
+import protection.ObjectProtection
 import scalaz.Memo
 import com.madgag.git.bfg.{CleaningMapper, MemoUtil}
 import com.madgag.git.bfg.GitUtil._
