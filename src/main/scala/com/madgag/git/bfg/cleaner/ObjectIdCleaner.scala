@@ -35,6 +35,7 @@ object ObjectIdCleaner {
                     objectIdSubstitutor: ObjectIdSubstitutor,
                     commitNodeCleaners: Seq[CommitNodeCleaner] = Seq.empty,
                     treeBlobsCleaners: Seq[TreeBlobsCleaner] = Seq.empty,
+                    // messageCleaners? - covers both Tag and Commits
                     objectChecker: Option[ObjectChecker] = None) {
 
     lazy val commitNodeCleaner = CommitNodeCleaner.chain(commitNodeCleaners)
@@ -102,7 +103,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
       val updatedTree = tree copyWith(cleanedSubtrees, fixedTreeBlobs)
 
-      val removedFiles = tree.blobs.entryMap -- fixedTreeBlobs.entryMap.keys
+      // val removedFiles = tree.blobs.entryMap -- fixedTreeBlobs.entryMap.keys
       //      val sizedRemovedFiles = removedFiles.mapValues {
       //        case (_, objectId) => SizedObject(objectId, objectDB.newReader.getObjectSize(objectId, ObjectReader.OBJ_ANY))
       //      }
@@ -128,9 +129,9 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
         tb.setObjectId(cleanedObj, originalTag.getObject.getType)
         tb.setTagger(originalTag.getTaggerIdent)
         tb.setMessage(objectIdSubstitutor.replaceOldIds(originalTag.getFullMessage, objectDB.newReader, apply))
-        val cleanTag: ObjectId = objectDB.newInserter.insert(tb)
+        val cleanedTag: ObjectId = objectDB.newInserter.insert(tb)
         objectChecker.foreach(_.checkTag(tb.toByteArray))
-        cleanTag
+        cleanedTag
     }.getOrElse(originalTag)
   }
 }
