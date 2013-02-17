@@ -29,8 +29,9 @@ object Tables {
     }
 
     val headerLine = padLine(header).mkString("   ")
-    headerLine +: "-"*headerLine.size +: (data.map { l =>
-      padLine(l).mkString(" | ")
+    headerLine +: "-" * headerLine.size +: (data.map {
+      l =>
+        padLine(l).mkString(" | ")
     })
   }
 }

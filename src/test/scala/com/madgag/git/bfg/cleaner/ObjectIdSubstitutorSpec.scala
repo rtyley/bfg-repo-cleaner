@@ -38,9 +38,9 @@ class ObjectIdSubstitutorSpec extends FlatSpec with ShouldMatchers {
 
     "This is decade2001 I say" should include regex (ObjectIdSubstitutor.hexRegex)
 
-    "This is Gdecade2001 I say" should not include regex (ObjectIdSubstitutor.hexRegex)
+    "This is Gdecade2001 I say" should not include regex(ObjectIdSubstitutor.hexRegex)
 
-    "This is decade2001X I say" should not include regex (ObjectIdSubstitutor.hexRegex)
+    "This is decade2001X I say" should not include regex(ObjectIdSubstitutor.hexRegex)
   }
 
   "Object Id" should "be substituted in commit message" in {
@@ -49,7 +49,7 @@ class ObjectIdSubstitutorSpec extends FlatSpec with ShouldMatchers {
 
     val cleanedMessage = ObjectIdSubstitutor.OldIdsPublic.replaceOldIds("See 3699910d2baab1 for backstory", reader, (_: ObjectId) => abbrId("06d7405020018d"))
 
-    cleanedMessage should be ("See 06d7405020018d [formerly 3699910d2baab1] for backstory")
+    cleanedMessage should be("See 06d7405020018d [formerly 3699910d2baab1] for backstory")
   }
 
 }

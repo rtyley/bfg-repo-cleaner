@@ -23,31 +23,23 @@ package com.madgag.git.bfg.cli
 import org.scalatest.FlatSpec
 import org.scalatest.matchers.ShouldMatchers
 import com.madgag.git.bfg._
-import cleaner.ObjectIdSubstitutor.OldIdsPublic
-import cleaner._
-import cli.Main._
 import com.madgag.git.bfg.GitUtil._
-import model.FileName
-import scala.Some
-import org.eclipse.jgit.api.Git
-import scala.collection.JavaConversions._
+import scala.collection.convert.wrapAsScala._
 
 class MainSpec extends FlatSpec with ShouldMatchers {
   "CLI" should "not change commits unnecessarily" in {
     implicit val repo = unpackRepo("/sample-repos/exampleWithInitialCleanHistory.git.zip")
     implicit val reader = repo.newObjectReader
-    def commitHist = {
-      new Git(repo).log.all.call.toList.reverse
-    }
+    def commitHist = repo.git.log.all.call.toSeq.reverse
 
-    val cleanStartCommits = Seq("ee1b29","b14312").map(abbrId)
+    val cleanStartCommits = Seq("ee1b29", "b14312").map(abbrId)
 
-    commitHist take 2 should equal (cleanStartCommits)
-    repo resolve("master") should be(abbrId("a9b7f0"))
+    commitHist take 2 should equal(cleanStartCommits)
+    repo resolve ("master") should be(abbrId("a9b7f0"))
 
     Main.main("--strip-blobs-bigger-than 1K".split(' ') :+ repo.getDirectory.getAbsolutePath)
 
-    commitHist take 2 should equal (cleanStartCommits)
-    repo resolve("master") should not be(abbrId("a9b7f0"))
+    commitHist take 2 should equal(cleanStartCommits)
+    repo resolve ("master") should not be (abbrId("a9b7f0"))
   }
 }

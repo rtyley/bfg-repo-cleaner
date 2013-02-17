@@ -30,7 +30,7 @@ class TextMatcherSpec extends FlatSpec with ShouldMatchers {
     TextMatcher("literal:foobar") should be(Literal("foobar"))
     TextMatcher("glob:foobar") should be(Glob("foobar"))
     TextMatcher("regex:foobar") should be(Reg("foobar"))
-    
+
     TextMatcher("boom", Reg) should be(Reg("boom"))
   }
 }

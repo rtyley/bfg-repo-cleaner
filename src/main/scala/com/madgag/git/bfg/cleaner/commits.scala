@@ -51,11 +51,11 @@ trait CommitNodeCleaner {
 object FormerCommitFooter extends CommitNodeCleaner {
   val Key = "Former-commit-id"
 
-  override def fixer(kit: CommitNodeCleaner.Kit) = modifyIf (kit.commitIsChanged) {
+  override def fixer(kit: CommitNodeCleaner.Kit) = modifyIf(kit.commitIsChanged) {
     _ add Footer(Key, kit.originalRevCommit.name)
   }
 
-  def modifyIf[A](predicate: A=>Boolean)(modifier: A=>A): (A=>A) = v => if (predicate(v)) modifier(v) else v
+  def modifyIf[A](predicate: A => Boolean)(modifier: A => A): (A => A) = v => if (predicate(v)) modifier(v) else v
 }
 
 object Commit {
@@ -64,7 +64,7 @@ object Commit {
 
 case class Commit(node: CommitNode, arcs: CommitArcs) {
   def toBytes: Array[Byte] = {
-    import scala.collection.JavaConversions._
+    import scala.collection.convert.wrapAsJava._
 
     val c = new CommitBuilder
     c.setParentIds(arcs.parents)

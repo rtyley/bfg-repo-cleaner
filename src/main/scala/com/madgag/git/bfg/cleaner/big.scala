@@ -20,7 +20,7 @@
 
 package com.madgag.git.bfg.cleaner
 
-import org.eclipse.jgit.revwalk.{RevObject, RevWalk, RevCommit}
+import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
 import org.eclipse.jgit.lib.Constants.OBJ_COMMIT
 import java.io.InputStream
 import org.eclipse.jgit.transport.ReceiveCommand
@@ -31,13 +31,9 @@ import org.eclipse.jgit.lib._
 import concurrent.future
 import concurrent.ExecutionContext.Implicits.global
 import protection.ProtectedObjectDirtReport
-import scala.collection.JavaConversions._
-import org.eclipse.jgit.treewalk.TreeWalk
-import org.eclipse.jgit.treewalk.filter.TreeFilter
-import org.eclipse.jgit.diff.DiffEntry
-import org.eclipse.jgit.diff.DiffEntry.ChangeType.ADD
+import scala.collection.convert.wrapAll._
 import Text._
-import com.madgag.git.bfg.cli.{ByteSize, Tables}
+import com.madgag.git.bfg.cli.Tables
 
 /*
 Encountering a blob ->
@@ -146,8 +142,6 @@ object RepoRewriter {
       reportTreeDirtHistory(commits, objectIdCleaner)
 
       {
-        import scala.collection.JavaConversions._
-
         val refUpdateCommands = for (ref <- repo.getAllRefs.values if !ref.isSymbolic;
                                      (oldId, newId) <- objectIdCleaner.substitution(ref.getObjectId)
         ) yield new ReceiveCommand(oldId, newId, ref.getName)

@@ -21,9 +21,8 @@
 package com.madgag.git.bfg.cli
 
 import com.madgag.git.bfg.cleaner._
-import org.eclipse.jgit.api.Git
-import org.eclipse.jgit.lib.{Constants, Repository, TextProgressMonitor}
-import scala.collection.JavaConversions._
+import org.eclipse.jgit.lib.{Constants, Repository}
+import scala.collection.convert.wrapAsScala._
 import com.madgag.git.bfg.GitUtil._
 import org.eclipse.jgit.revwalk.RevWalk
 
@@ -55,7 +54,7 @@ object Main extends App {
           // do this before implicitly initiating big-blob search
           if (hasBeenProcessedByBFGBefore(repo)) {
             println("\nThis repo has been processed by The BFG before! Will prune repo before proceeding - to avoid unnecessary cleaning work on unused objects...")
-            new Git(repo).gc.setProgressMonitor(NullProgressMonitor.INSTANCE).call()
+            repo.git.gc.call()
             println("Completed prune of old objects - will now proceed with the main job!\n")
           }
 

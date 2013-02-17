@@ -26,7 +26,7 @@ import org.eclipse.jgit.storage.file.FileRepository
 import java.io.File._
 import com.madgag.compress.CompressUtil._
 import org.eclipse.jgit.revwalk.RevCommit
-import scala.collection.JavaConversions._
+import scala.collection.convert.wrapAsScala._
 import java.io.File
 import com.google.common.io.Files
 import com.madgag.git.bfg.GitUtil._
@@ -43,7 +43,7 @@ package object bfg {
     val rawZipFileInputStream = getClass.getResource(fileName).openStream()
     assert(rawZipFileInputStream != null, "Stream for " + fileName + " is null.")
 
-    val repoParentFolder = new File(Files.createTempDir(),fileName.replace(separatorChar, '_') + "-unpacked")
+    val repoParentFolder = new File(Files.createTempDir(), fileName.replace(separatorChar, '_') + "-unpacked")
     repoParentFolder.mkdir()
 
     unzip(rawZipFileInputStream, repoParentFolder)

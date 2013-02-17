@@ -185,6 +185,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 }
 
 object ByteSize {
+
   import math._
 
   val magnitudeChars = List('K', 'M', 'G', 'T', 'P)
@@ -203,7 +204,7 @@ object ByteSize {
       bytes + " B"
     } else {
       val exp = (log(bytes) / log(unit)).toInt
-      val pre = "KMGTPE".charAt(exp-1)
+      val pre = "KMGTPE".charAt(exp - 1)
       "%.1f %sB".format(bytes / pow(unit, exp), pre)
     }
   }

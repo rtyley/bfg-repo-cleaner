@@ -26,12 +26,13 @@ import org.eclipse.jgit.lib.ObjectReader.OBJ_ANY
 import org.eclipse.jgit.treewalk.TreeWalk
 import collection.mutable
 import org.eclipse.jgit.storage.file.{WindowCache, WindowCacheConfig, ObjectDirectory, FileRepository}
-import scala.collection.JavaConversions._
+import scala.collection.convert.wrapAsScala._
 import java.io.File
 import scala.{Long, Some}
 import org.eclipse.jgit.util.FS
 import org.eclipse.jgit.lib.Constants.OBJ_BLOB
 import com.madgag.git.bfg.cleaner._
+import org.eclipse.jgit.api.Git
 
 object ObjectId {
   def apply(str: String) = org.eclipse.jgit.lib.ObjectId.fromString(str)
@@ -67,8 +68,11 @@ object GitUtil {
 
   def abbrId(str: String)(implicit reader: ObjectReader): ObjectId = reader.resolveExistingUniqueId(AbbreviatedObjectId.fromString(str)).get
 
-  implicit class RichRevObject(revObject: RevObject) {
+  implicit class RichRepo(repo: Repository) {
+    lazy val git = new Git(repo)
+  }
 
+  implicit class RichRevObject(revObject: RevObject) {
     lazy val typeString = Constants.typeString(revObject.getType)
   }
 
