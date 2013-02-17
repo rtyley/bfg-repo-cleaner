@@ -36,7 +36,7 @@ object CommitNodeCleaner {
 
     val arcsChanged = originalCommit.arcs != updatedArcs
 
-    def isCommitChangedWith(node: CommitNode) = arcsChanged || originalCommit.node != node
+    def commitIsChanged(withThisNode: CommitNode) = arcsChanged || originalCommit.node != withThisNode
   }
 
   def chain(cleaners: Seq[CommitNodeCleaner]) = new CommitNodeCleaner {
@@ -51,10 +51,11 @@ trait CommitNodeCleaner {
 object FormerCommitFooter extends CommitNodeCleaner {
   val Key = "Former-commit-id"
 
-  override def fixer(kit: CommitNodeCleaner.Kit) = message =>
-    if (kit.isCommitChangedWith(message)) {
-      message add Footer(Key, kit.originalRevCommit.name)
-    } else message
+  override def fixer(kit: CommitNodeCleaner.Kit) = modifyIf (kit.commitIsChanged) {
+    _ add Footer(Key, kit.originalRevCommit.name)
+  }
+
+  def modifyIf[A](predicate: A=>Boolean)(modifier: A=>A): (A=>A) = v => if (predicate(v)) modifier(v) else v
 }
 
 object Commit {
