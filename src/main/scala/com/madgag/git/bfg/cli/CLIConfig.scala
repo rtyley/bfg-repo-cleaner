@@ -53,7 +53,7 @@ object CLIConfig {
         (v: String, c: CLIConfig) => c.copy(deleteFiles = Some(TextMatcher(v, defaultType = Glob)))
       },
       opt("rt", "replace-banned-text", "<banned-text-file>", "remove banned text from files and replace it with '***REMOVED***'. Banned expressions are in the specified file, one expression per line.") {
-        (v: String, c: CLIConfig) => c.copy(replaceBannedStrings = Source.fromFile(v).getLines().toSeq)
+        (v: String, c: CLIConfig) => c.copy(replaceBannedStrings = Source.fromFile(v).getLines().filterNot(_.trim.isEmpty).toSeq)
       },
       opt("fi", "filter-content-including", "<glob>", "do file-content filtering on files that match the specified expression (eg '*.{txt|properties}')") {
         (v: String, c: CLIConfig) => c.copy(filenameFilters = c.filenameFilters :+ Include(TextMatcher(v, defaultType = Glob)))
