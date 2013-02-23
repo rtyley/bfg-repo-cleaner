@@ -50,16 +50,16 @@ object CLIConfig {
         (v: Int, c: CLIConfig) => c.copy(stripBiggestBlobs = Some(v))
       },
       opt("D", "delete-files", "<glob>", "delete files with the specified names (eg '*.class', '*.{txt,log}' - matches on file name, not path within repo)") {
-        (v: String, c: CLIConfig) => c.copy(deleteFiles = Some(TextMatcher(v, defaultType = Glob)))
+        (v: String, c: CLIConfig) => c.copy(deleteFiles = Some(FileMatcher(v)))
       },
       opt("rt", "replace-banned-text", "<banned-text-file>", "remove banned text from files and replace it with '***REMOVED***'. Banned expressions are in the specified file, one expression per line.") {
         (v: String, c: CLIConfig) => c.copy(replaceBannedStrings = Source.fromFile(v).getLines().filterNot(_.trim.isEmpty).toSeq)
       },
       opt("fi", "filter-content-including", "<glob>", "do file-content filtering on files that match the specified expression (eg '*.{txt|properties}')") {
-        (v: String, c: CLIConfig) => c.copy(filenameFilters = c.filenameFilters :+ Include(TextMatcher(v, defaultType = Glob)))
+        (v: String, c: CLIConfig) => c.copy(filenameFilters = c.filenameFilters :+ Include(FileMatcher(v)))
       },
       opt("fe", "filter-content-excluding", "<glob>", "don't do file-content filtering on files that match the specified expression (eg '*.{xml|pdf}')") {
-        (v: String, c: CLIConfig) => c.copy(filenameFilters = c.filenameFilters :+ Exclude(TextMatcher(v, defaultType = Glob)))
+        (v: String, c: CLIConfig) => c.copy(filenameFilters = c.filenameFilters :+ Exclude(FileMatcher(v)))
       },
       opt("fs", "filter-content-size-threshold", "<size>", "only do file-content filtering on files smaller than <size> (default is %1$d bytes)".format(CLIConfig().filterSizeThreshold)) {
         (v: String, c: CLIConfig) => c.copy(filterSizeThreshold = ByteSize.parse(v))
@@ -80,6 +80,15 @@ object CLIConfig {
         (v: String, c: CLIConfig) => c.copy(repoLocation = new File(v).getCanonicalFile)
       }
     )
+
+    object FileMatcher {
+      def apply(possiblyPrefixedExpr: String): TextMatcher = {
+        if (possiblyPrefixedExpr.contains('/')) {
+          throw new IllegalArgumentException("*** Can only match on filename, NOT path *** - remove '/' path segments")
+        }
+        TextMatcher(possiblyPrefixedExpr, defaultType = Glob)
+      }
+    }
   }
 }
 
