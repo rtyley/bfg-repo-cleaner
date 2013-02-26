@@ -101,7 +101,8 @@ ids <strong>will</strong> change, to reflect the changed history - only the SHA-
 </ul>
 
 <h1 id="speed">Faster...</h1>
-<p>The BFG is 10 - 50x faster than <code>git-filter-branch</code>, turning an <em>overnight</em> job into one that takes <em>less than ten minutes</em>. BFG's performance advantage is due to these factors:</p>
+<p>The BFG is <a href="https://docs.google.com/spreadsheet/ccc?key=0AsR1d5Zpes8HdER3VGU1a3dOcmVHMmtzT2dsS2xNenc">10 - 50x</a> faster
+than <code>git-filter-branch</code>, turning an <em>overnight</em> job into one that takes <em>less than ten minutes</em>. BFG's performance advantage is due to these factors:</p>
 
 <ul>
 <li>The approach of <code>git-filter-branch</code> is to step through every commit in your repository, examining the complete file-hierarchy of each one. For the intended use-cases of The BFG this is wasteful, as we don't care <em>where</em> in a file structure a 'bad' file exists - we just want it dealt with. Inherent in the nature of Git is that <em>every</em> file and folder is represented precisely once (and given a unique <a href="http://en.wikipedia.org/wiki/SHA-1">SHA-1</a> hash-id). The BFG takes advantage of this to process each and every file &amp; folder exactly <strong>once</strong> - no need for extra work.</li>
