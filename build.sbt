@@ -39,7 +39,7 @@ pomExtra := (
       <developer>
         <id>rtyley</id>
         <name>Roberto Tyley</name>
-        <url>https://github.com:rtyley</url>
+        <url>https://github.com/rtyley</url>
       </developer>
     </developers>)
 
