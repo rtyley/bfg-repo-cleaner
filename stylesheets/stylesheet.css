@@ -485,3 +485,7 @@ strong {
 em, i {
   font-style: italic;
 }
+
+.attribution {
+  font-size: 70%;
+}
