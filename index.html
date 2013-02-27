@@ -48,9 +48,12 @@
 </ul>
 
 <h1 id="usage">Usage</h1>
-<p>First clone a copy of your repo:</p>
-<pre><code>$ git clone --bare git://example.com/some-big-repo.git
+<p>First clone a fresh copy of your repo, using the <a href="http://stackoverflow.com/q/3959924/438886"><code>--mirror</code></a> flag:</p>
+<pre><code>$ git clone --mirror git://example.com/some-big-repo.git
 </code></pre>
+<p>This is a <a href="http://git-scm.com/docs/gitglossary.html#def_bare_repository">bare</a>
+repo, which means your normal files won't be visible, but it is a <em>full</em> copy of the Git database of your repository, and at this point
+you should <strong>make a backup of it</strong> to ensure you don't lose anything.</p>
 <p>Now you can run the BFG to clean your repository up:</p>
 <pre><code>$ java -jar <a class="latest-download-link" href="#download">bfg.jar</a> --strip-biggest-blobs 500 some-big-repo.git
 </code></pre>
@@ -58,8 +61,8 @@
 <pre><code>$ cd some-big-repo.git
 $ git gc --prune=now --aggressive
 </code></pre>
-<p>Finally, once you're happy with the updated state of your repo, push it back up:</p>
-<pre><code>$ git push --mirror</code></pre>
+<p>Finally, once you're happy with the updated state of your repo, push it back up <em>(note that because your clone command used the <code>--mirror</code> flag, this push will update <strong>all</strong> refs on your remote server)</em>:</p>
+<pre><code>$ git push</code></pre>
 <p>At this point, you're ready for everyone to ditch their old copies of the repo and do fresh clones of the nice, new pristine data.</p>
 
 <h1 id="examples">Examples</h1>
