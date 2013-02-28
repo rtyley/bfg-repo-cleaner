@@ -74,8 +74,9 @@ $ git gc --prune=now --aggressive
 <p>Remove all blobs bigger than 1 megabyte :</p>
 <pre><code>$ bfg <strong>--strip-blobs-bigger-than 1M</strong>  my-repo.git</code></pre>
 
-<p>Replace all passwords (listed in a file 'passwords.txt') with <code>***REMOVED***</code> :</p>
+<p>Replace all passwords listed in a file <em>(prefix lines 'regex:' or 'glob:' if required)</em> with <code>***REMOVED***</code> wherever they occur in your repository :</p>
 <pre><code>$ bfg <strong>--replace-banned-strings passwords.txt</strong>  my-repo.git</code></pre>
+
 
 <h1 id="protected-commits">Your <em>current</em> files are sacred...</h1>
 
