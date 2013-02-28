@@ -67,6 +67,9 @@ object CLIConfig {
       opt("p", "protect-blobs-from", "<refs>", "protect blobs that appear in the most recent versions of the specified refs (default is 'HEAD')") {
         (v: String, c: CLIConfig) => c.copy(protectBlobsFromRevisions = v.split(',').toSet)
       },
+      flag("no-blob-protection", "allow the BFG to modify even your *latest* commit. Not recommended: you should have already ensured your latest commit is clean.") {
+        (c: CLIConfig) => c.copy(protectBlobsFromRevisions = Set.empty)
+      },
       //      flag("strict-object-checking", "perform additional checks on integrity of consumed & created objects") {
       //        (c: CLIConfig) => c.copy(strictObjectChecking = true)
       //      },

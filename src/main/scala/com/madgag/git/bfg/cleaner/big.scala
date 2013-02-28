@@ -104,18 +104,15 @@ object RepoRewriter {
     val objectIdCleaner = new ObjectIdCleaner(objectIdCleanerConfig, repo.getObjectDatabase, revWalk)
 
     println(title("Protected commits"))
-    println("These are your latest commits, and so their contents will NOT be altered:\n")
 
-    val reports = objectIdCleanerConfig.objectProtection.objectProtection.map {
-      case (revObj, refNames) =>
-        implicit val reader = revWalk.getObjectReader
+    if (objectIdCleanerConfig.objectProtection.objectProtection.isEmpty) {
+      println("You're not protecting any commits, which means the BFG will modify the contents of even *current* commits.\n\n" +
+        "This isn't recommended - ideally, if your current commits are dirty, you should fix up your working copy and " +
+        "commit that, check that your build still works, and only then run the BFG to clean up your history.")
+    } else {
+      reportObjectProtection(objectIdCleanerConfig, objectIdCleaner)
+    }
 
-        val originalContentObject = treeOrBlobPointedToBy(revObj).merge
-        val replacementTreeOrBlob = objectIdCleaner.uncachedClean.replacement(originalContentObject)
-        ProtectedObjectDirtReport(revObj, originalContentObject, replacementTreeOrBlob)
-    }.toList
-
-    protection.Reporter.reportProtectedCommitsAndTheirDirt(reports, objectIdCleanerConfig)
     // lazy val allRemovedFiles = collection.mutable.Map[FileName, SizedObject]()
 
     println(title("Cleaning"))
@@ -162,6 +159,22 @@ object RepoRewriter {
 
       println("\nBFG run is complete!")
     }
+  }
+
+
+  def reportObjectProtection(objectIdCleanerConfig: ObjectIdCleaner.Config, objectIdCleaner: ObjectIdCleaner)(implicit revWalk: RevWalk) {
+    println("These are your latest commits, and so their contents will NOT be altered:\n")
+
+    val reports = objectIdCleanerConfig.objectProtection.objectProtection.map {
+      case (revObj, refNames) =>
+        implicit val reader = revWalk.getObjectReader
+
+        val originalContentObject = treeOrBlobPointedToBy(revObj).merge
+        val replacementTreeOrBlob = objectIdCleaner.uncachedClean.replacement(originalContentObject)
+        ProtectedObjectDirtReport(revObj, originalContentObject, replacementTreeOrBlob)
+    }.toList
+
+    protection.Reporter.reportProtectedCommitsAndTheirDirt(reports, objectIdCleanerConfig)
   }
 
   def reportTreeDirtHistory(commits: List[RevCommit], objectIdCleaner: ObjectId => ObjectId) {
