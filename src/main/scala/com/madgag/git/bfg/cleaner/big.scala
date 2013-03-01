@@ -153,7 +153,9 @@ object RepoRewriter {
           Tables.formatTable(("Ref", "Before", "After"), summaryTableCells.toSeq).map("\t" + _).foreach(println)
 
           println
-          repo.getRefDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(revWalk, progressMonitor)
+          Timing.measureTask("...Ref update", refUpdateCommands.size) {
+            repo.getRefDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(revWalk, progressMonitor)
+          }
         }
       }
 
