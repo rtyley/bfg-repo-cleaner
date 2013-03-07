@@ -205,7 +205,7 @@ object ByteSize {
 
   def parse(v: String): Int = {
 
-    magnitudeChars.indexOf(v.takeRight(1)(0).toUpper) match {
+    (1+magnitudeChars.indexOf(v.takeRight(1)(0).toUpper)) match {
       case -1 => throw new IllegalArgumentException("Size unit is missing (ie %s)".format(magnitudeChars.mkString(", ")))
       case index => v.dropRight(1).toInt << (index * 10)
     }
