@@ -29,7 +29,6 @@ import com.madgag.git.bfg.cleaner.TreeBlobsCleaner.Kit
 import scalaz.Memo
 import com.madgag.git.bfg.MemoUtil
 import scalax.io.Resource
-import com.ibm.icu.text.CharsetDetector
 import java.nio.charset.Charset
 import scala.Some
 import com.madgag.git.bfg.model.TreeBlobEntry
@@ -107,21 +106,6 @@ object QuickBlobCharsetDetector extends BlobCharsetDetector {
   private def decode(b: ByteBuffer, charset: Charset) {
     charset.newDecoder.onMalformedInput(REPORT).onUnmappableCharacter(REPORT).decode(b)
   }
-}
-
-object ICU4JBlobCharsetDetector {
-  private val cd = new CharsetDetector() // instances of CharsetDetector are not thread-safe!
-}
-
-class ICU4JBlobCharsetDetector extends BlobCharsetDetector {
-
-  def charsetFor(entry: TreeBlobEntry, streamResource: InputStreamResource[ObjectStream]): Option[Charset] =
-    Some(streamResource.bytes.take(8000).toArray).filterNot(RawText.isBinary).flatMap {
-      sampleBytes =>
-        ICU4JBlobCharsetDetector.cd.synchronized {
-          Option(ICU4JBlobCharsetDetector.cd.setText(sampleBytes).detect).map(cm => Charset.forName(cm.getName))
-        }
-    }
 }
 
 object BlobTextModifier {

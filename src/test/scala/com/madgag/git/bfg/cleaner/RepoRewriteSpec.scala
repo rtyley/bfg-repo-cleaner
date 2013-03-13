@@ -103,7 +103,7 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
         case FileExt("txt") | FileExt("scala") => """(\.password=).*""".r --> (_.group(1) + "*** PASSWORD ***")
       }
 
-      val charsetDetector = new ICU4JBlobCharsetDetector
+      val charsetDetector = QuickBlobCharsetDetector
     }
     RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set("HEAD")), OldIdsPublic, Seq(FormerCommitFooter), Seq(blobTextModifier)))
 
@@ -125,36 +125,30 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
   }
 
 
-  Seq(QuickBlobCharsetDetector, new ICU4JBlobCharsetDetector).foreach {
-    charDetector =>
-      val thing = "Text modifier with " + charDetector.getClass.getSimpleName
-      thing should "handle the short UTF-8" in textReplacementOf("UTF-8", "bushhidthefacts", "txt", "facts", "toffee")
+  "Text modifier" should "handle the short UTF-8" in textReplacementOf("UTF-8", "bushhidthefacts", "txt", "facts", "toffee")
 
-      thing should "handle the long UTF-8" in textReplacementOf("UTF-8", "big", "scala", "good", "blessed")
+    it should "handle the long UTF-8" in textReplacementOf("UTF-8", "big", "scala", "good", "blessed")
 
-      thing should "handle ASCII in SHIFT JIS" in textReplacementOf("SHIFT-JIS", "japanese", "txt", "EUC", "BOOM")
+    it should "handle ASCII in SHIFT JIS" in textReplacementOf("SHIFT-JIS", "japanese", "txt", "EUC", "BOOM")
 
-      thing should "handle ASCII in ISO-8859-1" in textReplacementOf("ISO-8859-1", "laparabla", "txt", "palpitando", "buscando")
+    it should "handle ASCII in ISO-8859-1" in textReplacementOf("ISO-8859-1", "laparabla", "txt", "palpitando", "buscando")
 
-      def textReplacementOf(parentPath: String, fileNamePrefix: String, fileNamePostfix: String, before: String, after: String) {
-        implicit val repo = unpackRepo("/sample-repos/encodings.git.zip")
+    def textReplacementOf(parentPath: String, fileNamePrefix: String, fileNamePostfix: String, before: String, after: String) {
+      implicit val repo = unpackRepo("/sample-repos/encodings.git.zip")
 
-        val blobTextModifier = new BlobTextModifier {
-          def lineCleanerFor(entry: TreeBlobEntry) = Some(quote(before).r --> (_ => after))
+      val blobTextModifier = new BlobTextModifier {
+        def lineCleanerFor(entry: TreeBlobEntry) = Some(quote(before).r --> (_ => after))
 
-          val charsetDetector = charDetector
-        }
-        RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set.empty), OldIdsPrivate, treeBlobsCleaners = Seq(blobTextModifier)))
-
-        val cleanedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-ORIGINAL.$fileNamePostfix")
-        val expectedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-MODIFIED-$before-$after.$fileNamePostfix")
-
-        expectedFile should not be null
-        cleanedFile should be(expectedFile)
+        val charsetDetector = QuickBlobCharsetDetector
       }
-  }
+      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set.empty), OldIdsPrivate, treeBlobsCleaners = Seq(blobTextModifier)))
 
+      val cleanedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-ORIGINAL.$fileNamePostfix")
+      val expectedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-MODIFIED-$before-$after.$fileNamePostfix")
 
+      expectedFile should not be null
+      cleanedFile should be(expectedFile)
+    }
 }
 
 
