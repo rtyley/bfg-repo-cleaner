@@ -21,17 +21,18 @@
 package com.madgag.git.bfg
 
 import model.{Tree, FileName}
-import org.scalatest._
-import matchers.ShouldMatchers
 import org.eclipse.jgit.lib.ObjectId.zeroId
 import org.eclipse.jgit.lib.FileMode
 import FileMode._
+import org.specs2.mutable._
 
-class TreeEntrySpec extends FlatSpec with ShouldMatchers {
+class TreeEntrySpec extends Specification {
 
   def a(mode: FileMode, name: String) = Tree.Entry(FileName(name), mode, zeroId)
 
-  "Tree entry ordering" should "match ordering used by Git" in {
-    a(TREE, "agit-test-utils") should be < (a(TREE, "agit"))
+  "Tree entry ordering" should {
+    "match ordering used by Git" in {
+      a(TREE, "agit-test-utils") should be < (a(TREE, "agit"))
+    }
   }
 }

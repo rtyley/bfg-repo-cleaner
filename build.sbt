@@ -56,7 +56,7 @@ libraryDependencies ++= Seq(
   "com.madgag" % "globs-for-java" % "0.2",
   "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.2",
   "com.ibm.icu" % "icu4j" % "50.1.1",
-  "org.scalatest" %% "scalatest" % "1.9.1" % "test",
+  "org.specs2" %% "specs2" % "1.14" % "test",
   "com.madgag" % "util-compress" % "1.33" % "test"
 )
 

@@ -21,29 +21,29 @@
 package com.madgag.git.bfg
 
 import cleaner.{Footer, CommitNode}
-import org.scalatest._
-import matchers.ShouldMatchers
 import org.eclipse.jgit.lib.PersonIdent
+import org.specs2.mutable._
 
-class MessageFooterSpec extends FlatSpec with ShouldMatchers {
+class MessageFooterSpec extends Specification {
 
-  val p = new PersonIdent("Dave Eg", "dave@e.com")
+  val person = new PersonIdent("Dave Eg", "dave@e.com")
 
-  def commit(m: String) = CommitNode(p, p, m)
+  def commit(m: String) = CommitNode(person, person, m)
 
-  "Message footers" should "append footer without new paragraph if footers already present" in {
+  "Message footers" should {
+    "append footer without new paragraph if footers already present" in {
 
-    val updatedCommit = commit("Sub\n\nmessage\n\nSigned-off-by: Joe Eg <joe@e.com>") add Footer("Foo", "Bar")
+      val updatedCommit = commit("Sub\n\nmessage\n\nSigned-off-by: Joe Eg <joe@e.com>") add Footer("Foo", "Bar")
 
-    updatedCommit.message should be("Sub\n\nmessage\n\nSigned-off-by: Joe Eg <joe@e.com>\nFoo: Bar")
+      updatedCommit.message mustEqual "Sub\n\nmessage\n\nSigned-off-by: Joe Eg <joe@e.com>\nFoo: Bar"
+    }
+    "create paragraph break if no footers already present" in {
+
+      val updatedCommit = commit("Sub\n\nmessage") add Footer("Foo", "Bar")
+
+      updatedCommit.message mustEqual "Sub\n\nmessage\n\nFoo: Bar"
+    }
+
+    // def footersViaJGit(commit: RevCommit) = commit.getFooterLines.map(f => Footer(f.getKey, f.getValue)).toList
   }
-
-  "Message footers" should "create paragraph break if no footers already present" in {
-
-    val updatedCommit = commit("Sub\n\nmessage") add Footer("Foo", "Bar")
-
-    updatedCommit.message should be("Sub\n\nmessage\n\nFoo: Bar")
-  }
-
-  // def footersViaJGit(commit: RevCommit) = commit.getFooterLines.map(f => Footer(f.getKey, f.getValue)).toList
 }

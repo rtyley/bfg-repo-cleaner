@@ -20,20 +20,21 @@
 
 package com.madgag.git.bfg.cli
 
-import org.scalatest.FlatSpec
-import org.scalatest.matchers.ShouldMatchers
-import com.madgag.git.bfg.model.FileName
+import org.specs2.mutable._
 
-class ByteSizeSpecs extends FlatSpec with ShouldMatchers {
-  "Size parser" should "understand 1M" in {
-    ByteSize.parse("1M") should be(1024 * 1024)
+class ByteSizeSpecs extends Specification {
+  "Size parser" should {
+    "understand 1M" in {
+      ByteSize.parse("1M") mustEqual 1024 * 1024
+    }
+    "understand 1K" in {
+      ByteSize.parse("1K") mustEqual 1024
+    }
   }
 
-  "Size parser" should "understand 1K" in {
-    ByteSize.parse("1K") should be(1024)
-  }
-
-  "Size formatter" should "correctly format" in {
-    ByteSize.format(1024) should be("1.0 KB")
+  "Size formatter" should {
+    "correctly format" in {
+      ByteSize.format(1024) mustEqual "1.0 KB"
+    }
   }
 }

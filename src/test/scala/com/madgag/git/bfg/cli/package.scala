@@ -18,19 +18,12 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/ .
  */
 
-package com.madgag.git.bfg.textmatching
+package com.madgag.git.bfg
 
-import org.specs2.mutable._
+import org.eclipse.jgit.lib.Repository
 
-class TextMatcherSpec extends Specification {
-
-  "text matcher creation" should {
-    "parse prefix if present" in {
-      TextMatcher("literal:foobar") mustEqual Literal("foobar")
-      TextMatcher("glob:foobar") mustEqual Glob("foobar")
-      TextMatcher("regex:foobar") mustEqual Reg("foobar")
-
-      TextMatcher("boom", Reg) mustEqual Reg("boom")
-    }
+package object cli {
+  def run(options: String)(implicit repo: Repository) {
+    Main.main(options.split(' ') :+ repo.getDirectory.getAbsolutePath)
   }
 }

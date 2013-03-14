@@ -20,8 +20,6 @@
 
 package com.madgag.git.bfg.cleaner
 
-import org.scalatest._
-import matchers.ShouldMatchers
 import protection.ObjectProtection
 import scala.collection.convert.wrapAsScala._
 import java.util.Properties
@@ -40,98 +38,103 @@ import cli.Main.hasBeenProcessedByBFGBefore
 import java.util.regex.Pattern._
 import ObjectIdSubstitutor._
 import org.eclipse.jgit.revwalk.RevWalk
+import org.specs2.mutable._
 
-class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
+class RepoRewriteSpec extends Specification {
 
-  "Git repo" should "not explode" in {
-    implicit val repo = unpackRepo("/sample-repos/example.git.zip")
-    implicit val reader = repo.newObjectReader
+  "Git repo" should {
+    "not explode" in {
+      implicit val repo = unpackRepo("/sample-repos/example.git.zip")
+      implicit val reader = repo.newObjectReader
 
-    hasBeenProcessedByBFGBefore(repo) should be(false)
+      hasBeenProcessedByBFGBefore(repo) must beFalse
 
-    val blobsToRemove = Set(abbrId("06d740"))
-    RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set("HEAD")), OldIdsPublic, Seq(FormerCommitFooter), Seq(new BlobRemover(blobsToRemove))))
+      val blobsToRemove = Set(abbrId("06d740"))
+      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set("HEAD")), OldIdsPublic, Seq(FormerCommitFooter), Seq(new BlobRemover(blobsToRemove))))
 
-    val allCommits = repo.git.log.all.call.toSeq
+      val allCommits = repo.git.log.all.call.toSeq
 
-    val unwantedBlobsByCommit = allCommits.flatMap(commit => {
-      val unwantedBlobs = allBlobsReachableFrom(commit).intersect(blobsToRemove).map(_.shortName)
-      if (!unwantedBlobs.isEmpty) Some(commit.shortName -> unwantedBlobs) else None
-    }).toMap
+      val unwantedBlobsByCommit = allCommits.flatMap(commit => {
+        val unwantedBlobs = allBlobsReachableFrom(commit).intersect(blobsToRemove).map(_.shortName)
+        if (!unwantedBlobs.isEmpty) Some(commit.shortName -> unwantedBlobs) else None
+      }).toMap
 
-    unwantedBlobsByCommit should be('empty)
+      unwantedBlobsByCommit must be empty
 
-    allCommits.head.getFullMessage should include(FormerCommitFooter.Key)
+      allCommits.head.getFullMessage must contain(FormerCommitFooter.Key)
 
-    hasBeenProcessedByBFGBefore(repo) should be(true)
+      hasBeenProcessedByBFGBefore(repo) should beTrue
+    }
   }
 
-  "Repo rewriter" should "clean commit messages even on clean branches, because they may reference commits from dirty ones" in {
-    implicit val repo = unpackRepo("/sample-repos/taleOfTwoBranches.git.zip")
-    implicit val revWalk = new RevWalk(repo)
+  "Repo rewriter" should {
+    "clean commit messages even on clean branches, because they may reference commits from dirty ones" in {
+      implicit val repo = unpackRepo("/sample-repos/taleOfTwoBranches.git.zip")
+      implicit val revWalk = new RevWalk(repo)
 
-    repo.getRef("pure").getObjectId.asRevCommit.getFullMessage should include("6e76960ede2addbbe7e")
+      repo.getRef("pure").getObjectId.asRevCommit.getFullMessage must contain("6e76960ede2addbbe7e")
 
-    RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set.empty), OldIdsPrivate, Seq(new CommitMessageObjectIdsUpdater(OldIdsPrivate)), Seq(new TreeBlobsCleaner {
-      def fixer(kit: Kit) = _.entries.filterNot(_.filename.string == "sin")
-    })))
+      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set.empty), OldIdsPrivate, Seq(new CommitMessageObjectIdsUpdater(OldIdsPrivate)), Seq(new TreeBlobsCleaner {
+        def fixer(kit: Kit) = _.entries.filterNot(_.filename.string == "sin")
+      })))
 
-    repo.getRef("pure").getObjectId.asRevCommit.getFullMessage should not include ("6e76960ede2addbbe7e")
-  }
-
-  "Git repo" should "have passwords removed" in {
-    implicit val repo = unpackRepo("/sample-repos/example.git.zip")
-    implicit val reader = repo.newObjectReader
-
-    def propertiesIn(contents: String) = {
-      val p = new Properties()
-      p.load(new StringReader(contents))
-      p
+      repo.getRef("pure").getObjectId.asRevCommit.getFullMessage must not contain ("6e76960ede2addbbe7e")
     }
 
-    def passwordFileContentsIn(id: ObjectId) = {
-      val cleanedPasswordFile = repo.resolve(id.name + ":folder/secret-passwords.txt")
-      RawParseUtils.decode(reader.open(cleanedPasswordFile).getCachedBytes)
-    }
+    "remove passwords" in {
+      implicit val repo = unpackRepo("/sample-repos/example.git.zip")
+      implicit val reader = repo.newObjectReader
 
-    object FileExt {
-      def unapply(boom: String) = Option(FilenameUtils.getExtension(boom))
-    }
-
-    val blobTextModifier = new BlobTextModifier {
-      override def lineCleanerFor(entry: TreeBlobEntry) = condOpt(entry.filename.string) {
-        case FileExt("txt") | FileExt("scala") => """(\.password=).*""".r --> (_.group(1) + "*** PASSWORD ***")
+      def propertiesIn(contents: String) = {
+        val p = new Properties()
+        p.load(new StringReader(contents))
+        p
       }
 
-      val charsetDetector = QuickBlobCharsetDetector
+      def passwordFileContentsIn(id: ObjectId) = {
+        val cleanedPasswordFile = repo.resolve(id.name + ":folder/secret-passwords.txt")
+        RawParseUtils.decode(reader.open(cleanedPasswordFile).getCachedBytes)
+      }
+
+      object FileExt {
+        def unapply(boom: String) = Option(FilenameUtils.getExtension(boom))
+      }
+
+      val blobTextModifier = new BlobTextModifier {
+        override def lineCleanerFor(entry: TreeBlobEntry) = condOpt(entry.filename.string) {
+          case FileExt("txt") | FileExt("scala") => """(\.password=).*""".r --> (_.group(1) + "*** PASSWORD ***")
+        }
+
+        val charsetDetector = QuickBlobCharsetDetector
+      }
+      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set("HEAD")), OldIdsPublic, Seq(FormerCommitFooter), Seq(blobTextModifier)))
+
+      val allCommits = repo.git.log.all.call.toSeq
+
+      val oldCommitContainingPasswords = abbrId("37bcc89")
+
+      val cleanedCommitWithPasswordsRemoved = allCommits.find(commitThatWasFormerly(oldCommitContainingPasswords)).get
+
+      val originalContents = passwordFileContentsIn(oldCommitContainingPasswords)
+      val cleanedContents = passwordFileContentsIn(cleanedCommitWithPasswordsRemoved)
+
+      cleanedContents must contain("science")
+      cleanedContents must contain("database.password=")
+      originalContents must contain("correcthorse")
+      cleanedContents must not contain ("correcthorse")
+
+      propertiesIn(cleanedContents).toMap must have size (propertiesIn(originalContents).size)
     }
-    RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set("HEAD")), OldIdsPublic, Seq(FormerCommitFooter), Seq(blobTextModifier)))
-
-    val allCommits = repo.git.log.all.call.toSeq
-
-    val oldCommitContainingPasswords = abbrId("37bcc89")
-
-    val cleanedCommitWithPasswordsRemoved = allCommits.find(commitThatWasFormerly(oldCommitContainingPasswords)).get
-
-    val originalContents = passwordFileContentsIn(oldCommitContainingPasswords)
-    val cleanedContents = passwordFileContentsIn(cleanedCommitWithPasswordsRemoved)
-
-    cleanedContents should include("science")
-    cleanedContents should include("database.password=")
-    originalContents should include("correcthorse")
-    cleanedContents should not include ("correcthorse")
-
-    propertiesIn(cleanedContents) should have size (propertiesIn(originalContents).size)
   }
 
+  "Text modifier" should {
+    "handle the short UTF-8" in textReplacementOf("UTF-8", "bushhidthefacts", "txt", "facts", "toffee")
 
-  "Text modifier" should "handle the short UTF-8" in textReplacementOf("UTF-8", "bushhidthefacts", "txt", "facts", "toffee")
+    "handle the long UTF-8" in textReplacementOf("UTF-8", "big", "scala", "good", "blessed")
 
-    it should "handle the long UTF-8" in textReplacementOf("UTF-8", "big", "scala", "good", "blessed")
+    "handle ASCII in SHIFT JIS" in textReplacementOf("SHIFT-JIS", "japanese", "txt", "EUC", "BOOM")
 
-    it should "handle ASCII in SHIFT JIS" in textReplacementOf("SHIFT-JIS", "japanese", "txt", "EUC", "BOOM")
-
-    it should "handle ASCII in ISO-8859-1" in textReplacementOf("ISO-8859-1", "laparabla", "txt", "palpitando", "buscando")
+    "handle ASCII in ISO-8859-1" in textReplacementOf("ISO-8859-1", "laparabla", "txt", "palpitando", "buscando")
 
     def textReplacementOf(parentPath: String, fileNamePrefix: String, fileNamePostfix: String, before: String, after: String) {
       implicit val repo = unpackRepo("/sample-repos/encodings.git.zip")
@@ -146,10 +149,9 @@ class RepoRewriteSpec extends FlatSpec with ShouldMatchers {
       val cleanedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-ORIGINAL.$fileNamePostfix")
       val expectedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-MODIFIED-$before-$after.$fileNamePostfix")
 
-      expectedFile should not be null
-      cleanedFile should be(expectedFile)
+      expectedFile should not beNull
+
+      cleanedFile mustEqual expectedFile
     }
+  }
 }
-
-
-

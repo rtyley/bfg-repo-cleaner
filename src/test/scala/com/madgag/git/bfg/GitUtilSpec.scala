@@ -20,19 +20,19 @@
 
 package com.madgag.git.bfg
 
-import org.scalatest._
-import matchers.ShouldMatchers
 import GitUtil._
 import org.eclipse.jgit.revwalk.RevWalk
+import org.specs2.mutable._
 
-class GitUtilSpec extends FlatSpec with ShouldMatchers {
+class GitUtilSpec extends Specification {
 
-  "reachable blobs" should "match expectations" in {
+  "reachable blobs" should {
+    "match expectations" in {
+      implicit val repo = unpackRepo("/sample-repos/example.git.zip")
+      implicit val reader = repo.newObjectReader
+      implicit val revWalk = new RevWalk(repo)
 
-    implicit val repo = unpackRepo("/sample-repos/example.git.zip")
-    implicit val reader = repo.newObjectReader
-    implicit val revWalk = new RevWalk(repo)
-
-    allBlobsReachableFrom(abbrId("475d") asRevCommit) should be(Set("d8d1", "34bd", "e69d", "c784", "d004").map(abbrId))
+      allBlobsReachableFrom(abbrId("475d") asRevCommit) mustEqual Set("d8d1", "34bd", "e69d", "c784", "d004").map(abbrId)
+    }
   }
 }

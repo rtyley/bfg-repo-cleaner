@@ -20,36 +20,40 @@
 
 package com.madgag.git.bfg.cleaner
 
-import org.scalatest._
-import matchers.ShouldMatchers
 import com.madgag.git.bfg.GitUtil._
 import org.eclipse.jgit.lib.ObjectId
 import com.madgag.git.bfg._
+import org.specs2.mutable._
+import ObjectIdSubstitutor.hexRegex
 
-class ObjectIdSubstitutorSpec extends FlatSpec with ShouldMatchers {
+class ObjectIdSubstitutorSpec extends Specification {
 
-  "Object Id Substitutor regex" should "match hex strings" in {
+  "Object Id Substitutor regex" should {
+    "match hex strings" in {
 
-    "01234567890" should include regex (ObjectIdSubstitutor.hexRegex)
+      "01234567890" must be =~ hexRegex
 
-    "decade2001" should include regex (ObjectIdSubstitutor.hexRegex)
+      "decade2001" must be =~ hexRegex
 
-    "This is decade2001" should include regex (ObjectIdSubstitutor.hexRegex)
+      "This is decade2001" must be =~ hexRegex
 
-    "This is decade2001 I say" should include regex (ObjectIdSubstitutor.hexRegex)
+      "This is decade2001 I say" must be =~ hexRegex
 
-    "This is Gdecade2001 I say" should not include regex(ObjectIdSubstitutor.hexRegex)
+      "This is Gdecade2001 I say" must not be =~(hexRegex)
 
-    "This is decade2001X I say" should not include regex(ObjectIdSubstitutor.hexRegex)
+      "This is decade2001X I say" must not be =~(hexRegex)
+    }
   }
 
-  "Object Id" should "be substituted in commit message" in {
-    implicit val repo = unpackRepo("/sample-repos/example.git.zip")
-    implicit val reader = repo.newObjectReader
+  "Object Id" should {
+    "be substituted in commit message" in {
+      implicit val repo = unpackRepo("/sample-repos/example.git.zip")
+      implicit val reader = repo.newObjectReader
 
-    val cleanedMessage = ObjectIdSubstitutor.OldIdsPublic.replaceOldIds("See 3699910d2baab1 for backstory", reader, (_: ObjectId) => abbrId("06d7405020018d"))
+      val cleanedMessage = ObjectIdSubstitutor.OldIdsPublic.replaceOldIds("See 3699910d2baab1 for backstory", reader, (_: ObjectId) => abbrId("06d7405020018d"))
 
-    cleanedMessage should be("See 06d7405020018d [formerly 3699910d2baab1] for backstory")
+      cleanedMessage mustEqual "See 06d7405020018d [formerly 3699910d2baab1] for backstory"
+    }
   }
 
 }
