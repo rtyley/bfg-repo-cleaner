@@ -8,7 +8,7 @@ licenses := Seq("GPLv3" -> url("http://www.gnu.org/licenses/gpl-3.0.html"))
 
 homepage := Some(url("https://github.com/rtyley/bfg-repo-cleaner"))
 
-scalaVersion := "2.10.0"
+scalaVersion := "2.10.1"
 
 scalacOptions ++= Seq("-feature", "-language:implicitConversions", "-language:postfixOps")
 
