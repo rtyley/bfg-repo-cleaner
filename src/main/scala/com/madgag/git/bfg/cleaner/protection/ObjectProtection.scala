@@ -59,7 +59,7 @@ object ObjectProtection {
 
   def apply(revisions: Set[String])(implicit repo: Repository): ObjectProtection = {
 
-    implicit val revWalk = new RevWalk(repo)
+    implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
 
     val objectProtection = revisions.groupBy(repo.resolve(_).asRevObject)
 

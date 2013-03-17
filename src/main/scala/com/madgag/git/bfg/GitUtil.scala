@@ -33,6 +33,7 @@ import org.eclipse.jgit.util.FS
 import org.eclipse.jgit.lib.Constants.OBJ_BLOB
 import com.madgag.git.bfg.cleaner._
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.treewalk.filter.{AndTreeFilter, TreeFilter}
 
 object ObjectId {
   def apply(str: String) = org.eclipse.jgit.lib.ObjectId.fromString(str)
@@ -68,8 +69,72 @@ object GitUtil {
 
   def abbrId(str: String)(implicit reader: ObjectReader): ObjectId = reader.resolveExistingUniqueId(AbbreviatedObjectId.fromString(str)).get
 
+  def singleThreadedReaderTuple(repo: Repository) = {
+    val revWalk=new RevWalk(repo)
+    (revWalk, revWalk.getObjectReader)
+  }
   implicit class RichRepo(repo: Repository) {
     lazy val git = new Git(repo)
+
+    def singleThreadedReaderTuple = {
+      val revWalk=new RevWalk(repo)
+      (revWalk, revWalk.getObjectReader)
+    }
+  }
+
+  implicit class RichRevTree(revTree: RevTree) {
+    def walk()(implicit reader: ObjectReader) = {
+      val treeWalk = new TreeWalk(reader)
+      treeWalk.setRecursive(true)
+      treeWalk.addTree(revTree)
+      treeWalk
+    }
+  }
+
+  implicit def treeWalkPredicateToTreeFilter(p: TreeWalk => Boolean): TreeFilter = new TreeFilter() {
+    def include(walker: TreeWalk) = p(walker)
+
+    def shouldBeRecursive() = true
+
+    override def clone() = this
+  }
+
+  implicit class RichTreeWalk(treeWalk: TreeWalk) {
+
+    /**
+     * @param f - note that the function must completely extract all information from the TreeWalk at the
+     *          point of execution, the state of TreeWalk will be altered after execution.
+     */
+    def map[V](f: TreeWalk => V): Iterator[V] = new Iterator[V] {
+      var _hasNext = treeWalk.next()
+
+      def hasNext = _hasNext
+
+      def next() = {
+        val v = f(treeWalk)
+        _hasNext = treeWalk.next()
+        v
+      }
+    }
+    // def flatMap[B](f: TreeWalk => Iterator[B]): C[B]
+
+    def withFilter(p: TreeWalk => Boolean): TreeWalk = {
+      treeWalk.setFilter(AndTreeFilter.create(treeWalk.getFilter, p))
+      treeWalk
+    }
+
+
+    def foreach[U](f: TreeWalk => U) {
+      while (treeWalk.next()) {
+        f(treeWalk)
+      }
+    }
+
+    def exists(p: TreeWalk => Boolean): Boolean = {
+      var res = false
+      while (!res && treeWalk.next()) res = p(treeWalk)
+      res
+    }
   }
 
   implicit class RichRevObject(revObject: RevObject) {
@@ -105,27 +170,24 @@ object GitUtil {
     case tag: RevTag => treeOrBlobPointedToBy(tag.getObject)
   }
 
-  def allBlobsUnder(tree: RevTree)(implicit repo: Repository): Set[ObjectId] = {
-    val treeWalk = new TreeWalk(repo)
-    treeWalk.setRecursive(true)
-    treeWalk.addTree(tree)
+  def allBlobsUnder(tree: RevTree)(implicit reader: ObjectReader): Set[ObjectId] = {
     val protectedIds = mutable.Set[ObjectId]()
-    while (treeWalk.next) {
-      protectedIds += treeWalk.getObjectId(0)
-    }
+
+    for (tw <- tree.walk()) { protectedIds += tw.getObjectId(0) }
+
     protectedIds.toSet
   }
 
   // use ObjectWalk instead ??
   def allBlobsReachableFrom(revisions: Set[String])(implicit repo: Repository): Set[ObjectId] = {
-    implicit val revWalk = new RevWalk(repo)
+    implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
 
     revisions.map(repo.resolve).toSet.map {
       objectId: ObjectId => allBlobsReachableFrom(objectId.asRevObject)
     } reduce (_ ++ _)
   }
 
-  def allBlobsReachableFrom(revObject: RevObject)(implicit repo: Repository): Set[ObjectId] = revObject match {
+  def allBlobsReachableFrom(revObject: RevObject)(implicit reader: ObjectReader): Set[ObjectId] = revObject match {
     case commit: RevCommit => allBlobsUnder(commit.getTree)
     case tree: RevTree => allBlobsUnder(tree)
     case blob: RevBlob => Set(blob)
