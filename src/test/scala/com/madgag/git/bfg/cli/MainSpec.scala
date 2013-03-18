@@ -24,13 +24,15 @@ import com.madgag.git.bfg._
 import com.madgag.git.bfg.GitUtil._
 import scala.collection.convert.wrapAsScala._
 import org.specs2.mutable._
+import org.eclipse.jgit.lib.Repository
+import org.eclipse.jgit.revwalk.RevCommit
+import org.specs2.matcher.Matcher
 
 class MainSpec extends Specification {
   "CLI" should {
     "not change commits unnecessarily" in {
       implicit val repo = unpackRepo("/sample-repos/exampleWithInitialCleanHistory.git.zip")
       implicit val reader = repo.newObjectReader
-      def commitHist = repo.git.log.all.call.toSeq.reverse
 
       val cleanStartCommits = Seq("ee1b29", "b14312").map(abbrId)
 
@@ -42,5 +44,22 @@ class MainSpec extends Specification {
       commitHist take 2 mustEqual cleanStartCommits
       repo resolve ("master") mustNotEqual abbrId("a9b7f0")
     }
+
+    "remove empty trees" in {
+      implicit val repo = unpackRepo("/sample-repos/folder-example.git.zip")
+      implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
+
+      def haveFolder(name: String): Matcher[RevCommit] = be_===(name).atLeastOnce ^^ {
+        (c: RevCommit) => c.getTree.walk(postOrderTraversal = true).withFilter(_.isSubtree).map(_.getNameString).toList
+      }
+
+      commitHist must haveFolder("secret-files").atLeastOnce
+
+      run("--delete-files {credentials,passwords}.txt")
+
+      commitHist must (not(haveFolder("secret-files"))).forall
+    }
   }
+
+  def commitHist(implicit repo: Repository) = repo.git.log.all.call.toSeq.reverse
 }

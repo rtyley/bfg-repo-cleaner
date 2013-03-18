@@ -28,6 +28,8 @@ import scala.collection
 
 object Tree {
 
+  val Empty = Tree(Map.empty[FileName, (FileMode, ObjectId)])
+
   def apply(entries: Traversable[Tree.Entry]): Tree = Tree(entries.map {
     entry => entry.name ->(entry.fileMode, entry.objectId)
   }.toMap)
@@ -104,6 +106,8 @@ case class Tree(entryMap: Map[FileName, (FileMode, ObjectId)]) {
     treeFormatter
   }
 
+  lazy val objectId = formatter.computeId(new ObjectInserter.Formatter)
+
   lazy val blobs = TreeBlobs(entriesByType(OBJ_BLOB).flatMap {
     e => BlobFileMode(e.fileMode).map {
       blobFileMode => e.name ->(blobFileMode, e.objectId)
@@ -157,4 +161,5 @@ case class TreeSubtrees(entryMap: Map[FileName, ObjectId]) extends Tree.EntryGro
     case (name, objectId) => Tree.Entry(name, FileMode.TREE, objectId)
   }
 
+  lazy val withoutEmptyTrees = TreeSubtrees(entryMap.filterNot(_._2 == Tree.Empty.objectId))
 }

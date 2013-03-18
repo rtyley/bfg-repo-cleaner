@@ -97,7 +97,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     val fixedTreeBlobs = treeBlobsCleaner.fixer(new TreeBlobsCleaner.Kit(objectDB))(tree.blobs)
     val cleanedSubtrees = TreeSubtrees(tree.subtrees.entryMap.map {
       case (name, treeId) => (name, apply(treeId))
-    })
+    }).withoutEmptyTrees
 
     if (fixedTreeBlobs != tree.blobs || cleanedSubtrees != tree.subtrees) {
 

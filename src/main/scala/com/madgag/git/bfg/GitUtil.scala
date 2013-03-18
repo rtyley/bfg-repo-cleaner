@@ -83,9 +83,10 @@ object GitUtil {
   }
 
   implicit class RichRevTree(revTree: RevTree) {
-    def walk()(implicit reader: ObjectReader) = {
+    def walk(postOrderTraversal: Boolean = false)(implicit reader: ObjectReader) = {
       val treeWalk = new TreeWalk(reader)
       treeWalk.setRecursive(true)
+      treeWalk.setPostOrderTraversal(postOrderTraversal)
       treeWalk.addTree(revTree)
       treeWalk
     }
