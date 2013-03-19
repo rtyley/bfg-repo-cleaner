@@ -21,7 +21,6 @@
 package com.madgag.git.bfg.cli
 
 import java.io.File
-import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.cleaner._
 import com.madgag.git.bfg.cleaner.TreeBlobsCleaner.Kit
 import com.madgag.git.bfg.textmatching.RegexReplacer._
@@ -34,10 +33,11 @@ import org.eclipse.jgit.storage.file.FileRepository
 import protection.ObjectProtection
 import scopt.immutable.OptionParser
 import scala.Some
-import com.madgag.git.bfg.GitUtil.SizedObject
+import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.model.{FileName, TreeBlobEntry}
 import com.madgag.git.bfg.textmatching.{Glob, Literal, TextMatcher}
 import com.madgag.inclusion._
+import org.eclipse.jgit.lib.ObjectId
 
 
 object CLIConfig {
@@ -48,6 +48,9 @@ object CLIConfig {
       },
       intOpt("B", "strip-biggest-blobs", "NUM", "strip the top NUM biggest blobs") {
         (v: Int, c: CLIConfig) => c.copy(stripBiggestBlobs = Some(v))
+      },
+      opt("bi", "strip-blobs-with-ids", "<blob-ids-file>", "strip blobs with the specified Git object ids") {
+        (v: String, c: CLIConfig) => c.copy(stripBlobsWithIds = Some(Source.fromFile(v).getLines().map(_.trim).filterNot(_.isEmpty).map(_.asObjectId).toSet))
       },
       opt("D", "delete-files", "<glob>", "delete files with the specified names (eg '*.class', '*.{txt,log}' - matches on file name, not path within repo)") {
         (v: String, c: CLIConfig) => c.copy(deleteFiles = Some(FileMatcher(v)))
@@ -99,6 +102,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      filenameFilters: Seq[Filter[String]] = Nil,
                      filterSizeThreshold: Int = BlobTextModifier.DefaultSizeThreshold,
                      replaceBannedStrings: Traversable[String] = List.empty,
+                     stripBlobsWithIds: Option[Set[ObjectId]] = None,
                      blobCharsetDetector: BlobCharsetDetector = QuickBlobCharsetDetector,
                      strictObjectChecking: Boolean = false,
                      sensitiveData: Option[Boolean] = None,
@@ -138,6 +142,8 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
       }
   }
 
+  lazy val blobsByIdRemover = stripBlobsWithIds.map(new BlobRemover(_))
+
   lazy val blobRemover = {
     implicit val progressMonitor = new TextProgressMonitor()
 
@@ -171,7 +177,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   lazy val commitNodeCleaners = Seq(new CommitMessageObjectIdsUpdater(objectIdSubstitutor)) ++ formerCommitFooter
 
-  lazy val treeBlobCleaners = Seq(blobRemover, fileDeletion, blobTextModifier).flatten
+  lazy val treeBlobCleaners = Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier).flatten
 
   lazy val definesNoWork = treeBlobCleaners.isEmpty
 

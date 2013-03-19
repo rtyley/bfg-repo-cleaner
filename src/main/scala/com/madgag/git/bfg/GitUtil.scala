@@ -35,10 +35,6 @@ import com.madgag.git.bfg.cleaner._
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.treewalk.filter.{AndTreeFilter, TreeFilter}
 
-object ObjectId {
-  def apply(str: String) = org.eclipse.jgit.lib.ObjectId.fromString(str)
-}
-
 trait CleaningMapper[V] extends Cleaner[V] {
   def isDirty(v: V) = apply(v) != v
 
@@ -80,6 +76,10 @@ object GitUtil {
       val revWalk=new RevWalk(repo)
       (revWalk, revWalk.getObjectReader)
     }
+  }
+
+  implicit class RichString(str: String) {
+    def asObjectId = org.eclipse.jgit.lib.ObjectId.fromString(str)
   }
 
   implicit class RichRevTree(revTree: RevTree) {

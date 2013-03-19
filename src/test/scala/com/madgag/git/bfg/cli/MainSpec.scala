@@ -24,9 +24,10 @@ import com.madgag.git.bfg._
 import com.madgag.git.bfg.GitUtil._
 import scala.collection.convert.wrapAsScala._
 import org.specs2.mutable._
-import org.eclipse.jgit.lib.Repository
+import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.revwalk.RevCommit
 import org.specs2.matcher.Matcher
+import scalax.file.Path
 
 class MainSpec extends Specification {
   "CLI" should {
@@ -59,7 +60,29 @@ class MainSpec extends Specification {
 
       commitHist must (not(haveFolder("secret-files"))).forall
     }
+
+    "strip blobs by id" in {
+      implicit val repo = unpackRepo("/sample-repos/example.git.zip")
+      implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
+
+      def haveCommitWhereObjectIds(boom: Matcher[Traversable[ObjectId]]): Matcher[RevCommit] = boom ^^ {
+          (c: RevCommit) => c.getTree.walk().map(_.getObjectId(0)).toList
+        }
+
+      val badBlobs = Set(abbrId("db59"),abbrId("86f9"))
+
+      val blobIdsFile = Path.createTempFile()
+      blobIdsFile.writeStrings(badBlobs.map(_.name()),"\n")
+
+      commitHist must haveCommitWhereObjectIds(containAllOf(badBlobs.toSeq)).atLeastOnce
+
+      run(s"--strip-blobs-with-ids ${blobIdsFile.path}")
+
+      commitHist must (not(haveCommitWhereObjectIds(containAnyOf(badBlobs.toSeq)))).forall
+    }
   }
+
+
 
   def commitHist(implicit repo: Repository) = repo.git.log.all.call.toSeq.reverse
 }

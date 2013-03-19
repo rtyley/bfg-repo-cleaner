@@ -52,5 +52,5 @@ package object bfg {
   }
 
   def commitThatWasFormerly(id: ObjectId): RevCommit => Boolean =
-    _.getFooterLines.exists(f => f.getKey == FormerCommitFooter.Key && ObjectId(f.getValue) == id)
+    _.getFooterLines.exists(f => f.getKey == FormerCommitFooter.Key && f.getValue.asObjectId == id)
 }
