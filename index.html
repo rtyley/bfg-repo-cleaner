@@ -151,7 +151,7 @@ The BFG was simple to set up and so fast that I had to ask Roberto, <em>"Is that
         </section>
 
         <aside id="sidebar">
-          <a id="download" class="button latest-download-link" href="http://repo1.maven.org/maven2/com/madgag/bfg-repo-cleaner/1.2.0/bfg-1.2.0.jar">
+          <a id="download" class="button latest-download-link" href="https://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=com.madgag&a=bfg&v=LATEST">
             <small>Download</small>
             <span class="latest-version">.jar file</span>
           </a>
@@ -168,7 +168,7 @@ The BFG was simple to set up and so fast that I had to ask Roberto, <em>"Is that
 <script>
 
 $.ajax({ dataType: "jsonp", timeout: 5000,
-  url: 'http://search.maven.org/solrsearch/select/?q=g:"com.madgag"+AND+a:"bfg-repo-cleaner"&wt=json&json.wrf=?&indent=true'
+  url: 'http://search.maven.org/solrsearch/select/?q=g:"com.madgag"+AND+a:"bfg"&wt=json&json.wrf=?&indent=true'
 }).done(function ( data ) {
     var v = data.response.docs[0].latestVersion;
     var u = "http://repo1.maven.org/maven2/com/madgag/bfg-repo-cleaner/"+v+"/bfg-"+v+".jar"
