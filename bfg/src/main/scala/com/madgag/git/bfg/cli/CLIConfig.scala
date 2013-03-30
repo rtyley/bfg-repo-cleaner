@@ -56,8 +56,10 @@ object CLIConfig {
       opt("D", "delete-files", "<glob>", "delete files with the specified names (eg '*.class', '*.{txt,log}' - matches on file name, not path within repo)") {
         (v: String, c: CLIConfig) => c.copy(deleteFiles = Some(FileMatcher(v)))
       },
-      opt("rt", "replace-banned-text", "<banned-text-file>", "remove banned text from files and replace it with '***REMOVED***'. Banned expressions are in the specified file, one expression per line.") {
-        (v: String, c: CLIConfig) => c.copy(replaceBannedStrings = Source.fromFile(v).getLines().filterNot(_.trim.isEmpty).toSeq)
+      opt("rt", "replace-text", "<expressions-file>", "filter content of files, replacing matched text. Match expressions should be listed in the file, one expression per line - " +
+        "by default, each expression is treated as a literal, but 'regex:' & 'glob:' prefixes are supported, with '==>' to specify a replacement " +
+        "string other than the default of '***REMOVED***'.") {
+        (v: String, c: CLIConfig) => c.copy(textReplacementExpressions = Source.fromFile(v).getLines().filterNot(_.trim.isEmpty).toSeq)
       },
       opt("fi", "filter-content-including", "<glob>", "do file-content filtering on files that match the specified expression (eg '*.{txt|properties}')") {
         (v: String, c: CLIConfig) => c.copy(filenameFilters = c.filenameFilters :+ Include(FileMatcher(v)))
@@ -102,7 +104,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      deleteFiles: Option[TextMatcher] = None,
                      filenameFilters: Seq[Filter[String]] = Nil,
                      filterSizeThreshold: Int = BlobTextModifier.DefaultSizeThreshold,
-                     replaceBannedStrings: Traversable[String] = List.empty,
+                     textReplacementExpressions: Traversable[String] = List.empty,
                      stripBlobsWithIds: Option[Set[ObjectId]] = None,
                      blobCharsetDetector: BlobCharsetDetector = QuickBlobCharsetDetector,
                      strictObjectChecking: Boolean = false,
@@ -125,10 +127,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
       }
   }
 
-  lazy val lineModifier: Option[String => String] = {
-    val allRegex = replaceBannedStrings.map(TextMatcher(_, defaultType = Literal).r)
-    allRegex.map(regex => regex --> (_ => "***REMOVED***")).reduceOption((f, g) => Function.chain(Seq(f, g)))
-  }
+  lazy val lineModifier: Option[String => String] = TextReplacementConfig(textReplacementExpressions)
 
   lazy val filterContentPredicate: (FileName => Boolean) = f => IncExcExpression(filenameFilters) includes (f.string)
 

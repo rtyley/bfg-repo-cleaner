@@ -24,6 +24,7 @@ import util.matching.Regex
 import com.madgag.globs.openjdk.Globs
 
 import RegexReplacer._
+import java.util.regex.Pattern
 
 object TextMatcher {
 
@@ -53,6 +54,8 @@ sealed trait TextMatcherType {
   def apply(expression: String) = TextMatcher(this, expression)
 
   def regexFor(expression: String): Regex
+
+  def implicitReplacementTextEscaping(replacementText: String) = replacementText
 }
 
 object Glob extends TextMatcherType {
@@ -64,7 +67,9 @@ object Glob extends TextMatcherType {
 object Literal extends TextMatcherType {
   val expressionPrefix = "literal"
 
-  def regexFor(expression: String) = Regex.quoteReplacement(expression).r
+  def regexFor(expression: String) = Pattern.quote(expression).r
+
+  override def implicitReplacementTextEscaping(replacementText: String) = Regex.quoteReplacement(replacementText)
 }
 
 object Reg extends TextMatcherType {

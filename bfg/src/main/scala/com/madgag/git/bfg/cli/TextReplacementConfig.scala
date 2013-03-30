@@ -18,27 +18,26 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/ .
  */
 
-package com.madgag.git.bfg.textmatching
+package com.madgag.git.bfg.cli
 
-import org.specs2.mutable._
+import com.madgag.git.bfg.textmatching.{Literal, TextMatcher}
+import com.madgag.git.bfg.textmatching.RegexReplacer._
 
-class TextMatcherSpec extends Specification {
+object TextReplacementConfig {
+  val lineRegex = "(.+?)(?:==>(.*))?".r
 
-  "text matcher creation" should {
-    "parse prefix if present" in {
-      TextMatcher("literal:foobar") mustEqual Literal("foobar")
-      TextMatcher("glob:foobar") mustEqual Glob("foobar")
-      TextMatcher("regex:foobar") mustEqual Reg("foobar")
+  def apply(configLines: Traversable[String]): Option[String=>String] =
+    configLines.map(apply).reduceLeftOption((f, g) => Function.chain(Seq(f, g)))
 
-      TextMatcher("boom", Reg) mustEqual Reg("boom")
+  def apply(configLine: String): (String=>String) = {
+    val (matcherText, replacementText) = configLine match {
+      case lineRegex(matcherText, null) => (matcherText, "***REMOVED***")
+      case lineRegex(matcherText, replacementText) => (matcherText, replacementText)
     }
-    "quote content of literal expression in generated regex" in {
-      "what was b4 this?" must =~ (TextMatcher("literal:b4").r)
 
-      "what was b{4} this?" must =~ (TextMatcher("literal:b{4}").r)
-      "what was bbbb this?" must not =~ (TextMatcher("literal:b{4}").r)
+    val textMatcher = TextMatcher(matcherText, defaultType = Literal)
 
-      "what was bbbb this?" must =~ (TextMatcher("regex:b{4}").r)
-    }
+    textMatcher.r --> textMatcher.typ.implicitReplacementTextEscaping(replacementText)
   }
+
 }

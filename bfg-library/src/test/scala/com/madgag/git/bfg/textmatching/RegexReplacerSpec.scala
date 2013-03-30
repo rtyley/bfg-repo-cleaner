@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012 Roberto Tyley
+ * Copyright (c) 2012, 2013 Roberto Tyley
  *
  * This file is part of 'BFG Repo-Cleaner' - a tool for removing large
  * or troublesome blobs from Git repositories.
@@ -20,17 +20,21 @@
 
 package com.madgag.git.bfg.textmatching
 
-import util.matching.Regex
-import util.matching.Regex.Match
+import org.specs2.mutable._
+import RegexReplacer._
 
-object RegexReplacer {
+class RegexReplacerSpec extends Specification {
 
-  implicit class RichRegex(regex: Regex) {
-    def matches(s: String) = regex.pattern.matcher(s).matches
+  "regex replacer" should {
+    "support a simple closure" in {
+      val replacer = """f\w*d""".r --> (_.group(0).length.toString)
 
-    def -->(replacer: Match => String): String => String = regex.replaceAllIn(_, replacer)
+      replacer("bing fod feed") mustEqual("bing 3 4")
+    }
+    "support Java appendReplacement syntax" in {
+      val replacer = """f(\w*)d""".r --> "x$1y"
 
-    def -->(replacement: String): String => String = regex.replaceAllIn(_, replacement)
+      replacer("bing fod feed") mustEqual("bing xoy xeey")
+    }
   }
-
 }
