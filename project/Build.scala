@@ -5,7 +5,6 @@ import sbtrelease.ReleasePlugin._
 import sbtrelease.ReleasePlugin.ReleaseKeys._
 import com.typesafe.sbt.pgp.PgpKeys._
 import sbtrelease.ReleaseStateTransformations._
-import Keys._
 
 object BFGBuild extends Build {
   lazy val root = Project(id = "bfg-parent", base = file(".")) settings (signedReleaseSettings:_*) settings ( publishSigned := {} ) aggregate(scalaGitTest, scalaGit, bfg, bfgLibrary)
