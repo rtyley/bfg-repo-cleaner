@@ -171,7 +171,7 @@ $.ajax({ dataType: "jsonp", timeout: 5000,
   url: 'http://search.maven.org/solrsearch/select/?q=g:"com.madgag"+AND+a:"bfg"&wt=json&json.wrf=?&indent=true'
 }).done(function ( data ) {
     var v = data.response.docs[0].latestVersion;
-    var u = "http://repo1.maven.org/maven2/com/madgag/bfg-repo-cleaner/"+v+"/bfg-"+v+".jar"
+    var u = "http://repo1.maven.org/maven2/com/madgag/bfg/"+v+"/bfg-"+v+".jar"
     $('.latest-version').text('v' + v);
     $('.latest-download-link').prop("href", u);
 });
