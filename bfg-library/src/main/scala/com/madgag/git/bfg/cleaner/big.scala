@@ -25,7 +25,7 @@ import org.eclipse.jgit.lib.Constants.OBJ_COMMIT
 import java.io.InputStream
 import org.eclipse.jgit.transport.ReceiveCommand
 import org.eclipse.jgit.revwalk.RevSort._
-import com.madgag.git.bfg.{Timing}
+import com.madgag.git.bfg.Timing
 import com.madgag.git.bfg.GitUtil._
 import org.eclipse.jgit.lib._
 import concurrent.future

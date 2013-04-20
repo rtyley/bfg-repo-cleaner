@@ -35,7 +35,7 @@ import protection.ObjectProtection
 import scopt.immutable.OptionParser
 import scala.Some
 import com.madgag.git.bfg.model.{FileName, TreeBlobEntry}
-import com.madgag.git.bfg.textmatching.{Glob, Literal, TextMatcher}
+import com.madgag.git.bfg.textmatching.{Glob, TextMatcher}
 import com.madgag.inclusion._
 import org.eclipse.jgit.lib.ObjectId
 import com.madgag.text.ByteSize

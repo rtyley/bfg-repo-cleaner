@@ -21,8 +21,6 @@
 package com.madgag.git
 
 import org.specs2.mutable._
-import collection.mutable
-import com.madgag.git._
 import com.madgag.git.test._
 
 

@@ -22,10 +22,7 @@ package com.madgag.git.bfg.cli
 
 import com.madgag.git._
 import com.madgag.git.bfg.cleaner._
-import org.eclipse.jgit.lib.{Constants, Repository}
-import scala.collection.convert.wrapAsScala._
 import com.madgag.git.bfg.GitUtil._
-import org.eclipse.jgit.revwalk.RevWalk
 
 object Main extends App {
 
