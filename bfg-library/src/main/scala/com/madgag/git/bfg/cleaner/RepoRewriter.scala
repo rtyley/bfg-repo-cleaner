@@ -67,11 +67,7 @@ in a new commit, we don't care about history.
 When updating a Tree, the User has no right to muck with sub-trees. They can only alter the blob contents.
  */
 
-trait BlobInserter {
-  def insert(data: Array[Byte]): ObjectId
 
-  def insert(length: Long, in: InputStream): ObjectId
-}
 
 object RepoRewriter {
 

@@ -37,19 +37,15 @@ import scalax.io.managed.InputStreamResource
 import java.nio.ByteBuffer
 import util.Try
 import java.nio.charset.CodingErrorAction._
+import com.madgag.git.bfg.cleaner.kit.BlobInserter
 
 object TreeBlobsCleaner {
 
   class Kit(objectDB: ObjectDatabase) {
     lazy val objectReader = objectDB.newReader
 
-    private lazy val inserter = objectDB.newInserter
 
-    lazy val blobInserter = new BlobInserter {
-      def insert(length: Long, in: InputStream) = inserter.insert(OBJ_BLOB, length, in)
-
-      def insert(data: Array[Byte]) = inserter.insert(OBJ_BLOB, data)
-    }
+    lazy val blobInserter = new BlobInserter(objectDB.newInserter)
   }
 
   def chain(cleaners: Seq[TreeBlobsCleaner]) = new TreeBlobsCleaner {
