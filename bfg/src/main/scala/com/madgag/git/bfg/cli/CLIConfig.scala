@@ -23,7 +23,7 @@ package com.madgag.git.bfg.cli
 import java.io.File
 import com.madgag.git._
 import com.madgag.git.bfg.cleaner._
-import com.madgag.git.bfg.cleaner.TreeBlobsCleaner.Kit
+import com.madgag.git.bfg.cleaner.kit.BlobInserter
 import com.madgag.git.bfg.textmatching.RegexReplacer._
 import com.madgag.git.bfg.model.FileName.ImplicitConversions._
 import io.Source
@@ -34,7 +34,7 @@ import org.eclipse.jgit.storage.file.FileRepository
 import protection.ObjectProtection
 import scopt.immutable.OptionParser
 import scala.Some
-import com.madgag.git.bfg.model.{FileName, TreeBlobEntry}
+import com.madgag.git.bfg.model.{TreeBlobs, FileName, TreeBlobEntry}
 import com.madgag.git.bfg.textmatching.{Glob, TextMatcher}
 import com.madgag.inclusion._
 import org.eclipse.jgit.lib.ObjectId
@@ -119,12 +119,11 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   lazy val objectChecker = if (strictObjectChecking) Some(new ObjectChecker()) else None
 
-  lazy val fileDeletion = deleteFiles.map {
+  lazy val fileDeletion: Option[Cleaner[TreeBlobs]] = deleteFiles.map {
     textMatcher =>
       val filePattern = textMatcher.r
-      new TreeBlobsCleaner {
-        def fixer(kit: Kit) = _.entries.filterNot(e => filePattern.matches(e.filename))
-      }
+
+      treeBlobs: TreeBlobs => treeBlobs.entries.filterNot(e => filePattern.matches(e.filename))
   }
 
   lazy val lineModifier: Option[String => String] = TextReplacementConfig(textReplacementExpressions)
@@ -139,12 +138,13 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
         def lineCleanerFor(entry: TreeBlobEntry) = if (filterContentPredicate(entry.filename)) Some(replacer) else None
 
         val charsetDetector = blobCharsetDetector
+        val threadLocalRepoResources = repo.threadLocalRepoResources
       }
   }
 
-  lazy val blobsByIdRemover = stripBlobsWithIds.map(new BlobRemover(_))
+  lazy val blobsByIdRemover: Option[BlobRemover] = stripBlobsWithIds.map(new BlobRemover(_))
 
-  lazy val blobRemover = {
+  lazy val blobRemover: Option[Cleaner[TreeBlobs]] = {
     implicit val progressMonitor = new TextProgressMonitor()
 
     val sizeBasedBlobTargetSources = Seq(
@@ -162,7 +162,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
           } else {
             println("Found " + sizedBadIds.size + " blob ids for large blobs - biggest=" + sizedBadIds.max.size + " smallest=" + sizedBadIds.min.size)
             println("Total size (unpacked)=" + sizedBadIds.map(_.size).sum)
-            Some(new BlobReplacer(sizedBadIds.map(_.objectId)))
+            Some(new BlobReplacer(sizedBadIds.map(_.objectId), new BlobInserter(repo.threadLocalRepoResources.objectInserter())))
           }
         }
       case _ => None
@@ -177,7 +177,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   lazy val commitNodeCleaners = Seq(new CommitMessageObjectIdsUpdater(objectIdSubstitutor)) ++ formerCommitFooter
 
-  lazy val treeBlobCleaners = Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier).flatten
+  lazy val treeBlobCleaners: Seq[Cleaner[TreeBlobs]] = Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier).flatten
 
   lazy val definesNoWork = treeBlobCleaners.isEmpty
 

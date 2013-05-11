@@ -20,66 +20,50 @@
 
 package com.madgag.git.bfg.cleaner
 
-import org.eclipse.jgit.lib.{ObjectStream, ObjectDatabase, ObjectId}
+import org.eclipse.jgit.lib.{ObjectReader, ObjectStream, ObjectId}
 import com.madgag.git.bfg.model._
 import org.eclipse.jgit.diff.RawText
 import java.io._
-import org.eclipse.jgit.lib.Constants._
-import com.madgag.git.bfg.cleaner.TreeBlobsCleaner.Kit
 import scalaz.Memo
 import com.madgag.git.bfg.MemoUtil
 import scalax.io.Resource
 import java.nio.charset.Charset
-import scala.Some
-import com.madgag.git.bfg.model.TreeBlobEntry
 import BlobTextModifier._
 import scalax.io.managed.InputStreamResource
 import java.nio.ByteBuffer
 import util.Try
 import java.nio.charset.CodingErrorAction._
 import com.madgag.git.bfg.cleaner.kit.BlobInserter
+import scala.Some
+import com.madgag.git.bfg.model.TreeBlobEntry
+import com.madgag.git.ThreadLocalRepoResources
+import org.eclipse.jgit.lib.Constants._
 
-object TreeBlobsCleaner {
-
-  class Kit(objectDB: ObjectDatabase) {
-    lazy val objectReader = objectDB.newReader
-
-
-    lazy val blobInserter = new BlobInserter(objectDB.newInserter)
-  }
-
-  def chain(cleaners: Seq[TreeBlobsCleaner]) = new TreeBlobsCleaner {
-    override def fixer(kit: TreeBlobsCleaner.Kit) = Function.chain(cleaners.map(_.fixer(kit)))
-  }
+class BlobRemover(blobIds: Set[ObjectId]) extends Cleaner[TreeBlobs] {
+  override def apply(treeBlobs: TreeBlobs) = treeBlobs.entries.filter(e => !blobIds.contains(e.objectId))
 }
 
-trait TreeBlobsCleaner {
-  def fixer(kit: TreeBlobsCleaner.Kit): Cleaner[TreeBlobs]
-}
-
-class BlobRemover(blobIds: Set[ObjectId]) extends TreeBlobsCleaner {
-  override def fixer(kit: Kit) = _.entries.filter(e => !blobIds.contains(e.objectId))
-}
-
-class BlobReplacer(badBlobs: Set[ObjectId]) extends TreeBlobsCleaner {
-  def fixer(kit: Kit) = _.entries.map {
+class BlobReplacer(badBlobs: Set[ObjectId], blobInserter: => BlobInserter) extends Cleaner[TreeBlobs] {
+  override def apply(treeBlobs: TreeBlobs) = treeBlobs.entries.map {
     case e if badBlobs.contains(e.objectId) =>
-      TreeBlobEntry(FileName(e.filename + ".REMOVED.git-id"), RegularFile, kit.blobInserter.insert(e.objectId.name.getBytes))
+      TreeBlobEntry(FileName(e.filename + ".REMOVED.git-id"), RegularFile, blobInserter.insert(e.objectId.name.getBytes))
     case e => e
   }
 }
 
-trait TreeBlobModifier extends TreeBlobsCleaner {
+trait TreeBlobModifier extends Cleaner[TreeBlobs] {
 
   val memo: Memo[TreeBlobEntry, TreeBlobEntry] = MemoUtil.concurrentCleanerMemo(Set.empty)
 
-  override def fixer(kit: Kit) = _.entries.map(memo {
+  val memoisedCleaner: (TreeBlobEntry) => TreeBlobEntry = memo {
     entry =>
-      val (mode, objectId) = fix(entry, kit)
+      val (mode, objectId) = fix(entry)
       TreeBlobEntry(entry.filename, mode, objectId)
-  })
+  }
 
-  def fix(entry: TreeBlobEntry, kit: Kit): (BlobFileMode, ObjectId) // implementing code can not safely know valid filename
+  override def apply(treeBlobs: TreeBlobs) = treeBlobs.entries.map(memoisedCleaner)
+
+  def fix(entry: TreeBlobEntry): (BlobFileMode, ObjectId) // implementing code can not safely know valid filename
 }
 
 trait BlobCharsetDetector {
@@ -112,18 +96,20 @@ object BlobTextModifier {
 
 trait BlobTextModifier extends TreeBlobModifier {
 
+  val threadLocalRepoResources: ThreadLocalRepoResources
+
   def lineCleanerFor(entry: TreeBlobEntry): Option[String => String]
 
   val charsetDetector: BlobCharsetDetector
 
   val sizeThreshold = DefaultSizeThreshold
 
-  override def fix(entry: TreeBlobEntry, kit: Kit) = {
+  override def fix(entry: TreeBlobEntry) = {
 
     def filterTextIn(e: TreeBlobEntry, lineCleaner: String => String): TreeBlobEntry = {
       def isDirty(line: String) = lineCleaner(line) != line
 
-      Some(kit.objectReader.open(e.objectId)).filter(_.getSize < sizeThreshold).flatMap {
+      Some(threadLocalRepoResources.objectReader().open(e.objectId)).filter(_.getSize < sizeThreshold).flatMap {
         loader =>
           Some(Resource.fromInputStream(loader.openStream())).flatMap {
             streamResource =>
@@ -135,7 +121,7 @@ trait BlobTextModifier extends TreeBlobModifier {
 
                       lines.view.map(lineCleaner).foreach(line => b.write(line.getBytes(charset)))
 
-                      val oid = kit.blobInserter.insert(b.toByteArray)
+                      val oid = threadLocalRepoResources.objectInserter().insert(OBJ_BLOB, b.toByteArray)
 
                       e.copy(objectId = oid)
                   }

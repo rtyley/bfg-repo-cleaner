@@ -25,8 +25,25 @@ package object git {
     val revWalk=new RevWalk(repo)
     (revWalk, revWalk.getObjectReader)
   }
+
+  class ThreadLocalRepoResources(val repo: Repository) {
+    private lazy val _objectReader = new ThreadLocal[ObjectReader] {
+      override def initialValue() = repo.newObjectReader()
+    }
+
+    private lazy val _objectInserter = new ThreadLocal[ObjectInserter] {
+      override def initialValue() = repo.newObjectInserter()
+    }
+
+    def objectReader() = _objectReader.get
+
+    def objectInserter() = _objectInserter.get
+  }
+
   implicit class RichRepo(repo: Repository) {
     lazy val git = new Git(repo)
+
+    lazy val threadLocalRepoResources = new ThreadLocalRepoResources(repo)
 
     def singleThreadedReaderTuple = {
       val revWalk=new RevWalk(repo)

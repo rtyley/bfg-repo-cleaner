@@ -28,7 +28,7 @@ import java.io.StringReader
 import org.eclipse.jgit.lib.ObjectId
 import PartialFunction.condOpt
 import org.apache.commons.io.FilenameUtils
-import com.madgag.git.bfg.model.TreeBlobEntry
+import com.madgag.git.bfg.model.{TreeBlobs, TreeBlobEntry}
 import scala.Some
 import com.madgag.git.bfg.textmatching.RegexReplacer._
 import com.madgag.git.bfg.GitUtil._
@@ -37,7 +37,6 @@ import ObjectIdSubstitutor._
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import org.specs2.mutable._
 import com.madgag.git._
-import bfg.cleaner.TreeBlobsCleaner.Kit
 import com.madgag.git.test._
 
 class RepoRewriteSpec extends Specification {
@@ -74,8 +73,8 @@ class RepoRewriteSpec extends Specification {
 
       repo.getRef("pure").getObjectId.asRevCommit.getFullMessage must contain("6e76960ede2addbbe7e")
 
-      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set.empty), OldIdsPrivate, Seq(new CommitMessageObjectIdsUpdater(OldIdsPrivate)), Seq(new TreeBlobsCleaner {
-        def fixer(kit: Kit) = _.entries.filterNot(_.filename.string == "sin")
+      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set.empty), OldIdsPrivate, Seq(new CommitMessageObjectIdsUpdater(OldIdsPrivate)), Seq(new Cleaner[TreeBlobs] {
+        def apply(tbs: TreeBlobs) = tbs.entries.filterNot(_.filename.string == "sin")
       })))
 
       repo.getRef("pure").getObjectId.asRevCommit.getFullMessage must not contain ("6e76960ede2addbbe7e")
@@ -106,6 +105,7 @@ class RepoRewriteSpec extends Specification {
         }
 
         val charsetDetector = QuickBlobCharsetDetector
+        val threadLocalRepoResources = repo.threadLocalRepoResources
       }
       RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set("HEAD")), OldIdsPublic, Seq(FormerCommitFooter), Seq(blobTextModifier)))
 
@@ -143,6 +143,7 @@ class RepoRewriteSpec extends Specification {
         def lineCleanerFor(entry: TreeBlobEntry) = Some(quote(before).r --> (_ => after))
 
         val charsetDetector = QuickBlobCharsetDetector
+        val threadLocalRepoResources = repo.threadLocalRepoResources
       }
       RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set.empty), OldIdsPrivate, treeBlobsCleaners = Seq(blobTextModifier)))
 
