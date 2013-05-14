@@ -111,6 +111,13 @@ package object git {
     }
   }
 
+  implicit class RichRef(ref: Ref) {
+    def targetObjectId(implicit refDatabase: RefDatabase): ObjectId = {
+      val peeledRef = refDatabase.peel(ref)
+      Option(peeledRef.getPeeledObjectId).getOrElse(peeledRef.getObjectId)
+    }
+  }
+
   implicit class RichRevObject(revObject: RevObject) {
     lazy val typeString = Constants.typeString(revObject.getType)
   }

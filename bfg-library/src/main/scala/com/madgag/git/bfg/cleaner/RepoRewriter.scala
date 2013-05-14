@@ -75,24 +75,28 @@ object RepoRewriter {
     assert(!repo.getAllRefs.isEmpty, "Can't find any refs in repo at " + repo.getDirectory.getAbsolutePath)
     implicit val progressMonitor = new TextProgressMonitor
     val objectDB = repo.getObjectDatabase
+    implicit val refDB = repo.getRefDatabase
 
     def createRevWalk: RevWalk = {
 
-      val revWalk = new RevWalk(repo)
+      implicit val revWalk = new RevWalk(repo)
       revWalk.sort(TOPO) // crucial to ensure we visit parents BEFORE children, otherwise blow stack
       revWalk.sort(REVERSE, true) // we want to start with the earliest commits and work our way up...
       val objReader = objectDB.newReader
 
+      val allRefs = repo.getAllRefs.values
       val refsByObjType = repo.getAllRefs.values.groupBy {
         ref => objReader.open(ref.getObjectId).getType
       } withDefault Seq.empty
+
+      val startCommits = allRefs.map(_.targetObjectId.asRevObject).collect { case c: RevCommit => c }
+
+      revWalk.markStart(startCommits)
 
       refsByObjType.foreach {
         case (typ, refs) => println("Found " + refs.size + " " + Constants.typeString(typ) + "-pointing refs : " + abbreviate(refs.map(_.getName).toSeq, "...", 4).mkString(", "))
       }
 
-      revWalk.markStart(refsByObjType(OBJ_COMMIT).map(ref => ref.getObjectId.asRevCommit(revWalk)))
-      // revWalk.markStart(refsByObjType(OBJ_TAG).map(_.getPeeledObjectId).filter(id=>objectDB.open(id).getType==OBJ_COMMIT).map(revWalk.lookupCommit(_)))
       revWalk
     }
 
