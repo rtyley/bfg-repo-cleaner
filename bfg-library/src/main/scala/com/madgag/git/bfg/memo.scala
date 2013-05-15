@@ -22,11 +22,21 @@ package com.madgag.git.bfg
 
 import com.google.common.cache.{CacheLoader, LoadingCache, CacheBuilder}
 import com.madgag.git.bfg.cleaner._
+import collection.convert.decorateAsScala._
+
+trait Memo[K, V] {
+  def apply(z: K => V): MemoFunc[K, V]
+}
+
+trait MemoFunc[K,V] extends (K => V) {
+  def asMap(): Map[K,V]
+}
 
 object MemoUtil {
 
-  import scalaz._
-  import Scalaz._
+  def memo[K, V](f: (K => V) => MemoFunc[K, V]): Memo[K, V] = new Memo[K, V] {
+    def apply(z: K => V) = f(z)
+  }
 
   /**
    *
@@ -41,10 +51,17 @@ object MemoUtil {
 
         fixedEntries foreach fix
 
-        (k: V) =>
-          val v = permanentCache.get(k)
-          fix(v) // enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
-          v
+        new MemoFunc[V, V] {
+          def apply(k: V) = {
+            val v = permanentCache.get(k)
+            fix(v) // enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
+            v
+          }
+
+          def asMap() = permanentCache.asMap().asScala.view.filter {
+            case (oldId, newId) => newId != oldId
+          }.toMap
+        }
     }
   }
 
@@ -54,4 +71,3 @@ object MemoUtil {
   })
 
 }
-

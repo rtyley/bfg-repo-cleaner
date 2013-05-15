@@ -8,6 +8,8 @@ import com.madgag.text.Text._
 import org.eclipse.jgit.transport.ReceiveCommand
 import com.madgag.git._
 import com.madgag.git.bfg.cleaner.protection.ProtectedObjectDirtReport
+import scalax.file.Path
+import scala.collection.immutable.SortedMap
 
 trait Reporter {
 
@@ -24,7 +26,13 @@ trait Reporter {
   def reportResults(commits: List[RevCommit], objectIdCleaner: ObjectIdCleaner)
 }
 
-object CLIReporter extends Reporter {
+class CLIReporter(repo: Repository) extends Reporter {
+
+  lazy val reportsDir = {
+    val dir = Path.fromString(repo.getDirectory.getAbsolutePath + ".bfg-report")
+    dir.doCreateDirectory()
+    dir
+  }
 
   lazy val progressMonitor = new TextProgressMonitor
 
@@ -77,11 +85,6 @@ object CLIReporter extends Reporter {
   }
 
   def reportResults(commits: List[RevCommit], objectIdCleaner: ObjectIdCleaner) {
-
-    reportTreeDirtHistory()
-
-    println("\nBFG run is complete!")
-
     def reportTreeDirtHistory() {
 
       val dirtHistoryElements = math.max(20, math.min(60, commits.size))
@@ -112,6 +115,23 @@ object CLIReporter extends Reporter {
       ) yield (desc, before.shortName, after.shortName)
       Tables.formatTable(("", "Before", "After"), items).map("\t" + _).foreach(println)
     }
+
+    reportTreeDirtHistory()
+
+    lazy val mapFile = reportsDir / "object-id-map.old-new.txt"
+
+    val changedIds = objectIdCleaner.cleanedObjectMap()
+
+    println(s"\n\nIn total, ${changedIds.size} object ids were changed - a record of these will be written to:\n\n\t${mapFile.path}")
+
+    implicit val anyObjectIdOrdering: Ordering[ObjectId] = new Ordering[ObjectId] {
+      def compare(x: ObjectId, y: ObjectId): Int = x compareTo y
+    }
+
+    mapFile.writeStrings(SortedMap(changedIds.toSeq: _*).view.map { case (o,n) => s"${o.name} ${n.name}"}, "\n")
+
+    println("\nBFG run is complete!")
+
   }
 
   def title(text: String) = s"\n$text\n" + ("-" * text.size) + "\n"

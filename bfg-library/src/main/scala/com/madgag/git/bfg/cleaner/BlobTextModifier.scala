@@ -20,74 +20,13 @@
 
 package com.madgag.git.bfg.cleaner
 
-import org.eclipse.jgit.lib.{ObjectStream, ObjectId}
-import com.madgag.git.bfg.model._
-import org.eclipse.jgit.diff.RawText
-import java.io._
-import scalaz.Memo
-import com.madgag.git.bfg.MemoUtil
+import java.io.ByteArrayOutputStream
 import scalax.io.Resource
-import java.nio.charset.Charset
-import BlobTextModifier._
-import scalax.io.managed.InputStreamResource
-import java.nio.ByteBuffer
-import util.Try
-import java.nio.charset.CodingErrorAction._
-import com.madgag.git.bfg.cleaner.kit.BlobInserter
 import scala.Some
 import com.madgag.git.bfg.model.TreeBlobEntry
-import org.eclipse.jgit.lib.Constants._
-import com.madgag.git
 import com.madgag.git.ThreadLocalObjectDatabaseResources
+import org.eclipse.jgit.lib.Constants.OBJ_BLOB
 
-class BlobRemover(blobIds: Set[ObjectId]) extends Cleaner[TreeBlobs] {
-  override def apply(treeBlobs: TreeBlobs) = treeBlobs.entries.filter(e => !blobIds.contains(e.objectId))
-}
-
-class BlobReplacer(badBlobs: Set[ObjectId], blobInserter: => BlobInserter) extends Cleaner[TreeBlobs] {
-  override def apply(treeBlobs: TreeBlobs) = treeBlobs.entries.map {
-    case e if badBlobs.contains(e.objectId) =>
-      TreeBlobEntry(FileName(e.filename + ".REMOVED.git-id"), RegularFile, blobInserter.insert(e.objectId.name.getBytes))
-    case e => e
-  }
-}
-
-trait TreeBlobModifier extends Cleaner[TreeBlobs] {
-
-  val memo: Memo[TreeBlobEntry, TreeBlobEntry] = MemoUtil.concurrentCleanerMemo(Set.empty)
-
-  val memoisedCleaner: (TreeBlobEntry) => TreeBlobEntry = memo {
-    entry =>
-      val (mode, objectId) = fix(entry)
-      TreeBlobEntry(entry.filename, mode, objectId)
-  }
-
-  override def apply(treeBlobs: TreeBlobs) = treeBlobs.entries.map(memoisedCleaner)
-
-  def fix(entry: TreeBlobEntry): (BlobFileMode, ObjectId) // implementing code can not safely know valid filename
-}
-
-trait BlobCharsetDetector {
-  // should return None if this is a binary file that can not be converted to text
-  def charsetFor(entry: TreeBlobEntry, streamResource: InputStreamResource[ObjectStream]): Option[Charset]
-}
-
-
-object QuickBlobCharsetDetector extends BlobCharsetDetector {
-
-  val charSets = Seq(Charset.forName("UTF-8"), Charset.defaultCharset(), Charset.forName("ISO-8859-1")).distinct
-
-  def charsetFor(entry: TreeBlobEntry, streamResource: InputStreamResource[ObjectStream]): Option[Charset] =
-    Some(streamResource.bytes.take(8000).toArray).filterNot(RawText.isBinary).flatMap {
-      sampleBytes =>
-        val b = ByteBuffer.wrap(sampleBytes)
-        charSets.find(cs => Try(decode(b, cs)).isSuccess)
-    }
-
-  private def decode(b: ByteBuffer, charset: Charset) {
-    charset.newDecoder.onMalformedInput(REPORT).onUnmappableCharacter(REPORT).decode(b)
-  }
-}
 
 object BlobTextModifier {
 
@@ -103,7 +42,7 @@ trait BlobTextModifier extends TreeBlobModifier {
 
   val charsetDetector: BlobCharsetDetector
 
-  val sizeThreshold = DefaultSizeThreshold
+  val sizeThreshold = BlobTextModifier.DefaultSizeThreshold
 
   override def fix(entry: TreeBlobEntry) = {
 

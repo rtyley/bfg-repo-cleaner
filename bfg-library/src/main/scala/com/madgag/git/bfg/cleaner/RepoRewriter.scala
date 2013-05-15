@@ -67,7 +67,7 @@ object RepoRewriter {
 
     implicit val refDatabase = repo.getRefDatabase
 
-    val reporter: Reporter = CLIReporter
+    val reporter: Reporter = new CLIReporter(repo)
     implicit val progressMonitor = reporter.progressMonitor
 
     val allRefs = repo.getAllRefs.values
@@ -119,12 +119,10 @@ object RepoRewriter {
     if (refUpdateCommands.isEmpty) {
       println("\nBFG aborting: No refs to update - no dirty commits found??\n")
     } else {
-      {
-        reporter.reportRefUpdateStart(refUpdateCommands)
+      reporter.reportRefUpdateStart(refUpdateCommands)
 
-        Timing.measureTask("...Ref update", refUpdateCommands.size) {
-          refDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(revWalk, progressMonitor)
-        }
+      Timing.measureTask("...Ref update", refUpdateCommands.size) {
+        refDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(revWalk, progressMonitor)
       }
 
       reporter.reportResults(commits, objectIdCleaner)

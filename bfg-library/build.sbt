@@ -1,5 +1,4 @@
 libraryDependencies ++= Seq(
-  "org.scalaz" %% "scalaz-core" % "6.0.4",
   "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.2",
   "com.github.scopt" %% "scopt" % "2.1.0",
   "com.madgag" % "globs-for-java" % "0.2",

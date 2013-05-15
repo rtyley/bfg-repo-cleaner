@@ -23,8 +23,7 @@ package com.madgag.git.bfg.cleaner
 import org.eclipse.jgit.revwalk.{RevWalk, RevTag, RevCommit}
 import org.eclipse.jgit.lib.Constants._
 import protection.ObjectProtection
-import scalaz.Memo
-import com.madgag.git.bfg.{CleaningMapper, MemoUtil}
+import com.madgag.git.bfg.{Memo, CleaningMapper, MemoUtil}
 import com.madgag.git.bfg.model._
 import com.madgag.git._
 import bfg.model.Tree
@@ -62,6 +61,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     uncachedClean
   }
 
+  def cleanedObjectMap(): Map[ObjectId, ObjectId] = memoClean.asMap()
 
   def uncachedClean: (ObjectId) => ObjectId = {
     objectId =>
