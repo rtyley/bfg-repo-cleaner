@@ -34,7 +34,7 @@ object Tree {
     entry => entry.name ->(entry.fileMode, entry.objectId)
   }.toMap)
 
-  def apply(objectId: ObjectId, objectReader: ObjectReader): Tree = {
+  def apply(objectId: ObjectId)(implicit objectReader: ObjectReader): Tree = {
     val treeParser = new CanonicalTreeParser
     treeParser.reset(objectReader, objectId)
     val entries = collection.mutable.Buffer[Entry]()

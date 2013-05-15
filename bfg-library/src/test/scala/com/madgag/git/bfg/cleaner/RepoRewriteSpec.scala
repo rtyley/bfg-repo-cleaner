@@ -105,7 +105,7 @@ class RepoRewriteSpec extends Specification {
         }
 
         val charsetDetector = QuickBlobCharsetDetector
-        val threadLocalRepoResources = repo.threadLocalRepoResources
+        val threadLocalObjectDBResources = repo.getObjectDatabase.threadLocalResources
       }
       RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set("HEAD")), OldIdsPublic, Seq(FormerCommitFooter), Seq(blobTextModifier)))
 
@@ -143,7 +143,7 @@ class RepoRewriteSpec extends Specification {
         def lineCleanerFor(entry: TreeBlobEntry) = Some(quote(before).r --> (_ => after))
 
         val charsetDetector = QuickBlobCharsetDetector
-        val threadLocalRepoResources = repo.threadLocalRepoResources
+        val threadLocalObjectDBResources = repo.getObjectDatabase.threadLocalResources
       }
       RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set.empty), OldIdsPrivate, treeBlobsCleaners = Seq(blobTextModifier)))
 

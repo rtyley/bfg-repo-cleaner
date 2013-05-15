@@ -138,7 +138,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
         def lineCleanerFor(entry: TreeBlobEntry) = if (filterContentPredicate(entry.filename)) Some(replacer) else None
 
         val charsetDetector = blobCharsetDetector
-        val threadLocalRepoResources = repo.threadLocalRepoResources
+        val threadLocalObjectDBResources = repo.getObjectDatabase.threadLocalResources
       }
   }
 
@@ -162,7 +162,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
           } else {
             println("Found " + sizedBadIds.size + " blob ids for large blobs - biggest=" + sizedBadIds.max.size + " smallest=" + sizedBadIds.min.size)
             println("Total size (unpacked)=" + sizedBadIds.map(_.size).sum)
-            Some(new BlobReplacer(sizedBadIds.map(_.objectId), new BlobInserter(repo.threadLocalRepoResources.objectInserter())))
+            Some(new BlobReplacer(sizedBadIds.map(_.objectId), new BlobInserter(repo.getObjectDatabase.threadLocalResources.inserter())))
           }
         }
       case _ => None

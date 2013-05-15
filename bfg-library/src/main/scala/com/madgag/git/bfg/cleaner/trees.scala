@@ -20,7 +20,7 @@
 
 package com.madgag.git.bfg.cleaner
 
-import org.eclipse.jgit.lib.{ObjectReader, ObjectStream, ObjectId}
+import org.eclipse.jgit.lib.{ObjectStream, ObjectId}
 import com.madgag.git.bfg.model._
 import org.eclipse.jgit.diff.RawText
 import java.io._
@@ -36,8 +36,9 @@ import java.nio.charset.CodingErrorAction._
 import com.madgag.git.bfg.cleaner.kit.BlobInserter
 import scala.Some
 import com.madgag.git.bfg.model.TreeBlobEntry
-import com.madgag.git.ThreadLocalRepoResources
 import org.eclipse.jgit.lib.Constants._
+import com.madgag.git
+import com.madgag.git.ThreadLocalObjectDatabaseResources
 
 class BlobRemover(blobIds: Set[ObjectId]) extends Cleaner[TreeBlobs] {
   override def apply(treeBlobs: TreeBlobs) = treeBlobs.entries.filter(e => !blobIds.contains(e.objectId))
@@ -96,7 +97,7 @@ object BlobTextModifier {
 
 trait BlobTextModifier extends TreeBlobModifier {
 
-  val threadLocalRepoResources: ThreadLocalRepoResources
+  val threadLocalObjectDBResources: ThreadLocalObjectDatabaseResources
 
   def lineCleanerFor(entry: TreeBlobEntry): Option[String => String]
 
@@ -109,7 +110,7 @@ trait BlobTextModifier extends TreeBlobModifier {
     def filterTextIn(e: TreeBlobEntry, lineCleaner: String => String): TreeBlobEntry = {
       def isDirty(line: String) = lineCleaner(line) != line
 
-      Some(threadLocalRepoResources.objectReader().open(e.objectId)).filter(_.getSize < sizeThreshold).flatMap {
+      Some(threadLocalObjectDBResources.reader().open(e.objectId)).filter(_.getSize < sizeThreshold).flatMap {
         loader =>
           Some(Resource.fromInputStream(loader.openStream())).flatMap {
             streamResource =>
@@ -121,7 +122,7 @@ trait BlobTextModifier extends TreeBlobModifier {
 
                       lines.view.map(lineCleaner).foreach(line => b.write(line.getBytes(charset)))
 
-                      val oid = threadLocalRepoResources.objectInserter().insert(OBJ_BLOB, b.toByteArray)
+                      val oid = threadLocalObjectDBResources.inserter().insert(OBJ_BLOB, b.toByteArray)
 
                       e.copy(objectId = oid)
                   }

@@ -51,6 +51,8 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
   import config._
 
+  val threadLocalResources = objectDB.threadLocalResources
+
   // want to enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
   val memo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(objectProtection.fixedObjectIds)
 
@@ -63,7 +65,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
   def uncachedClean: (ObjectId) => ObjectId = {
     objectId =>
-      objectDB.newReader.open(objectId).getType match {
+      threadLocalResources.reader().open(objectId).getType match {
         case OBJ_COMMIT => cleanCommit(objectId)
         case OBJ_TREE => cleanTree(objectId)
         case OBJ_TAG => cleanTag(objectId)
@@ -80,21 +82,21 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     val originalCommit = Commit(originalRevCommit)
 
     val cleanedArcs = originalCommit.arcs cleanWith this
-    val kit = new CommitNodeCleaner.Kit(objectDB, originalRevCommit, originalCommit, cleanedArcs, apply)
+    val kit = new CommitNodeCleaner.Kit(threadLocalResources, originalRevCommit, originalCommit, cleanedArcs, apply)
     val updatedCommitNode = commitNodeCleaner.fixer(kit)(originalCommit.node)
     val updatedCommit = Commit(updatedCommitNode, cleanedArcs)
 
     if (updatedCommit != originalCommit) {
       val commitBytes = updatedCommit.toBytes
       objectChecker.foreach(_.checkCommit(commitBytes))
-      objectDB.newInserter.insert(OBJ_COMMIT, commitBytes)
+      threadLocalResources.inserter().insert(OBJ_COMMIT, commitBytes)
     } else {
       originalRevCommit
     }
   }
 
   def cleanTree(originalObjectId: ObjectId): ObjectId = {
-    val tree = Tree(originalObjectId, objectDB.newReader)
+    val tree = Tree(originalObjectId)(threadLocalResources.reader())
 
     val fixedTreeBlobs = treeBlobsCleaner(tree.blobs)
     val cleanedSubtrees = TreeSubtrees(tree.subtrees.entryMap.map {
@@ -105,15 +107,9 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
       val updatedTree = tree copyWith(cleanedSubtrees, fixedTreeBlobs)
 
-      // val removedFiles = tree.blobs.entryMap -- fixedTreeBlobs.entryMap.keys
-      //      val sizedRemovedFiles = removedFiles.mapValues {
-      //        case (_, objectId) => SizedObject(objectId, objectDB.newReader.getObjectSize(objectId, ObjectReader.OBJ_ANY))
-      //      }
-      // allRemovedFiles ++= sizedRemovedFiles
-
       val treeFormatter = updatedTree.formatter
       objectChecker.foreach(_.checkTree(treeFormatter.toByteArray))
-      val updatedTreeId = treeFormatter.insertTo(objectDB.newInserter)
+      val updatedTreeId = treeFormatter.insertTo(threadLocalResources.inserter())
 
       updatedTreeId
     } else {
@@ -130,8 +126,8 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
         tb.setTag(originalTag.getTagName)
         tb.setObjectId(cleanedObj, originalTag.getObject.getType)
         tb.setTagger(originalTag.getTaggerIdent)
-        tb.setMessage(objectIdSubstitutor.replaceOldIds(originalTag.getFullMessage, objectDB.newReader, apply))
-        val cleanedTag: ObjectId = objectDB.newInserter.insert(tb)
+        tb.setMessage(objectIdSubstitutor.replaceOldIds(originalTag.getFullMessage, threadLocalResources.reader(), apply))
+        val cleanedTag: ObjectId = threadLocalResources.inserter().insert(tb)
         objectChecker.foreach(_.checkTag(tb.toByteArray))
         cleanedTag
     }.getOrElse(originalTag)

@@ -23,15 +23,15 @@ package com.madgag.git.bfg.cleaner
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.RevCommit
 import com.madgag.git.bfg.model._
+import com.madgag.git.ThreadLocalObjectDatabaseResources
 
 object CommitNodeCleaner {
 
-  class Kit(objectDB: ObjectDatabase,
+  class Kit(val threadLocalResources: ThreadLocalObjectDatabaseResources,
             val originalRevCommit: RevCommit,
             val originalCommit: Commit,
             val updatedArcs: CommitArcs,
             val mapper: Cleaner[ObjectId]) {
-    lazy val objectReader = objectDB.newReader
 
     val arcsChanged = originalCommit.arcs != updatedArcs
 
