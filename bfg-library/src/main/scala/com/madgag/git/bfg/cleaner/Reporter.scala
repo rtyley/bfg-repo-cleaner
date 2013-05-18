@@ -124,11 +124,7 @@ class CLIReporter(repo: Repository) extends Reporter {
 
     println(s"\n\nIn total, ${changedIds.size} object ids were changed - a record of these will be written to:\n\n\t${mapFile.path}")
 
-    implicit val anyObjectIdOrdering: Ordering[ObjectId] = new Ordering[ObjectId] {
-      def compare(x: ObjectId, y: ObjectId): Int = x compareTo y
-    }
-
-    mapFile.writeStrings(SortedMap(changedIds.toSeq: _*).view.map { case (o,n) => s"${o.name} ${n.name}"}, "\n")
+    mapFile.writeStrings(SortedMap[AnyObjectId, ObjectId](changedIds.toSeq: _*).view.map { case (o,n) => s"${o.name} ${n.name}"}, "\n")
 
     println("\nBFG run is complete!")
 

@@ -21,24 +21,26 @@
 package com.madgag.git.bfg.cli
 
 import java.io.File
-import com.madgag.git._
 import com.madgag.git.bfg.cleaner._
 import com.madgag.git.bfg.cleaner.kit.BlobInserter
 import com.madgag.git.bfg.textmatching.RegexReplacer._
 import com.madgag.git.bfg.model.FileName.ImplicitConversions._
 import io.Source
 import com.madgag.git.bfg.Timing
-import org.eclipse.jgit.lib.{ObjectChecker, TextProgressMonitor, ProgressMonitor}
+import org.eclipse.jgit.lib._
 import collection.immutable.SortedSet
-import org.eclipse.jgit.storage.file.FileRepository
 import protection.ObjectProtection
-import scopt.immutable.OptionParser
-import scala.Some
-import com.madgag.git.bfg.model.{TreeBlobs, FileName, TreeBlobEntry}
+import com.madgag.git.bfg.model.{TreeBlobs, FileName}
 import com.madgag.git.bfg.textmatching.{Glob, TextMatcher}
 import com.madgag.inclusion._
-import org.eclipse.jgit.lib.ObjectId
 import com.madgag.text.ByteSize
+import scopt.immutable.OptionParser
+import scala.Some
+import com.madgag.git.bfg.model.TreeBlobEntry
+import com.madgag.inclusion.IncExcExpression
+import org.eclipse.jgit.internal.storage.file.FileRepository
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder
+import com.madgag.git._
 
 
 object CLIConfig {
@@ -113,7 +115,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   lazy val gitdir = resolveGitDirFor(repoLocation)
 
-  implicit lazy val repo = new FileRepository(gitdir.get)
+  implicit lazy val repo = FileRepositoryBuilder.create(repoLocation).asInstanceOf[FileRepository]
 
   lazy val objectProtection = ObjectProtection(protectBlobsFromRevisions)
 
@@ -155,7 +157,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     sizeBasedBlobTargetSources match {
       case sources if sources.size > 0 =>
         Timing.measureTask("Finding target blobs", ProgressMonitor.UNKNOWN) {
-          val sizedBadIds = SortedSet(sources.flatMap(_(biggestBlobs(repo))): _*)
+          val sizedBadIds = SortedSet(sources.flatMap(_(biggestBlobs(repo.getObjectDatabase))): _*)
           if (sizedBadIds.isEmpty) {
             println("Warning : no large blobs matching criteria found in packfiles - does the repo need to be packed?")
             None
@@ -198,5 +200,3 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     }
   }
 }
-
-

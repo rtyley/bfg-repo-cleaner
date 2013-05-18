@@ -1,6 +1,5 @@
 package com.madgag
 
-import org.eclipse.jgit.storage.file.{ObjectDirectory, FileRepository}
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk._
 import org.eclipse.jgit.api.Git
@@ -14,10 +13,10 @@ import scala.Some
 import collection.convert.wrapAsScala._
 import Constants._
 import language.implicitConversions
+import org.eclipse.jgit.internal.storage.file.ObjectDirectory
 
 
 package object git {
-  implicit def fileRepository2ObjectDirectory(repo: FileRepository): ObjectDirectory = repo.getObjectDatabase
 
   def abbrId(str: String)(implicit reader: ObjectReader): ObjectId = reader.resolveExistingUniqueId(AbbreviatedObjectId.fromString(str)).get
 

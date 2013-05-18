@@ -20,7 +20,7 @@
 
 package com.madgag.git.bfg
 
-import org.eclipse.jgit.storage.file.{WindowCache, WindowCacheConfig}
+import org.eclipse.jgit.storage.file.WindowCacheConfig
 import scala.Some
 import com.madgag.git.bfg.cleaner._
 import scala.language.implicitConversions
@@ -48,7 +48,7 @@ object GitUtil {
   def tweakStaticJGitConfig {
     val wcConfig: WindowCacheConfig = new WindowCacheConfig()
     wcConfig.setStreamFileThreshold(1024 * 1024)
-    WindowCache.reconfigure(wcConfig)
+    wcConfig.install()
   }
 
   def hasBeenProcessedByBFGBefore(repo: Repository): Boolean = {
