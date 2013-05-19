@@ -9,7 +9,7 @@ licenses in ThisBuild := Seq("GPLv3" -> url("http://www.gnu.org/licenses/gpl-3.0
 homepage in ThisBuild := Some(url("https://github.com/rtyley/bfg-repo-cleaner"))
 
 libraryDependencies in ThisBuild ++= Seq(
-  "com.madgag" % "org.eclipse.jgit" % "2.99.99.0.0-UNOFFICIAL-ROBERTO-RELEASE",
+  "com.madgag" % "org.eclipse.jgit" % "2.99.99.1.0-UNOFFICIAL-ROBERTO-RELEASE",
   "org.specs2" %% "specs2" % "1.14" % "test"
 )
 
