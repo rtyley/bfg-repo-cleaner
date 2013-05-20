@@ -24,10 +24,15 @@ import org.eclipse.jgit.storage.file.WindowCacheConfig
 import scala.Some
 import com.madgag.git.bfg.cleaner._
 import scala.language.implicitConversions
-import org.eclipse.jgit.lib.{Constants, Repository}
+import org.eclipse.jgit.lib.{NullProgressMonitor, ProgressMonitor, Constants, Repository}
 import org.eclipse.jgit.revwalk.RevWalk
 import collection.convert.wrapAsScala._
 import com.madgag.git._
+import org.eclipse.jgit.internal.storage.file.ObjectDirectory
+import org.eclipse.jgit.lib.ObjectReader._
+import scala.Some
+import com.madgag.git.SizedObject
+import Constants.OBJ_BLOB
 
 trait CleaningMapper[V] extends Cleaner[V] {
   def isDirty(v: V) = apply(v) != v
@@ -62,5 +67,19 @@ object GitUtil {
 
   implicit def cleaner2CleaningMapper[V](f: Cleaner[V]): CleaningMapper[V] = new CleaningMapper[V] {
     def apply(v: V) = f(v)
+  }
+
+  def biggestBlobs(implicit objectDB: ObjectDirectory, progressMonitor: ProgressMonitor = NullProgressMonitor.INSTANCE): Stream[SizedObject] = {
+    Timing.measureTask("Scanning packfile for large blobs", ProgressMonitor.UNKNOWN) {
+      val reader = objectDB.newReader
+      objectDB.getPacks.flatMap {
+        pack =>
+          pack.map(_.toObjectId).map {
+            objectId =>
+              progressMonitor update 1
+              SizedObject(objectId, reader.getObjectSize(objectId, OBJ_ANY))
+          }
+      }.toSeq.sorted.reverse.toStream.filter(oid => reader.open(oid.objectId).getType == OBJ_BLOB)
+    }
   }
 }

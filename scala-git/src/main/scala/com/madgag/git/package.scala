@@ -182,16 +182,4 @@ package object git {
     def compare(that: SizedObject) = size.compareTo(that.size)
   }
 
-  def biggestBlobs(implicit objectDB: ObjectDirectory, progressMonitor: ProgressMonitor = NullProgressMonitor.INSTANCE): Stream[SizedObject] = {
-    val reader = objectDB.newReader
-    objectDB.getPacks.flatMap {
-      pack =>
-        pack.map(_.toObjectId).map {
-          objectId =>
-            progressMonitor update 1
-            SizedObject(objectId, reader.getObjectSize(objectId, OBJ_ANY))
-        }
-    }.toSeq.sorted.reverse.toStream.filter(oid => reader.open(oid.objectId).getType == OBJ_BLOB)
-  }
-
 }
