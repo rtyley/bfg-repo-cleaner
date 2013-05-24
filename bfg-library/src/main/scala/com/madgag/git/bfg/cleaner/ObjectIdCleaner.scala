@@ -33,7 +33,7 @@ import org.eclipse.jgit.lib._
 object ObjectIdCleaner {
 
   case class Config(objectProtection: ObjectProtection,
-                    objectIdSubstitutor: ObjectIdSubstitutor,
+                    objectIdSubstitutor: ObjectIdSubstitutor = ObjectIdSubstitutor.OldIdsPublic,
                     commitNodeCleaners: Seq[CommitNodeCleaner] = Seq.empty,
                     treeBlobsCleaners: Seq[Cleaner[TreeBlobs]] = Seq.empty,
                     // messageCleaners? - covers both Tag and Commits

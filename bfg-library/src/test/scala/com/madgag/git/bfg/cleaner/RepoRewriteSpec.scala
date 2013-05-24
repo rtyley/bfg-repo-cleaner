@@ -25,7 +25,7 @@ import scala.collection.convert.wrapAsScala._
 import java.util.Properties
 import org.eclipse.jgit.util.RawParseUtils
 import java.io.StringReader
-import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.lib.{Ref, ObjectId}
 import PartialFunction.condOpt
 import org.apache.commons.io.FilenameUtils
 import com.madgag.git.bfg.model.{TreeBlobs, TreeBlobEntry}
@@ -34,10 +34,11 @@ import com.madgag.git.bfg.textmatching.RegexReplacer._
 import com.madgag.git.bfg.GitUtil._
 import java.util.regex.Pattern._
 import ObjectIdSubstitutor._
-import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
+import org.eclipse.jgit.revwalk.RevWalk
 import org.specs2.mutable._
 import com.madgag.git._
 import com.madgag.git.test._
+import com.madgag.git.bfg.textmatching.Literal
 
 class RepoRewriteSpec extends Specification {
 
@@ -67,22 +68,22 @@ class RepoRewriteSpec extends Specification {
   }
 
   "Repo rewriter" should {
-    "clean commit messages even on clean branches, because they may reference commits from dirty ones" in {
+    "clean commit messages even on clean branches, because commit messages may reference commits from dirty ones" in {
       implicit val repo = unpackRepo("/sample-repos/taleOfTwoBranches.git.zip")
       implicit val revWalk = new RevWalk(repo)
 
-      repo.getRef("pure").getObjectId.asRevCommit.getFullMessage must contain("6e76960ede2addbbe7e")
+      def commitMessageForRev(rev: String) = repo.resolve(rev).asRevCommit.getFullMessage
 
-      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set.empty), OldIdsPrivate, Seq(new CommitMessageObjectIdsUpdater(OldIdsPrivate)), Seq(new Cleaner[TreeBlobs] {
-        def apply(tbs: TreeBlobs) = tbs.entries.filterNot(_.filename.string == "sin")
-      })))
+      commitMessageForRev("pure") must contain("6e76960ede2addbbe7e")
 
-      repo.getRef("pure").getObjectId.asRevCommit.getFullMessage must not contain ("6e76960ede2addbbe7e")
+      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection.none, OldIdsPrivate, Seq(new CommitMessageObjectIdsUpdater(OldIdsPrivate)), Seq(new FileDeleter(Literal("sin")))))
+
+      commitMessageForRev("pure") must not contain ("6e76960ede2addbbe7e")
     }
 
     "remove passwords" in {
       implicit val repo = unpackRepo("/sample-repos/example.git.zip")
-      implicit val reader = repo.newObjectReader
+      implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
 
       def propertiesIn(contents: String) = {
         val p = new Properties()
@@ -96,7 +97,7 @@ class RepoRewriteSpec extends Specification {
       }
 
       object FileExt {
-        def unapply(boom: String) = Option(FilenameUtils.getExtension(boom))
+        def unapply(fileName: String) = Option(FilenameUtils.getExtension(fileName))
       }
 
       val blobTextModifier = new BlobTextModifier {
@@ -104,22 +105,18 @@ class RepoRewriteSpec extends Specification {
           case FileExt("txt") | FileExt("scala") => """(\.password=).*""".r --> (_.group(1) + "*** PASSWORD ***")
         }
 
-        val charsetDetector = QuickBlobCharsetDetector
         val threadLocalObjectDBResources = repo.getObjectDatabase.threadLocalResources
       }
-      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set("HEAD")), OldIdsPublic, Seq(FormerCommitFooter), Seq(blobTextModifier)))
-
-      val allCommits = repo.git.log.all.call.toSeq
+      val cleanedObjectMap = RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set("HEAD")), treeBlobsCleaners = Seq(blobTextModifier)))
 
       val oldCommitContainingPasswords = abbrId("37bcc89")
 
-      val cleanedCommitWithPasswordsRemoved = allCommits.find(commitThatWasFormerly(oldCommitContainingPasswords)).get
+      val cleanedCommitWithPasswordsRemoved = cleanedObjectMap(oldCommitContainingPasswords).asRevCommit
 
       val originalContents = passwordFileContentsIn(oldCommitContainingPasswords)
       val cleanedContents = passwordFileContentsIn(cleanedCommitWithPasswordsRemoved)
 
-      cleanedContents must contain("science")
-      cleanedContents must contain("database.password=")
+      cleanedContents must contain("science") and contain("database.password=")
       originalContents must contain("correcthorse")
       cleanedContents must not contain ("correcthorse")
 
@@ -142,10 +139,9 @@ class RepoRewriteSpec extends Specification {
       val blobTextModifier = new BlobTextModifier {
         def lineCleanerFor(entry: TreeBlobEntry) = Some(quote(before).r --> (_ => after))
 
-        val charsetDetector = QuickBlobCharsetDetector
         val threadLocalObjectDBResources = repo.getObjectDatabase.threadLocalResources
       }
-      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set.empty), OldIdsPrivate, treeBlobsCleaners = Seq(blobTextModifier)))
+      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection.none, treeBlobsCleaners = Seq(blobTextModifier)))
 
       val cleanedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-ORIGINAL.$fileNamePostfix")
       val expectedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-MODIFIED-$before-$after.$fileNamePostfix")
@@ -155,8 +151,4 @@ class RepoRewriteSpec extends Specification {
       cleanedFile mustEqual expectedFile
     }
   }
-
-  def commitThatWasFormerly(id: ObjectId): RevCommit => Boolean =
-    _.getFooterLines.exists(f => f.getKey == FormerCommitFooter.Key && f.getValue.asObjectId == id)
-
 }

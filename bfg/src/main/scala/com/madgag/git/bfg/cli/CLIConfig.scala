@@ -109,7 +109,6 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      filterSizeThreshold: Int = BlobTextModifier.DefaultSizeThreshold,
                      textReplacementExpressions: Traversable[String] = List.empty,
                      stripBlobsWithIds: Option[Set[ObjectId]] = None,
-                     blobCharsetDetector: BlobCharsetDetector = QuickBlobCharsetDetector,
                      strictObjectChecking: Boolean = false,
                      sensitiveData: Option[Boolean] = None,
                      repoLocation: File = new File(System.getProperty("user.dir"))) {
@@ -123,10 +122,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
   lazy val objectChecker = if (strictObjectChecking) Some(new ObjectChecker()) else None
 
   lazy val fileDeletion: Option[Cleaner[TreeBlobs]] = deleteFiles.map {
-    textMatcher =>
-      val filePattern = textMatcher.r
-
-      treeBlobs: TreeBlobs => treeBlobs.entries.filterNot(e => filePattern.matches(e.filename))
+    textMatcher => new FileDeleter(textMatcher)
   }
 
   lazy val lineModifier: Option[String => String] = TextReplacementConfig(textReplacementExpressions)
@@ -140,7 +136,6 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
         def lineCleanerFor(entry: TreeBlobEntry) = if (filterContentPredicate(entry.filename)) Some(replacer) else None
 
-        val charsetDetector = blobCharsetDetector
         val threadLocalObjectDBResources = repo.getObjectDatabase.threadLocalResources
       }
   }

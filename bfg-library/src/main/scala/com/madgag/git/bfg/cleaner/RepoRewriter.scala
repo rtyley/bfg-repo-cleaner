@@ -28,6 +28,7 @@ import concurrent.future
 import concurrent.ExecutionContext.Implicits.global
 import scala.collection.convert.wrapAll._
 import com.madgag.git._
+import org.eclipse.jgit.lib.ObjectId
 
 /*
 Encountering a blob ->
@@ -62,7 +63,7 @@ When updating a Tree, the User has no right to muck with sub-trees. They can onl
 
 object RepoRewriter {
 
-  def rewrite(repo: org.eclipse.jgit.lib.Repository, objectIdCleanerConfig: ObjectIdCleaner.Config) {
+  def rewrite(repo: org.eclipse.jgit.lib.Repository, objectIdCleanerConfig: ObjectIdCleaner.Config): Map[ObjectId, ObjectId] = {
     assert(!repo.getAllRefs.isEmpty, "Can't find any refs in repo at " + repo.getDirectory.getAbsolutePath)
 
     implicit val refDatabase = repo.getRefDatabase
@@ -127,6 +128,8 @@ object RepoRewriter {
 
       reporter.reportResults(commits, objectIdCleaner)
     }
+
+    objectIdCleaner.cleanedObjectMap()
   }
 
 }

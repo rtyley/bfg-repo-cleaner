@@ -68,6 +68,7 @@ object Reporter {
         "your current commits still use it, it will STILL exist in your repository.\n\n" +
         "If you *really* want this content gone, make a manual commit that removes it,\n" +
         "and then run the BFG on a fresh copy of your repo.")
+      // TODO would like to abort here if we are cleaning 'private' data.
     }
   }
 

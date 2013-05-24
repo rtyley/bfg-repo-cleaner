@@ -57,6 +57,8 @@ import com.madgag.git._
  */
 object ObjectProtection {
 
+  def none(implicit repo: Repository): ObjectProtection = apply(Set.empty)
+
   def apply(revisions: Set[String])(implicit repo: Repository): ObjectProtection = {
 
     implicit val (revWalk, reader) = repo.singleThreadedReaderTuple

@@ -40,7 +40,7 @@ trait BlobTextModifier extends TreeBlobModifier {
 
   def lineCleanerFor(entry: TreeBlobEntry): Option[String => String]
 
-  val charsetDetector: BlobCharsetDetector
+  val charsetDetector: BlobCharsetDetector = QuickBlobCharsetDetector
 
   val sizeThreshold = BlobTextModifier.DefaultSizeThreshold
 
