@@ -22,7 +22,7 @@ package com.madgag.git.bfg.cli
 
 import scala.collection.convert.wrapAsScala._
 import org.specs2.mutable._
-import org.eclipse.jgit.lib.{ObjectId, Repository}
+import org.eclipse.jgit.lib.{ObjectReader, ObjectId, Repository}
 import org.eclipse.jgit.revwalk.RevCommit
 import org.specs2.matcher.Matcher
 import scalax.file.Path
@@ -50,15 +50,22 @@ class MainSpec extends Specification {
       implicit val repo = unpackRepo("/sample-repos/folder-example.git.zip")
       implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
 
-      def haveFolder(name: String): Matcher[RevCommit] = be_===(name).atLeastOnce ^^ {
-        (c: RevCommit) => c.getTree.walk(postOrderTraversal = true).withFilter(_.isSubtree).map(_.getNameString).toList
-      }
-
       commitHist must haveFolder("secret-files").atLeastOnce
 
       run("--delete-files {credentials,passwords}.txt")
 
       commitHist must (not(haveFolder("secret-files"))).forall
+    }
+
+    "remove bad folder named '.git'" in {
+      implicit val repo = unpackRepo("/sample-repos/badRepoContainingDotGitFolder.git.zip")
+      implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
+
+      commitHist must haveFolder(".git").atLeastOnce
+
+      run("--delete-folders .git --no-blob-protection")
+
+      commitHist must (not(haveFolder(".git"))).forall
     }
 
     "strip blobs by id" in {
@@ -87,4 +94,8 @@ class MainSpec extends Specification {
   }
 
   def commitHist(implicit repo: Repository) = repo.git.log.all.call.toSeq.reverse
+
+  def haveFolder(name: String)(implicit reader: ObjectReader): Matcher[RevCommit] = be_===(name).atLeastOnce ^^ {
+    (c: RevCommit) => c.getTree.walk(postOrderTraversal = true).withFilter(_.isSubtree).map(_.getNameString).toList
+  }
 }

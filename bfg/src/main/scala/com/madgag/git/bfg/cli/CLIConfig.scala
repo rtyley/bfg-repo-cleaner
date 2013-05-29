@@ -30,13 +30,12 @@ import com.madgag.git.bfg.GitUtil
 import org.eclipse.jgit.lib._
 import collection.immutable.SortedSet
 import protection.ObjectProtection
-import com.madgag.git.bfg.model.{TreeBlobs, FileName}
+import com.madgag.git.bfg.model.{TreeSubtrees, TreeBlobs, FileName, TreeBlobEntry}
 import com.madgag.git.bfg.textmatching.{Glob, TextMatcher}
 import com.madgag.inclusion._
 import com.madgag.text.ByteSize
 import scopt.immutable.OptionParser
 import scala.Some
-import com.madgag.git.bfg.model.TreeBlobEntry
 import com.madgag.inclusion.IncExcExpression
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
@@ -58,6 +57,9 @@ object CLIConfig {
       },
       opt("D", "delete-files", "<glob>", "delete files with the specified names (eg '*.class', '*.{txt,log}' - matches on file name, not path within repo)") {
         (v: String, c: CLIConfig) => c.copy(deleteFiles = Some(FileMatcher(v)))
+      },
+      opt("Dfo","delete-folders", "<glob>", "delete folders with the specified names (eg '.svn', '*-tmp' - matches on folder name, not path within repo)") {
+        (v: String, c: CLIConfig) => c.copy(deleteFolders = Some(FileMatcher(v)))
       },
       opt("rt", "replace-text", "<expressions-file>", "filter content of files, replacing matched text. Match expressions should be listed in the file, one expression per line - " +
         "by default, each expression is treated as a literal, but 'regex:' & 'glob:' prefixes are supported, with '==>' to specify a replacement " +
@@ -105,6 +107,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      stripBlobsBiggerThan: Option[Int] = None,
                      protectBlobsFromRevisions: Set[String] = Set("HEAD"),
                      deleteFiles: Option[TextMatcher] = None,
+                     deleteFolders: Option[TextMatcher] = None,
                      filenameFilters: Seq[Filter[String]] = Nil,
                      filterSizeThreshold: Int = BlobTextModifier.DefaultSizeThreshold,
                      textReplacementExpressions: Traversable[String] = List.empty,
@@ -123,6 +126,12 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   lazy val fileDeletion: Option[Cleaner[TreeBlobs]] = deleteFiles.map {
     textMatcher => new FileDeleter(textMatcher)
+  }
+
+  lazy val folderDeletion: Option[Cleaner[TreeSubtrees]] = deleteFolders.map {
+    textMatcher => { subtrees: TreeSubtrees =>
+      TreeSubtrees(subtrees.entryMap.filterKeys(filename => !textMatcher(filename)))
+    }
   }
 
   lazy val lineModifier: Option[String => String] = TextReplacementConfig(textReplacementExpressions)
@@ -175,7 +184,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   lazy val treeBlobCleaners: Seq[Cleaner[TreeBlobs]] = Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier).flatten
 
-  lazy val definesNoWork = treeBlobCleaners.isEmpty
+  lazy val definesNoWork = treeBlobCleaners.isEmpty && folderDeletion.isEmpty
 
   def objectIdCleanerConfig: ObjectIdCleaner.Config =
     ObjectIdCleaner.Config(
@@ -183,6 +192,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
       objectIdSubstitutor,
       commitNodeCleaners,
       treeBlobCleaners,
+      folderDeletion.toSeq,
       objectChecker
     )
 

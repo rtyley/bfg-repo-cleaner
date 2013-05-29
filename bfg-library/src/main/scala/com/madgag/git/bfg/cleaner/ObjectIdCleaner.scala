@@ -36,12 +36,15 @@ object ObjectIdCleaner {
                     objectIdSubstitutor: ObjectIdSubstitutor = ObjectIdSubstitutor.OldIdsPublic,
                     commitNodeCleaners: Seq[CommitNodeCleaner] = Seq.empty,
                     treeBlobsCleaners: Seq[Cleaner[TreeBlobs]] = Seq.empty,
+                    treeSubtreesCleaners: Seq[Cleaner[TreeSubtrees]] = Seq.empty,
                     // messageCleaners? - covers both Tag and Commits
                     objectChecker: Option[ObjectChecker] = None) {
 
     lazy val commitNodeCleaner = CommitNodeCleaner.chain(commitNodeCleaners)
 
     lazy val treeBlobsCleaner = Function.chain(treeBlobsCleaners)
+
+    lazy val treeSubtreesCleaner:Cleaner[TreeSubtrees] = Function.chain(treeSubtreesCleaners)
   }
 
 }
@@ -99,7 +102,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     val tree = Tree(originalObjectId)(threadLocalResources.reader())
 
     val fixedTreeBlobs = treeBlobsCleaner(tree.blobs)
-    val cleanedSubtrees = TreeSubtrees(tree.subtrees.entryMap.map {
+    val cleanedSubtrees = TreeSubtrees(treeSubtreesCleaner(tree.subtrees).entryMap.map {
       case (name, treeId) => (name, apply(treeId))
     }).withoutEmptyTrees
 
