@@ -51,9 +51,11 @@ class MainSpec extends Specification {
       implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
 
       commitHist must haveFolder("secret-files").atLeastOnce
+      repo.resolve("master") mustEqual abbrId("cd1a")
 
       run("--delete-files {credentials,passwords}.txt")
 
+      repo.resolve("master") mustNotEqual abbrId("cd1a")
       commitHist must (not(haveFolder("secret-files"))).forall
     }
 
