@@ -30,6 +30,9 @@ import com.madgag.git._
 import com.madgag.git.test._
 
 class MainSpec extends Specification {
+
+  sequential // concurrent testing against scala.App is not safe https://twitter.com/rtyley/status/340376844916387840
+
   "CLI" should {
     "not change commits unnecessarily" in {
       implicit val repo = unpackRepo("/sample-repos/exampleWithInitialCleanHistory.git.zip")
