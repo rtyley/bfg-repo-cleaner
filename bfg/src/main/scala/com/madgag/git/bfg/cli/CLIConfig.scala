@@ -118,7 +118,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   lazy val gitdir = resolveGitDirFor(repoLocation)
 
-  implicit lazy val repo = FileRepositoryBuilder.create(repoLocation).asInstanceOf[FileRepository]
+  implicit lazy val repo = FileRepositoryBuilder.create(gitdir.get).asInstanceOf[FileRepository]
 
   lazy val objectProtection = ObjectProtection(protectBlobsFromRevisions)
 
