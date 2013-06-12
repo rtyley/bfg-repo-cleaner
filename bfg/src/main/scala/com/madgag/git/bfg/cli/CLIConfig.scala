@@ -149,7 +149,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
       }
   }
 
-  lazy val privateDataRemoval = sensitiveData.getOrElse(Seq(fileDeletion, blobTextModifier).flatten.nonEmpty)
+  lazy val privateDataRemoval = sensitiveData.getOrElse(Seq(fileDeletion, folderDeletion, blobTextModifier).flatten.nonEmpty)
 
   lazy val objectIdSubstitutor = if (privateDataRemoval) ObjectIdSubstitutor.OldIdsPrivate else ObjectIdSubstitutor.OldIdsPublic
 
