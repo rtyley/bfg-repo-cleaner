@@ -149,40 +149,45 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
       }
   }
 
-  lazy val blobsByIdRemover: Option[BlobRemover] = stripBlobsWithIds.map(new BlobRemover(_))
-
-  lazy val blobRemover: Option[Cleaner[TreeBlobs]] = {
-    implicit val progressMonitor: ProgressMonitor = new TextProgressMonitor()
-
-    val sizeBasedBlobTargetSources = Seq(
-      stripBlobsBiggerThan.map(threshold => (s: Stream[SizedObject]) => s.takeWhile(_.size > threshold)),
-      stripBiggestBlobs.map(num => (s: Stream[SizedObject]) => s.take(num))
-    ).flatten
-
-    sizeBasedBlobTargetSources match {
-      case sources if sources.size > 0 =>
-        val sizedBadIds = SortedSet(sources.flatMap(_(biggestBlobs(repo.getObjectDatabase, progressMonitor))): _*)
-        if (sizedBadIds.isEmpty) {
-          println("Warning : no large blobs matching criteria found in packfiles - does the repo need to be packed?")
-          None
-        } else {
-          println("Found " + sizedBadIds.size + " blob ids for large blobs - biggest=" + sizedBadIds.max.size + " smallest=" + sizedBadIds.min.size)
-          println("Total size (unpacked)=" + sizedBadIds.map(_.size).sum)
-          Some(new BlobReplacer(sizedBadIds.map(_.objectId), new BlobInserter(repo.getObjectDatabase.threadLocalResources.inserter())))
-        }
-      case _ => None
-    }
-  }
-
   lazy val privateDataRemoval = sensitiveData.getOrElse(Seq(fileDeletion, blobTextModifier).flatten.nonEmpty)
 
   lazy val objectIdSubstitutor = if (privateDataRemoval) ObjectIdSubstitutor.OldIdsPrivate else ObjectIdSubstitutor.OldIdsPublic
 
-  lazy val formerCommitFooter = if (privateDataRemoval) None else Some(FormerCommitFooter)
+  lazy val commitNodeCleaners = {
+    lazy val formerCommitFooter = if (privateDataRemoval) None else Some(FormerCommitFooter)
 
-  lazy val commitNodeCleaners = Seq(new CommitMessageObjectIdsUpdater(objectIdSubstitutor)) ++ formerCommitFooter
+    Seq(new CommitMessageObjectIdsUpdater(objectIdSubstitutor)) ++ formerCommitFooter
+  }
 
-  lazy val treeBlobCleaners: Seq[Cleaner[TreeBlobs]] = Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier).flatten
+  lazy val treeBlobCleaners: Seq[Cleaner[TreeBlobs]] = {
+
+    lazy val blobsByIdRemover: Option[BlobRemover] = stripBlobsWithIds.map(new BlobRemover(_))
+
+    lazy val blobRemover: Option[Cleaner[TreeBlobs]] = {
+      implicit val progressMonitor: ProgressMonitor = new TextProgressMonitor()
+
+      val sizeBasedBlobTargetSources = Seq(
+        stripBlobsBiggerThan.map(threshold => (s: Stream[SizedObject]) => s.takeWhile(_.size > threshold)),
+        stripBiggestBlobs.map(num => (s: Stream[SizedObject]) => s.take(num))
+      ).flatten
+
+      sizeBasedBlobTargetSources match {
+        case sources if sources.size > 0 =>
+          val sizedBadIds = SortedSet(sources.flatMap(_(biggestBlobs(repo.getObjectDatabase, progressMonitor))): _*)
+          if (sizedBadIds.isEmpty) {
+            println("Warning : no large blobs matching criteria found in packfiles - does the repo need to be packed?")
+            None
+          } else {
+            println("Found " + sizedBadIds.size + " blob ids for large blobs - biggest=" + sizedBadIds.max.size + " smallest=" + sizedBadIds.min.size)
+            println("Total size (unpacked)=" + sizedBadIds.map(_.size).sum)
+            Some(new BlobReplacer(sizedBadIds.map(_.objectId), new BlobInserter(repo.getObjectDatabase.threadLocalResources.inserter())))
+          }
+        case _ => None
+      }
+    }
+
+    Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier).flatten
+  }
 
   lazy val definesNoWork = treeBlobCleaners.isEmpty && folderDeletion.isEmpty
 
