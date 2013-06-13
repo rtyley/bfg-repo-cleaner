@@ -25,10 +25,10 @@ import scala.collection.convert.wrapAsScala._
 import java.util.Properties
 import org.eclipse.jgit.util.RawParseUtils
 import java.io.StringReader
-import org.eclipse.jgit.lib.{Ref, ObjectId}
+import org.eclipse.jgit.lib.ObjectId
 import PartialFunction.condOpt
 import org.apache.commons.io.FilenameUtils
-import com.madgag.git.bfg.model.{TreeBlobs, TreeBlobEntry}
+import com.madgag.git.bfg.model.TreeBlobEntry
 import scala.Some
 import com.madgag.git.bfg.textmatching.RegexReplacer._
 import com.madgag.git.bfg.GitUtil._

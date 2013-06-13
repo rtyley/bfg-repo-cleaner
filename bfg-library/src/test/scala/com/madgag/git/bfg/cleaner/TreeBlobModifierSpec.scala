@@ -24,7 +24,6 @@ import protection.ObjectProtection
 import com.madgag.git.bfg.model.TreeBlobEntry
 import ObjectIdSubstitutor._
 import org.specs2.mutable._
-import com.madgag.git._
 import com.madgag.git.test._
 import scala.collection.mutable
 

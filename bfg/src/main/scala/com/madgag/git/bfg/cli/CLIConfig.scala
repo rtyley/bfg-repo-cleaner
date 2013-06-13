@@ -23,7 +23,6 @@ package com.madgag.git.bfg.cli
 import java.io.File
 import com.madgag.git.bfg.cleaner._
 import com.madgag.git.bfg.cleaner.kit.BlobInserter
-import com.madgag.git.bfg.textmatching.RegexReplacer._
 import com.madgag.git.bfg.model.FileName.ImplicitConversions._
 import io.Source
 import com.madgag.git.bfg.GitUtil

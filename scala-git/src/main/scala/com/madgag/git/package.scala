@@ -8,12 +8,9 @@ import org.eclipse.jgit.treewalk.filter.{AndTreeFilter, TreeFilter}
 import java.io.File
 import org.eclipse.jgit.util.FS
 import collection.mutable
-import org.eclipse.jgit.lib.ObjectReader._
 import scala.Some
 import collection.convert.wrapAsScala._
-import Constants._
 import language.implicitConversions
-import org.eclipse.jgit.internal.storage.file.ObjectDirectory
 
 
 package object git {

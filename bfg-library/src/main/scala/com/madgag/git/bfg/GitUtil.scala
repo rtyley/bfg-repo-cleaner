@@ -21,7 +21,6 @@
 package com.madgag.git.bfg
 
 import org.eclipse.jgit.storage.file.WindowCacheConfig
-import scala.Some
 import com.madgag.git.bfg.cleaner._
 import scala.language.implicitConversions
 import org.eclipse.jgit.lib.{NullProgressMonitor, ProgressMonitor, Constants, Repository}
