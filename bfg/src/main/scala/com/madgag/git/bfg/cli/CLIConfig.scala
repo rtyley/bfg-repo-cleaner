@@ -57,7 +57,7 @@ object CLIConfig {
       opt("D", "delete-files", "<glob>", "delete files with the specified names (eg '*.class', '*.{txt,log}' - matches on file name, not path within repo)") {
         (v: String, c: CLIConfig) => c.copy(deleteFiles = Some(FileMatcher(v)))
       },
-      opt("Dfo","delete-folders", "<glob>", "delete folders with the specified names (eg '.svn', '*-tmp' - matches on folder name, not path within repo)") {
+      opt(None, "delete-folders", "<glob>", "delete folders with the specified names (eg '.svn', '*-tmp' - matches on folder name, not path within repo)") {
         (v: String, c: CLIConfig) => c.copy(deleteFolders = Some(FileMatcher(v)))
       },
       opt("rt", "replace-text", "<expressions-file>", "filter content of files, replacing matched text. Match expressions should be listed in the file, one expression per line - " +
