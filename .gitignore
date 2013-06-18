@@ -2,4 +2,6 @@ target
 *~
 .idea
 .idea_modules
+*.jar
+repo.git.zip
 

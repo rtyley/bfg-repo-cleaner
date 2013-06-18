@@ -7,11 +7,13 @@ import com.typesafe.sbt.pgp.PgpKeys._
 import sbtrelease.ReleaseStateTransformations._
 
 object BFGBuild extends Build {
-  lazy val root = Project(id = "bfg-parent", base = file(".")) settings (signedReleaseSettings:_*) settings ( publishSigned := {} ) aggregate(scalaGitTest, scalaGit, bfg, bfgLibrary)
+  lazy val root = Project(id = "bfg-parent", base = file(".")) settings (signedReleaseSettings:_*) settings ( publishSigned := {} ) aggregate(scalaGitTest, scalaGit, bfg, bfgLibrary, bfgBenchmark)
 
   lazy val bfg = bfgProject("bfg") dependsOn(bfgLibrary, scalaGitTest % "test")
 
   lazy val bfgLibrary = bfgProject("bfg-library") dependsOn(scalaGit, scalaGitTest % "test")
+
+  lazy val bfgBenchmark = bfgProject("bfg-benchmark")
 
   lazy val scalaGit = bfgProject("scala-git") dependsOn (scalaGitTest % "test")
 

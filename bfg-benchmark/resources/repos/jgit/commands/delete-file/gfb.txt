@@ -1,0 +1,7 @@
+--index-filter
+git rm --cached --ignore-unmatch make_jgit.sh
+--prune-empty
+--tag-name-filter
+cat
+--
+--all

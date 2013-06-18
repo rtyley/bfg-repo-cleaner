@@ -1,0 +1,7 @@
+--index-filter
+git rm --cached --ignore-unmatch object.c
+--prune-empty
+--tag-name-filter
+cat
+--
+--all

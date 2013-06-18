@@ -1,0 +1,7 @@
+--index-filter
+git rm --cached --ignore-unmatch bin/breakgen.dll
+--prune-empty
+--tag-name-filter
+cat
+--
+--all

@@ -1,0 +1,7 @@
+--index-filter
+git rm --cached --ignore-unmatch gcc/README-fixinc
+--prune-empty
+--tag-name-filter
+cat
+--
+--all
