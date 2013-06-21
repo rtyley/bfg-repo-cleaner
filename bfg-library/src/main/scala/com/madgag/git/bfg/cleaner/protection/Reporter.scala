@@ -38,7 +38,7 @@ object Reporter {
       report =>
         implicit val reader = revWalk.getObjectReader
 
-        val objectTitle = " * " + report.revObject.typeString + " " + report.revObject.shortName + " (protected by '" + objectIdCleanerConfig.objectProtection.objectProtection(report.revObject).mkString("', '") + "')"
+        val objectTitle = s" * ${report.revObject.typeString} ${report.revObject.shortName} (protected by '${objectIdCleanerConfig.objectProtection.objectProtection(report.revObject).mkString("', '")}')"
 
         report.replacementTreeOrBlob match {
           case None => println(objectTitle)
