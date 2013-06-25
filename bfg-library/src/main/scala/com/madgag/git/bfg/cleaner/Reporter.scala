@@ -21,7 +21,7 @@ trait Reporter {
 
   def reportObjectProtection(objectIdCleanerConfig: ObjectIdCleaner.Config, objectIdCleaner: ObjectIdCleaner)(implicit revWalk: RevWalk)
 
-  def reportCleaningStart(commits: List[RevCommit])
+  def reportCleaningStart(commits: Seq[RevCommit])
 
   def reportResults(commits: List[RevCommit], objectIdCleaner: ObjectIdCleaner)
 }
@@ -56,6 +56,10 @@ class CLIReporter(repo: Repository) extends Reporter {
     }
   }
 
+
+  // abort due to Dirty Tips on Private run - user needs to manually clean
+  // warn due to Dirty Tips on Public run - it's not so serious if users publicise dirty tips.
+  // if no protection
   def reportObjectProtection(objectIdCleanerConfig: ObjectIdCleaner.Config, objectIdCleaner: ObjectIdCleaner)(implicit revWalk: RevWalk) {
     println(title("Protected commits"))
 
@@ -79,7 +83,7 @@ class CLIReporter(repo: Repository) extends Reporter {
     }
   }
 
-  def reportCleaningStart(commits: List[RevCommit]) {
+  def reportCleaningStart(commits: Seq[RevCommit]) {
     println(title("Cleaning"))
     println("Found " + commits.size + " commits")
   }

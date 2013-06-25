@@ -97,37 +97,46 @@ object RepoRewriter {
 
     val commits = revWalk.toList
 
-    reporter.reportCleaningStart(commits)
+    def clean(commits: Seq[RevCommit]) {
+      reporter.reportCleaningStart(commits)
 
-    Timing.measureTask("Cleaning commits", commits.size) {
-      future {
-        commits.par.foreach {
-          commit => objectIdCleaner(commit.getTree)
+      Timing.measureTask("Cleaning commits", commits.size) {
+        future {
+          commits.par.foreach {
+            commit => objectIdCleaner(commit.getTree)
+          }
+        }
+
+        commits.foreach {
+          commit =>
+            objectIdCleaner(commit)
+            progressMonitor update 1
         }
       }
+    }
 
-      commits.foreach {
-        commit =>
-          objectIdCleaner(commit)
-          progressMonitor update 1
+    def updateRefsWithCleanedIds() {
+      val refUpdateCommands = for (ref <- repo.getAllRefs.values if !ref.isSymbolic;
+                                   (oldId, newId) <- objectIdCleaner.substitution(ref.getObjectId)
+      ) yield new ReceiveCommand(oldId, newId, ref.getName)
+
+      if (refUpdateCommands.isEmpty) {
+        println("\nBFG aborting: No refs to update - no dirty commits found??\n")
+      } else {
+        reporter.reportRefUpdateStart(refUpdateCommands)
+
+        Timing.measureTask("...Ref update", refUpdateCommands.size) {
+          refDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(revWalk, progressMonitor)
+        }
+
+        reporter.reportResults(commits, objectIdCleaner)
       }
     }
 
-    val refUpdateCommands = for (ref <- repo.getAllRefs.values if !ref.isSymbolic;
-                                 (oldId, newId) <- objectIdCleaner.substitution(ref.getObjectId)
-    ) yield new ReceiveCommand(oldId, newId, ref.getName)
 
-    if (refUpdateCommands.isEmpty) {
-      println("\nBFG aborting: No refs to update - no dirty commits found??\n")
-    } else {
-      reporter.reportRefUpdateStart(refUpdateCommands)
+    clean(commits)
 
-      Timing.measureTask("...Ref update", refUpdateCommands.size) {
-        refDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(revWalk, progressMonitor)
-      }
-
-      reporter.reportResults(commits, objectIdCleaner)
-    }
+    updateRefsWithCleanedIds()
 
     objectIdCleaner.cleanedObjectMap()
   }
