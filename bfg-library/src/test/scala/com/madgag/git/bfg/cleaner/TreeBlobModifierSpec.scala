@@ -20,7 +20,7 @@
 
 package com.madgag.git.bfg.cleaner
 
-import protection.ObjectProtection
+import protection.ProtectedObjectCensus
 import com.madgag.git.bfg.model.TreeBlobEntry
 import ObjectIdSubstitutor._
 import org.specs2.mutable._
@@ -46,7 +46,7 @@ class TreeBlobModifierSpec extends Specification {
 
       val countingTreeBlobModifier = new CountingTreeBlobModifier()
 
-      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set("HEAD")), OldIdsPublic, Seq.empty, Seq(countingTreeBlobModifier)))
+      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), OldIdsPublic, Seq.empty, Seq(countingTreeBlobModifier)))
 
       countingTreeBlobModifier.counts.values must beEqualTo(1).foreach
     }

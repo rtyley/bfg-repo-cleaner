@@ -55,11 +55,11 @@ import com.madgag.git._
  * state - such as the message, or author, or referenced commit Ids (and consequently the object Id of the target
  * object itself) is very much up for grabs. I gotta change your history, or I've no business being here.
  */
-object ObjectProtection {
+object ProtectedObjectCensus {
 
-  def none(implicit repo: Repository): ObjectProtection = apply(Set.empty)
+  def none(implicit repo: Repository): ProtectedObjectCensus = apply(Set.empty)
 
-  def apply(revisions: Set[String])(implicit repo: Repository): ObjectProtection = {
+  def apply(revisions: Set[String])(implicit repo: Repository): ProtectedObjectCensus = {
 
     implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
 
@@ -78,14 +78,16 @@ object ObjectProtection {
     }
     val indirectBlobProtection = treeProtection.keys.flatMap(tree => allBlobsUnder(tree).map(_ -> tree)).groupBy(_._1).mapValues(_.map(_._2).toSet)
 
-    ObjectProtection(objectProtection, treeProtection, directBlobProtection, indirectBlobProtection)
+    ProtectedObjectCensus(objectProtection, treeProtection, directBlobProtection, indirectBlobProtection)
   }
 }
 
-case class ObjectProtection(objectProtection: Map[RevObject, Set[String]],
+case class ProtectedObjectCensus(protectorRevsByObject: Map[RevObject, Set[String]],
                             treeProtection: Map[RevTree, Set[RevObject]],
                             directBlobProtection: Map[ObjectId, Set[RevObject]],
                             indirectBlobProtection: Map[ObjectId, Set[RevTree]]) {
+
+  val isEmpty = protectorRevsByObject.isEmpty
 
   lazy val blobIds: Set[ObjectId] = directBlobProtection.keySet ++ indirectBlobProtection.keySet
 

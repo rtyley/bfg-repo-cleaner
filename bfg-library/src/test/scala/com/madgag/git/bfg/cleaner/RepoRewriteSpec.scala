@@ -20,7 +20,7 @@
 
 package com.madgag.git.bfg.cleaner
 
-import protection.ObjectProtection
+import protection.ProtectedObjectCensus
 import scala.collection.convert.wrapAsScala._
 import java.util.Properties
 import org.eclipse.jgit.util.RawParseUtils
@@ -50,7 +50,7 @@ class RepoRewriteSpec extends Specification {
       hasBeenProcessedByBFGBefore(repo) must beFalse
 
       val blobsToRemove = Set(abbrId("06d740"))
-      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set("HEAD")), OldIdsPublic, Seq(FormerCommitFooter), Seq(new BlobRemover(blobsToRemove))))
+      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), OldIdsPublic, Seq(FormerCommitFooter), Seq(new BlobRemover(blobsToRemove))))
 
       val allCommits = repo.git.log.all.call.toSeq
 
@@ -76,7 +76,7 @@ class RepoRewriteSpec extends Specification {
 
       commitMessageForRev("pure") must contain("6e76960ede2addbbe7e")
 
-      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection.none, OldIdsPrivate, Seq(new CommitMessageObjectIdsUpdater(OldIdsPrivate)), Seq(new FileDeleter(Literal("sin")))))
+      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus.none, OldIdsPrivate, Seq(new CommitMessageObjectIdsUpdater(OldIdsPrivate)), Seq(new FileDeleter(Literal("sin")))))
 
       commitMessageForRev("pure") must not contain ("6e76960ede2addbbe7e")
     }
@@ -107,7 +107,7 @@ class RepoRewriteSpec extends Specification {
 
         val threadLocalObjectDBResources = repo.getObjectDatabase.threadLocalResources
       }
-      val cleanedObjectMap = RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection(Set("HEAD")), treeBlobsCleaners = Seq(blobTextModifier)))
+      val cleanedObjectMap = RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), treeBlobsCleaners = Seq(blobTextModifier)))
 
       val oldCommitContainingPasswords = abbrId("37bcc89")
 
@@ -141,7 +141,7 @@ class RepoRewriteSpec extends Specification {
 
         val threadLocalObjectDBResources = repo.getObjectDatabase.threadLocalResources
       }
-      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ObjectProtection.none, treeBlobsCleaners = Seq(blobTextModifier)))
+      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus.none, treeBlobsCleaners = Seq(blobTextModifier)))
 
       val cleanedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-ORIGINAL.$fileNamePostfix")
       val expectedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-MODIFIED-$before-$after.$fileNamePostfix")

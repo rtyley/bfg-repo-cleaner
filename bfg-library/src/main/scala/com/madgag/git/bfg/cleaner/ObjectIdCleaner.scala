@@ -22,7 +22,7 @@ package com.madgag.git.bfg.cleaner
 
 import org.eclipse.jgit.revwalk.{RevWalk, RevTag, RevCommit}
 import org.eclipse.jgit.lib.Constants._
-import protection.ObjectProtection
+import protection.ProtectedObjectCensus
 import com.madgag.git.bfg.{Memo, CleaningMapper, MemoUtil}
 import com.madgag.git.bfg.model._
 import com.madgag.git._
@@ -32,7 +32,7 @@ import org.eclipse.jgit.lib._
 
 object ObjectIdCleaner {
 
-  case class Config(objectProtection: ObjectProtection,
+  case class Config(protectedObjectCensus: ProtectedObjectCensus,
                     objectIdSubstitutor: ObjectIdSubstitutor = ObjectIdSubstitutor.OldIdsPublic,
                     commitNodeCleaners: Seq[CommitNodeCleaner] = Seq.empty,
                     treeBlobsCleaners: Seq[Cleaner[TreeBlobs]] = Seq.empty,
@@ -56,7 +56,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
   val threadLocalResources = objectDB.threadLocalResources
 
   // want to enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
-  val memo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(objectProtection.fixedObjectIds)
+  val memo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds)
 
   def apply(objectId: ObjectId): ObjectId = memoClean(objectId)
 

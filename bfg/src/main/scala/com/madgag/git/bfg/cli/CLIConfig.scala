@@ -28,7 +28,7 @@ import io.Source
 import com.madgag.git.bfg.GitUtil
 import org.eclipse.jgit.lib._
 import collection.immutable.SortedSet
-import protection.ObjectProtection
+import protection.ProtectedObjectCensus
 import com.madgag.git.bfg.model.{TreeSubtrees, TreeBlobs, FileName, TreeBlobEntry}
 import com.madgag.git.bfg.textmatching.{Glob, TextMatcher}
 import com.madgag.inclusion._
@@ -119,7 +119,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   implicit lazy val repo = FileRepositoryBuilder.create(gitdir.get).asInstanceOf[FileRepository]
 
-  lazy val objectProtection = ObjectProtection(protectBlobsFromRevisions)
+  lazy val objectProtection = ProtectedObjectCensus(protectBlobsFromRevisions)
 
   lazy val objectChecker = if (strictObjectChecking) Some(new ObjectChecker()) else None
 
