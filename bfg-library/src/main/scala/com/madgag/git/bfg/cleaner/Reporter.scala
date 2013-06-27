@@ -72,8 +72,6 @@ class CLIReporter(repo: Repository) extends Reporter {
 
       val reports = objectIdCleanerConfig.protectedObjectCensus.protectorRevsByObject.map {
         case (protectedRevObj, refNames) =>
-          implicit val reader = revWalk.getObjectReader
-
           val originalContentObject = treeOrBlobPointedToBy(protectedRevObj).merge
           val replacementTreeOrBlob = objectIdCleaner.uncachedClean.replacement(originalContentObject)
           ProtectedObjectDirtReport(protectedRevObj, originalContentObject, replacementTreeOrBlob)
