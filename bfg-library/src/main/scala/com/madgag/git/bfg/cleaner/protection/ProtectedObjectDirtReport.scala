@@ -23,12 +23,11 @@ package com.madgag.git.bfg.cleaner.protection
 import org.eclipse.jgit.revwalk.RevObject
 import org.eclipse.jgit.lib.ObjectId
 
-
 /**
  * @param revObject - the protected object (eg protected because it is the HEAD commit)
  * @param originalTreeOrBlob - the unmodified content-object referred to by the protected object (may be same object)
  * @param replacementTreeOrBlob - an option, populated if cleaning creates a replacement for the content-object
  */
 case class ProtectedObjectDirtReport(revObject: RevObject, originalTreeOrBlob: RevObject, replacementTreeOrBlob: Option[ObjectId]) {
-  val dirtProtector: Boolean = replacementTreeOrBlob.isDefined
+  val objectProtectsDirt: Boolean = replacementTreeOrBlob.isDefined
 }

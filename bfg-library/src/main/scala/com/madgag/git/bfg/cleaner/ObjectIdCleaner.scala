@@ -22,13 +22,14 @@ package com.madgag.git.bfg.cleaner
 
 import org.eclipse.jgit.revwalk.{RevWalk, RevTag, RevCommit}
 import org.eclipse.jgit.lib.Constants._
-import protection.ProtectedObjectCensus
+import com.madgag.git.bfg.cleaner.protection.{ProtectedObjectDirtReport, ProtectedObjectCensus}
 import com.madgag.git.bfg.{Memo, CleaningMapper, MemoUtil}
 import com.madgag.git.bfg.model._
 import com.madgag.git._
 import bfg.model.Tree
 import bfg.model.TreeSubtrees
 import org.eclipse.jgit.lib._
+import com.madgag.git.bfg.GitUtil._
 
 object ObjectIdCleaner {
 
@@ -134,5 +135,14 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
         objectChecker.foreach(_.checkTag(tb.toByteArray))
         cleanedTag
     }.getOrElse(originalTag)
+  }
+
+  lazy val protectedDirt: List[ProtectedObjectDirtReport] = {
+    protectedObjectCensus.protectorRevsByObject.map {
+      case (protectedRevObj, refNames) =>
+        val originalContentObject = treeOrBlobPointedToBy(protectedRevObj).merge
+        val replacementTreeOrBlob = uncachedClean.replacement(originalContentObject)
+        ProtectedObjectDirtReport(protectedRevObj, originalContentObject, replacementTreeOrBlob)
+    }.toList
   }
 }

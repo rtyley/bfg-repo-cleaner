@@ -63,7 +63,7 @@ object Reporter {
         }
     }
 
-    if (reports.exists(_.dirtProtector)) {
+    if (reports.exists(_.objectProtectsDirt)) {
       println("\nWARNING: This protected content may be removed from *older* commits, but as\n" +
         "your current commits still use it, it will STILL exist in your repository.\n\n" +
         "If you *really* want this content gone, make a manual commit that removes it,\n" +

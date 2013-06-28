@@ -70,14 +70,7 @@ class CLIReporter(repo: Repository) extends Reporter {
     } else {
       println("These are your latest commits, and so their contents will NOT be altered:\n")
 
-      val reports = objectIdCleanerConfig.protectedObjectCensus.protectorRevsByObject.map {
-        case (protectedRevObj, refNames) =>
-          val originalContentObject = treeOrBlobPointedToBy(protectedRevObj).merge
-          val replacementTreeOrBlob = objectIdCleaner.uncachedClean.replacement(originalContentObject)
-          ProtectedObjectDirtReport(protectedRevObj, originalContentObject, replacementTreeOrBlob)
-      }.toList
-
-      protection.Reporter.reportProtectedCommitsAndTheirDirt(reports, objectIdCleanerConfig)
+      protection.Reporter.reportProtectedCommitsAndTheirDirt(objectIdCleaner.protectedDirt, objectIdCleanerConfig)
     }
   }
 
