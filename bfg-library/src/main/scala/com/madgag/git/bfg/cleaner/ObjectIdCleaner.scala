@@ -50,6 +50,9 @@ object ObjectIdCleaner {
 
 }
 
+/*
+ * Knows how to clean an object, and what objects are protected...
+ */
 class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, implicit val revWalk: RevWalk) extends CleaningMapper[ObjectId] {
 
   import config._
