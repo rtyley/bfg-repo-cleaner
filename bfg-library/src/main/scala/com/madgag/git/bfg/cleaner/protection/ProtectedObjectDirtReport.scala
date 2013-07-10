@@ -20,8 +20,14 @@
 
 package com.madgag.git.bfg.cleaner.protection
 
-import org.eclipse.jgit.revwalk.RevObject
+import org.eclipse.jgit.revwalk.{RevWalk, RevObject}
 import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.treewalk.TreeWalk
+import org.eclipse.jgit.treewalk.filter.TreeFilter
+import com.madgag.git._
+import scala.collection.convert.wrapAsScala._
+import org.eclipse.jgit.diff.DiffEntry
+import org.eclipse.jgit.diff.DiffEntry.ChangeType._
 
 /**
  * @param revObject - the protected object (eg protected because it is the HEAD commit)
@@ -30,4 +36,15 @@ import org.eclipse.jgit.lib.ObjectId
  */
 case class ProtectedObjectDirtReport(revObject: RevObject, originalTreeOrBlob: RevObject, replacementTreeOrBlob: Option[ObjectId]) {
   val objectProtectsDirt: Boolean = replacementTreeOrBlob.isDefined
+
+  def dirt(implicit revWalk: RevWalk): Option[Seq[DiffEntry]] = replacementTreeOrBlob.map { newId =>
+    val tw = new TreeWalk(revWalk.getObjectReader)
+    tw.setRecursive(true)
+    tw.reset
+
+    tw.addTree(originalTreeOrBlob.asRevTree)
+    tw.addTree(newId.asRevTree)
+    tw.setFilter(TreeFilter.ANY_DIFF)
+    DiffEntry.scan(tw).filterNot(_.getChangeType == ADD)
+  }
 }

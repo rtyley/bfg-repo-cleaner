@@ -22,41 +22,30 @@ package com.madgag.git.bfg.cleaner.protection
 
 import org.eclipse.jgit.revwalk.RevWalk
 import com.madgag.git.bfg.cleaner.ObjectIdCleaner
-import org.eclipse.jgit.treewalk.TreeWalk
-import org.eclipse.jgit.treewalk.filter.TreeFilter
 import org.eclipse.jgit.diff.DiffEntry
-import org.eclipse.jgit.diff.DiffEntry.ChangeType._
 import com.madgag.text.{ByteSize, Text}
 import Text._
 import scala.Some
-import scala.collection.convert.wrapAsScala._
 import com.madgag.git._
 
 object Reporter {
   def reportProtectedCommitsAndTheirDirt(reports: List[ProtectedObjectDirtReport], objectIdCleanerConfig: ObjectIdCleaner.Config)(implicit revWalk: RevWalk) {
+    implicit val reader = revWalk.getObjectReader
+    def fileInfo(d: DiffEntry) = s"${d.getOldPath} (${ByteSize.format(d.getOldId.toObjectId.open.getSize)})"
+
     reports.foreach {
       report =>
-        implicit val reader = revWalk.getObjectReader
+        val protectors = objectIdCleanerConfig.protectedObjectCensus.protectorRevsByObject(report.revObject).mkString("', '")
+        val objectTitle = s" * ${report.revObject.typeString} ${report.revObject.shortName} (protected by '$protectors')"
 
-        val objectTitle = s" * ${report.revObject.typeString} ${report.revObject.shortName} (protected by '${objectIdCleanerConfig.protectedObjectCensus.protectorRevsByObject(report.revObject).mkString("', '")}')"
-
-        report.replacementTreeOrBlob match {
+        report.dirt match {
           case None => println(objectTitle)
-          case Some(newId) =>
-            val tw = new TreeWalk(reader)
-            tw.setRecursive(true)
-            tw.reset
-
-            tw.addTree(report.originalTreeOrBlob.asRevTree)
-            tw.addTree(newId.asRevTree)
-            tw.setFilter(TreeFilter.ANY_DIFF)
-            val diffEntries = DiffEntry.scan(tw).filterNot(_.getChangeType == ADD).map(d => d.getOldPath + " (" + ByteSize.format(d.getOldId.toObjectId.open.getSize) + ")")
-
+          case Some(diffEntries) =>
             if (diffEntries.isEmpty) {
               println(objectTitle + " - dirty")
             } else {
               println(objectTitle + " - contains " + plural(diffEntries, "dirty file") + " : ")
-              abbreviate(diffEntries, "...").foreach {
+              abbreviate(diffEntries.map(fileInfo), "...").foreach {
                 dirtyFile => println("\t- " + dirtyFile)
               }
             }
