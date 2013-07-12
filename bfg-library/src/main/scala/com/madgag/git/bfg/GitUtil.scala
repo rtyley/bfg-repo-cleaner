@@ -49,9 +49,9 @@ trait CleaningMapper[V] extends Cleaner[V] {
 
 object GitUtil {
 
-  def tweakStaticJGitConfig {
+  def tweakStaticJGitConfig(massiveNonFileObjects: Option[Int]) {
     val wcConfig: WindowCacheConfig = new WindowCacheConfig()
-    wcConfig.setStreamFileThreshold(1024 * 1024)
+    wcConfig.setStreamFileThreshold(massiveNonFileObjects.getOrElse(1024 * 1024))
     wcConfig.install()
   }
 

@@ -86,6 +86,9 @@ object CLIConfig {
       flag("private", "treat this repo-rewrite as removing private data (for example: omit old commit ids from commit messages)") {
         (c: CLIConfig) => c.copy(sensitiveData = Some(true))
       },
+      opt(None, "repo-contains-massive-non-file-objects", "<size>", "increase memory usage to handle over-size Commits, Tags, and Trees that are up to X in size (eg '10M')") {
+        (v: String, c: CLIConfig) => c.copy(massiveNonFileObjects = Some(ByteSize.parse(v)))
+      },
       argOpt("<repo>", "file path for Git repository to clean") {
         (v: String, c: CLIConfig) => c.copy(repoLocation = new File(v).getCanonicalFile)
       }
@@ -113,6 +116,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      stripBlobsWithIds: Option[Set[ObjectId]] = None,
                      strictObjectChecking: Boolean = false,
                      sensitiveData: Option[Boolean] = None,
+                     massiveNonFileObjects: Option[Int] = None,
                      repoLocation: File = new File(System.getProperty("user.dir"))) {
 
   lazy val gitdir = resolveGitDirFor(repoLocation)

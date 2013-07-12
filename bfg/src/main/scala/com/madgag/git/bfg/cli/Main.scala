@@ -29,10 +29,12 @@ object Main extends App {
   if (args.isEmpty) {
     CLIConfig.parser.showUsage
   } else {
-    tweakStaticJGitConfig
 
     CLIConfig.parser.parse(args, CLIConfig()) map {
       config =>
+
+        tweakStaticJGitConfig(config.massiveNonFileObjects)
+
         if (config.gitdir.isEmpty) {
           CLIConfig.parser.showUsage
           Console.err.println("Aborting : " + config.repoLocation + " is not a valid Git repository.\n")

@@ -94,6 +94,17 @@ class MainSpec extends Specification {
     }
   }
 
+  "Massive commit messages" should {
+    "be handled without crash (ie LargeObjectException) if the user specifies that the repo contains massive non-file objects" in {
+      implicit val repo = unpackRepo("/sample-repos/huge10MBCommitMessage.git.zip")
+      implicit val reader = repo.newObjectReader
+
+      repo resolve ("master") mustEqual abbrId("d887")
+      run("--strip-blobs-bigger-than 1K --repo-contains-massive-non-file-objects 20M")
+      repo resolve ("master") mustNotEqual abbrId("d887")
+    }
+  }
+
   def run(options: String)(implicit repo: Repository) {
     Main.main(options.split(' ') :+ repo.getDirectory.getAbsolutePath)
   }
