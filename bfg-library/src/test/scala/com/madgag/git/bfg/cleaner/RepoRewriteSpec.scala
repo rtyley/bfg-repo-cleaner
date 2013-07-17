@@ -125,15 +125,7 @@ class RepoRewriteSpec extends Specification {
   }
 
   "Text modifier" should {
-    "handle the short UTF-8" in textReplacementOf("UTF-8", "bushhidthefacts", "txt", "facts", "toffee")
-
-    "handle the long UTF-8" in textReplacementOf("UTF-8", "big", "scala", "good", "blessed")
-
-    "handle ASCII in SHIFT JIS" in textReplacementOf("SHIFT-JIS", "japanese", "txt", "EUC", "BOOM")
-
-    "handle ASCII in ISO-8859-1" in textReplacementOf("ISO-8859-1", "laparabla", "txt", "palpitando", "buscando")
-
-    def textReplacementOf(parentPath: String, fileNamePrefix: String, fileNamePostfix: String, before: String, after: String) {
+    def textReplacementOf(parentPath: String, fileNamePrefix: String, fileNamePostfix: String, before: String, after: String) = {
       implicit val repo = unpackRepo("/sample-repos/encodings.git.zip")
 
       val blobTextModifier = new BlobTextModifier {
@@ -150,5 +142,13 @@ class RepoRewriteSpec extends Specification {
 
       cleanedFile mustEqual expectedFile
     }
+
+    "handle the short UTF-8" in textReplacementOf("UTF-8", "bushhidthefacts", "txt", "facts", "toffee")
+
+    "handle the long UTF-8" in textReplacementOf("UTF-8", "big", "scala", "good", "blessed")
+
+    "handle ASCII in SHIFT JIS" in textReplacementOf("SHIFT-JIS", "japanese", "txt", "EUC", "BOOM")
+
+    "handle ASCII in ISO-8859-1" in textReplacementOf("ISO-8859-1", "laparabla", "txt", "palpitando", "buscando")
   }
 }

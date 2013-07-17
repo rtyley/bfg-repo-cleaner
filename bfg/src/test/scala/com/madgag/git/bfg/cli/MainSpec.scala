@@ -41,56 +41,44 @@ class MainSpec extends Specification {
       val cleanStartCommits = Seq("ee1b29", "b14312").map(abbrId)
 
       commitHist take 2 mustEqual cleanStartCommits
-      repo resolve ("master") mustEqual abbrId("a9b7f0")
 
-      run("--strip-blobs-bigger-than 1K")
+      ensureRemovalOf(commitHistory(haveCommitWhereObjectIds(contain(be_==(abbrId("294f")))).atLeastOnce)) {
+        run("--strip-blobs-bigger-than 1K")
+      }
 
       commitHist take 2 mustEqual cleanStartCommits
-      repo resolve ("master") mustNotEqual abbrId("a9b7f0")
     }
 
     "remove empty trees" in {
       implicit val repo = unpackRepo("/sample-repos/folder-example.git.zip")
       implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
 
-      commitHist must haveFolder("secret-files").atLeastOnce
-      repo.resolve("master") mustEqual abbrId("cd1a")
-
-      run("--delete-files {credentials,passwords}.txt")
-
-      repo.resolve("master") mustNotEqual abbrId("cd1a")
-      commitHist must (not(haveFolder("secret-files"))).forall
+      ensureRemovalOf(commitHistory(haveFolder("secret-files").atLeastOnce)) {
+        run("--delete-files {credentials,passwords}.txt")
+      }
     }
 
     "remove bad folder named '.git'" in {
       implicit val repo = unpackRepo("/sample-repos/badRepoContainingDotGitFolder.git.zip")
       implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
 
-      commitHist must haveFolder(".git").atLeastOnce
-
-      run("--delete-folders .git --no-blob-protection")
-
-      commitHist must (not(haveFolder(".git"))).forall
+      ensureRemovalOf(commitHistory(haveFolder(".git").atLeastOnce)) {
+        run("--delete-folders .git --no-blob-protection")
+      }
     }
 
     "strip blobs by id" in {
       implicit val repo = unpackRepo("/sample-repos/example.git.zip")
       implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
 
-      def haveCommitWhereObjectIds(boom: Matcher[Traversable[ObjectId]]): Matcher[RevCommit] = boom ^^ {
-          (c: RevCommit) => c.getTree.walk().map(_.getObjectId(0)).toList
-        }
-
       val badBlobs = Set(abbrId("db59"),abbrId("86f9"))
 
       val blobIdsFile = Path.createTempFile()
       blobIdsFile.writeStrings(badBlobs.map(_.name()),"\n")
 
-      commitHist must haveCommitWhereObjectIds(containAllOf(badBlobs.toSeq)).atLeastOnce
-
-      run(s"--strip-blobs-with-ids ${blobIdsFile.path}")
-
-      commitHist must (not(haveCommitWhereObjectIds(containAnyOf(badBlobs.toSeq)))).forall
+      ensureRemovalOf(commitHistory(haveCommitWhereObjectIds(contain(be_==(abbrId("db59")))).atLeastOnce)) {
+        run(s"--strip-blobs-with-ids ${blobIdsFile.path}")
+      }
     }
   }
 
@@ -99,10 +87,16 @@ class MainSpec extends Specification {
       implicit val repo = unpackRepo("/sample-repos/huge10MBCommitMessage.git.zip")
       implicit val reader = repo.newObjectReader
 
-      repo resolve ("master") mustEqual abbrId("d887")
-      run("--strip-blobs-bigger-than 1K --repo-contains-massive-non-file-objects 20M")
-      repo resolve ("master") mustNotEqual abbrId("d887")
+      ensureRemovalOf(haveRef("master", be_===(abbrId("d887")))) {
+        run("--strip-blobs-bigger-than 1K --repo-contains-massive-non-file-objects 20M")
+      }
     }
+  }
+
+  def ensureRemovalOf[T](dirtMatchers: Matcher[Repository]*)(block: => T)(implicit repo: Repository) = {
+    repo must (dirtMatchers.reduce(_ and _))
+    block
+    repo must not(dirtMatchers.reduce(_ or _))
   }
 
   def run(options: String)(implicit repo: Repository) {
@@ -111,7 +105,19 @@ class MainSpec extends Specification {
 
   def commitHist(implicit repo: Repository) = repo.git.log.all.call.toSeq.reverse
 
+  def haveCommitWhereObjectIds(boom: Matcher[Traversable[ObjectId]])(implicit reader: ObjectReader): Matcher[RevCommit] = boom ^^ {
+    (c: RevCommit) => c.getTree.walk().map(_.getObjectId(0)).toSeq
+  }
+
   def haveFolder(name: String)(implicit reader: ObjectReader): Matcher[RevCommit] = be_===(name).atLeastOnce ^^ {
     (c: RevCommit) => c.getTree.walk(postOrderTraversal = true).withFilter(_.isSubtree).map(_.getNameString).toList
+  }
+
+  def haveRef(refName: String, objectIdMatcher: Matcher[ObjectId]): Matcher[Repository] = objectIdMatcher ^^ {
+    (r: Repository) => r resolve (refName)
+  }
+
+  def commitHistory(histMatcher: Matcher[Seq[RevCommit]]): Matcher[Repository] = histMatcher ^^ {
+    (r: Repository) => commitHist(r)
   }
 }

@@ -84,6 +84,7 @@ class RichTreeWalkSpec extends Specification {
 
        for (t <- tree.walk() if t.getNameString == "zero") { t.getDepth }
 
+       success
      }
    }
  }

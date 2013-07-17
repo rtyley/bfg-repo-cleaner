@@ -5,6 +5,9 @@ import org.specs2.mutable._
 
 class CLIConfigSpecs extends Specification {
   "CLI config" should {
+
+    def parse(args: String) = CLIConfig.parser.parse(args.split(' ') :+ "my-repo.git", CLIConfig()).get.filterContentPredicate
+
     "understand lone include" in {
       val predicate = parse("-fi *.txt")
       predicate(FileName("panda")) should beFalse
@@ -34,6 +37,5 @@ class CLIConfigSpecs extends Specification {
       predicate(FileName("hbm.xml")) should beTrue
     }
 
-    def parse(args: String) = CLIConfig.parser.parse(args.split(' ') :+ "my-repo.git", CLIConfig()).get.filterContentPredicate
   }
 }

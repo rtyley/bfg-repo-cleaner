@@ -10,7 +10,7 @@ homepage in ThisBuild := Some(url("https://github.com/rtyley/bfg-repo-cleaner"))
 
 libraryDependencies in ThisBuild ++= Seq(
   "com.madgag" % "org.eclipse.jgit" % "2.99.99.2.0-UNOFFICIAL-ROBERTO-RELEASE",
-  "org.specs2" %% "specs2" % "1.14" % "test"
+  "org.specs2" %% "specs2" % "2.1" % "test"
 )
 
 publishMavenStyle in ThisBuild := true
