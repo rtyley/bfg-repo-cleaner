@@ -24,55 +24,43 @@ import scala.collection.convert.wrapAsScala._
 import org.specs2.mutable._
 import org.eclipse.jgit.lib.{ObjectReader, ObjectId, Repository}
 import org.eclipse.jgit.revwalk.RevCommit
-import org.specs2.matcher.Matcher
+import org.specs2.matcher.{MustThrownMatchers, Matcher}
 import scalax.file.Path
 import com.madgag.git._
 import com.madgag.git.test._
+import org.specs2.specification.Scope
 
 class MainSpec extends Specification {
 
   sequential // concurrent testing against scala.App is not safe https://twitter.com/rtyley/status/340376844916387840
 
   "CLI" should {
-    "not change commits unnecessarily" in {
-      implicit val repo = unpackRepo("/sample-repos/exampleWithInitialCleanHistory.git.zip")
-      implicit val reader = repo.newObjectReader
+    "not change commits unnecessarily" in new unpackedRepo("/sample-repos/exampleWithInitialCleanHistory.git.zip") {
+      implicit val r = reader
 
-      val cleanStartCommits = Seq("ee1b29", "b14312").map(abbrId)
-
-      commitHist take 2 mustEqual cleanStartCommits
-
-      ensureRemovalOf(commitHistory(haveCommitWhereObjectIds(contain(be_==(abbrId("294f")))).atLeastOnce)) {
-        run("--strip-blobs-bigger-than 1K")
+      ensureInvariant(commitHist take 2) {
+        ensureRemovalOf(commitHistory(haveCommitWhereObjectIds(contain(be_==(abbrId("294f")))).atLeastOnce)) {
+          run("--strip-blobs-bigger-than 1K")
+        }
       }
-
-      commitHist take 2 mustEqual cleanStartCommits
     }
 
-    "remove empty trees" in {
-      implicit val repo = unpackRepo("/sample-repos/folder-example.git.zip")
-      implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
-
+    "remove empty trees" in new unpackedRepo("/sample-repos/folder-example.git.zip") {
       ensureRemovalOf(commitHistory(haveFolder("secret-files").atLeastOnce)) {
         run("--delete-files {credentials,passwords}.txt")
       }
     }
 
-    "remove bad folder named '.git'" in {
-      implicit val repo = unpackRepo("/sample-repos/badRepoContainingDotGitFolder.git.zip")
-      implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
-
+    "remove bad folder named '.git'" in new unpackedRepo("/sample-repos/badRepoContainingDotGitFolder.git.zip") {
       ensureRemovalOf(commitHistory(haveFolder(".git").atLeastOnce)) {
         run("--delete-folders .git --no-blob-protection")
       }
     }
 
-    "strip blobs by id" in {
-      implicit val repo = unpackRepo("/sample-repos/example.git.zip")
-      implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
+    "strip blobs by id" in new unpackedRepo("/sample-repos/example.git.zip") {
+      implicit val r = reader
 
       val badBlobs = Set(abbrId("db59"),abbrId("86f9"))
-
       val blobIdsFile = Path.createTempFile()
       blobIdsFile.writeStrings(badBlobs.map(_.name()),"\n")
 
@@ -83,23 +71,26 @@ class MainSpec extends Specification {
   }
 
   "Massive commit messages" should {
-    "be handled without crash (ie LargeObjectException) if the user specifies that the repo contains massive non-file objects" in {
-      implicit val repo = unpackRepo("/sample-repos/huge10MBCommitMessage.git.zip")
-      implicit val reader = repo.newObjectReader
+    "be handled without crash (ie LargeObjectException) if the user specifies that the repo contains massive non-file objects" in
+      new unpackedRepo("/sample-repos/huge10MBCommitMessage.git.zip") {
 
       ensureRemovalOf(haveRef("master", be_===(abbrId("d887")))) {
         run("--strip-blobs-bigger-than 1K --repo-contains-massive-non-file-objects 20M")
       }
     }
   }
+}
 
-  def ensureRemovalOf[T](dirtMatchers: Matcher[Repository]*)(block: => T)(implicit repo: Repository) = {
-    repo must (dirtMatchers.reduce(_ and _))
-    block
-    repo must not(dirtMatchers.reduce(_ or _))
+class unpackedRepo(filePath: String) extends Scope with MustThrownMatchers {
+
+  implicit val repo = unpackRepo(filePath)
+  implicit lazy val (revWalk, reader) = repo.singleThreadedReaderTuple
+
+  def haveFolder(name: String): Matcher[RevCommit] = be_==(name).atLeastOnce ^^ {
+    (c: RevCommit) => c.getTree.walk(postOrderTraversal = true).withFilter(_.isSubtree).map(_.getNameString).toList
   }
 
-  def run(options: String)(implicit repo: Repository) {
+  def run(options: String) {
     Main.main(options.split(' ') :+ repo.getDirectory.getAbsolutePath)
   }
 
@@ -109,15 +100,25 @@ class MainSpec extends Specification {
     (c: RevCommit) => c.getTree.walk().map(_.getObjectId(0)).toSeq
   }
 
-  def haveFolder(name: String)(implicit reader: ObjectReader): Matcher[RevCommit] = be_===(name).atLeastOnce ^^ {
-    (c: RevCommit) => c.getTree.walk(postOrderTraversal = true).withFilter(_.isSubtree).map(_.getNameString).toList
-  }
-
   def haveRef(refName: String, objectIdMatcher: Matcher[ObjectId]): Matcher[Repository] = objectIdMatcher ^^ {
-    (r: Repository) => r resolve (refName)
+    (r: Repository) => r resolve (refName) aka s"Ref [$refName]"
   }
 
   def commitHistory(histMatcher: Matcher[Seq[RevCommit]]): Matcher[Repository] = histMatcher ^^ {
     (r: Repository) => commitHist(r)
+  }
+
+  def ensureRemovalOf[T](dirtMatchers: Matcher[Repository]*)(block: => T) = {
+    // repo.git.gc.call() ??
+    repo must (dirtMatchers.reduce(_ and _))
+    block
+    // repo.git.gc.call() ??
+    repo must dirtMatchers.map(not(_)).reduce(_ and _)
+  }
+
+  def ensureInvariant[T, S](f: => S)(block: => T) = {
+    val originalValue = f
+    block
+    f mustEqual originalValue
   }
 }
