@@ -86,7 +86,7 @@ object CLIConfig {
       flag("private", "treat this repo-rewrite as removing private data (for example: omit old commit ids from commit messages)") {
         (c: CLIConfig) => c.copy(sensitiveData = Some(true))
       },
-      opt(None, "repo-contains-massive-non-file-objects", "<size>", "increase memory usage to handle over-size Commits, Tags, and Trees that are up to X in size (eg '10M')") {
+      opt(None, "massive-non-file-objects-sized-up-to", "<size>", "increase memory usage to handle over-size Commits, Tags, and Trees that are up to X in size (eg '10M')") {
         (v: String, c: CLIConfig) => c.copy(massiveNonFileObjects = Some(ByteSize.parse(v)))
       },
       argOpt("<repo>", "file path for Git repository to clean") {

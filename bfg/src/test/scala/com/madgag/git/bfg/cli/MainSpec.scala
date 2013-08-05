@@ -83,7 +83,7 @@ class MainSpec extends Specification {
       new unpackedRepo("/sample-repos/huge10MBCommitMessage.git.zip") {
 
       ensureRemovalOf(haveRef("master", be_===(abbrId("d887")))) {
-        run("--strip-blobs-bigger-than 1K --repo-contains-massive-non-file-objects 20M")
+        run("--strip-blobs-bigger-than 1K --massive-non-file-objects-sized-up-to 20M")
       }
     }
   }
