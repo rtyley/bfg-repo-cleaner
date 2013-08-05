@@ -22,13 +22,15 @@ package com.madgag.git.bfg.cli
 
 import scala.collection.convert.wrapAsScala._
 import org.specs2.mutable._
-import org.eclipse.jgit.lib.{ObjectReader, ObjectId, Repository}
+import org.eclipse.jgit.lib.{Constants, ObjectReader, ObjectId, Repository}
 import org.eclipse.jgit.revwalk.RevCommit
-import org.specs2.matcher.{MustThrownMatchers, Matcher}
+import org.specs2.matcher.{Expectable, ContainWithResult, MustThrownMatchers, Matcher}
 import scalax.file.Path
 import com.madgag.git._
 import com.madgag.git.test._
 import org.specs2.specification.Scope
+import com.madgag.git.bfg.GitUtil._
+import org.eclipse.jgit.internal.storage.file.ObjectDirectory
 
 class MainSpec extends Specification {
 
@@ -48,6 +50,12 @@ class MainSpec extends Specification {
     "remove empty trees" in new unpackedRepo("/sample-repos/folder-example.git.zip") {
       ensureRemovalOf(commitHistory(haveFolder("secret-files").atLeastOnce)) {
         run("--delete-files {credentials,passwords}.txt")
+      }
+    }
+
+    "remove all big blobs, even if they have identical size" in new unpackedRepo("/sample-repos/moreThanOneBigBlobWithTheSameSize.git.zip") {
+      ensureRemovalOfBadEggs(packedBlobsOfSize(1024), contain(allOf(abbrId("06d7"), abbrId("cb2c")))) {
+        run("--strip-blobs-bigger-than 512")
       }
     }
 
@@ -84,7 +92,22 @@ class MainSpec extends Specification {
 class unpackedRepo(filePath: String) extends Scope with MustThrownMatchers {
 
   implicit val repo = unpackRepo(filePath)
+  implicit val objectDirectory = repo.getObjectDatabase.asInstanceOf[ObjectDirectory]
   implicit lazy val (revWalk, reader) = repo.singleThreadedReaderTuple
+
+
+  def blobOfSize(sizeInBytes: Int): Matcher[ObjectId] = (objectId: ObjectId) => {
+    val objectLoader = objectId.open
+    objectLoader.getType == Constants.OBJ_BLOB && objectLoader.getSize == sizeInBytes
+  }
+
+  def packedBlobsOfSize(sizeInBytes: Long): Set[ObjectId] = {
+    implicit val reader = repo.newObjectReader()
+    packedObjects.filter { objectId =>
+      val objectLoader = objectId.open
+      objectLoader.getType == Constants.OBJ_BLOB && objectLoader.getSize == sizeInBytes
+    }.toSet
+  }
 
   def haveFolder(name: String): Matcher[RevCommit] = be_==(name).atLeastOnce ^^ {
     (c: RevCommit) => c.getTree.walk(postOrderTraversal = true).withFilter(_.isSubtree).map(_.getNameString).toList
@@ -106,6 +129,16 @@ class unpackedRepo(filePath: String) extends Scope with MustThrownMatchers {
 
   def commitHistory(histMatcher: Matcher[Seq[RevCommit]]): Matcher[Repository] = histMatcher ^^ {
     (r: Repository) => commitHist(r)
+  }
+
+  def ensureRemovalOfBadEggs[S,T](expr : => Traversable[S], exprResultMatcher: Matcher[Traversable[S]])(block: => T) = {
+    repo.git.gc.call()
+    expr must exprResultMatcher
+
+    block
+
+    repo.git.gc.call()
+    expr must beEmpty
   }
 
   def ensureRemovalOf[T](dirtMatchers: Matcher[Repository]*)(block: => T) = {

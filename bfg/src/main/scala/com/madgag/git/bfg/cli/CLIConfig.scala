@@ -176,7 +176,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
       sizeBasedBlobTargetSources match {
         case sources if sources.size > 0 =>
-          val sizedBadIds = SortedSet(sources.flatMap(_(biggestBlobs(repo.getObjectDatabase, progressMonitor))): _*)
+          val sizedBadIds = sources.flatMap(_(biggestBlobs(repo.getObjectDatabase, progressMonitor))).toSet
           if (sizedBadIds.isEmpty) {
             println("Warning : no large blobs matching criteria found in packfiles - does the repo need to be packed?")
             None
