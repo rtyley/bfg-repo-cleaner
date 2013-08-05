@@ -52,7 +52,7 @@ trait ObjectIdSubstitutor {
   // slow!
   def replaceOldIds(message: String, reader: ObjectReader, mapper: ObjectId => ObjectId): String = {
     hexRegex.replaceAllIn(message, m => {
-      Some(AbbreviatedObjectId.fromString(m.matched)).flatMap(reader.resolveExistingUniqueId).flatMap(mapper.substitution).map {
+      Some(AbbreviatedObjectId.fromString(m.matched)).flatMap(id=> reader.resolveExistingUniqueId(id).toOption).flatMap(mapper.substitution).map {
         case (oldId, newId) =>
           format(m.matched, reader.abbreviate(newId, m.matched.length).name)
       }.getOrElse(m.matched)

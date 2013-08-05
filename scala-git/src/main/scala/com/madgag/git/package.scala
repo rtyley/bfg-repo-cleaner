@@ -11,6 +11,7 @@ import collection.mutable
 import scala.Some
 import collection.convert.wrapAsScala._
 import language.implicitConversions
+import scala.util.{Success, Failure, Try}
 
 
 package object git {
@@ -137,9 +138,17 @@ package object git {
   }
 
   implicit class RichObjectReader(reader: ObjectReader) {
-    def resolveUniquely(id: AbbreviatedObjectId): Option[ObjectId] = Some(id).map(reader.resolve).filter(_.size == 1).map(_.head)
+    def resolveUniquely(id: AbbreviatedObjectId): Try[ObjectId] = Try(reader.resolve(id).toList).flatMap {
+      _ match {
+        case fullId :: Nil => Success(fullId)
+        case ids => val message = if (ids.isEmpty) "no Git object" else s"${ids.size} objects : ${ids.map(reader.abbreviate).map(_.name).mkString(",")}"
+          throw new IllegalArgumentException(s"Abbreviated id '${id.name}' resolves to $message")
+      }
+    }
 
-    def resolveExistingUniqueId(id: AbbreviatedObjectId) = resolveUniquely(id).filter(reader.has)
+    def resolveExistingUniqueId(id: AbbreviatedObjectId) = resolveUniquely(id).flatMap {
+      fullId => if (reader.has(fullId)) Success(fullId) else throw new IllegalArgumentException(s"Id '$id' not found in repo")
+    }
   }
 
   def resolveGitDirFor(folder: File) = Option(RepositoryCache.FileKey.resolve(folder, FS.detect)).filter(_.exists())
