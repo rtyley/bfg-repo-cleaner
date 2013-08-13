@@ -22,6 +22,7 @@ package com.madgag.git.bfg.cleaner
 
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import org.eclipse.jgit.transport.ReceiveCommand
+import ReceiveCommand.Type.UPDATE_NONFASTFORWARD
 import org.eclipse.jgit.revwalk.RevSort._
 import com.madgag.git.bfg.Timing
 import concurrent.future
@@ -29,6 +30,7 @@ import concurrent.ExecutionContext.Implicits.global
 import scala.collection.convert.wrapAll._
 import com.madgag.git._
 import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.transport.ReceiveCommand.Result.NOT_ATTEMPTED
 
 /*
 Encountering a blob ->
@@ -118,7 +120,13 @@ object RepoRewriter {
     def updateRefsWithCleanedIds() {
       val refUpdateCommands = for (ref <- repo.getAllRefs.values if !ref.isSymbolic;
                                    (oldId, newId) <- objectIdCleaner.substitution(ref.getObjectId)
-      ) yield new ReceiveCommand(oldId, newId, ref.getName)
+      ) yield {
+        // Declare NON-FF to fix issue #23
+//        val command = new ReceiveCommand(oldId, newId, ref.getName, UPDATE_NONFASTFORWARD)
+//        command.setResult(NOT_ATTEMPTED)
+//        command
+        new ReceiveCommand(oldId, newId, ref.getName)
+      }
 
       if (refUpdateCommands.isEmpty) {
         println("\nBFG aborting: No refs to update - no dirty commits found??\n")
@@ -126,7 +134,7 @@ object RepoRewriter {
         reporter.reportRefUpdateStart(refUpdateCommands)
 
         Timing.measureTask("...Ref update", refUpdateCommands.size) {
-          refDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(revWalk, progressMonitor)
+          refDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(new RevWalk(revWalk.getObjectReader), progressMonitor)
         }
 
         reporter.reportResults(commits, objectIdCleaner)
