@@ -1,0 +1,1 @@
+--delete-files *.{52,50,crx,xib,png,pdf,jpg,zip,jar,pdb,psd,jpeg,dylib,dll,DLL,exe,EXE,vcproj,so,sln,scons,nib,graffle,yuv,webm}
