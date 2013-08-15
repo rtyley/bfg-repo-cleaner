@@ -126,7 +126,14 @@ object RepoRewriter {
         reporter.reportRefUpdateStart(refUpdateCommands)
 
         Timing.measureTask("...Ref update", refUpdateCommands.size) {
-          refDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands).execute(revWalk, progressMonitor)
+          // Hack a fix for issue #23 : Short-cut the calculation that determines an update is NON-FF
+          val quickMergeCalcRevWalk = new RevWalk(revWalk.getObjectReader) {
+            override def isMergedInto(base: RevCommit, tip: RevCommit) =
+              if (tip == objectIdCleaner(base)) false else super.isMergedInto(base, tip)
+          }
+
+          refDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands)
+            .execute(quickMergeCalcRevWalk, progressMonitor)
         }
 
         reporter.reportResults(commits, objectIdCleaner)
