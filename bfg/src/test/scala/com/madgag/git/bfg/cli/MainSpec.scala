@@ -31,6 +31,7 @@ import com.madgag.git.test._
 import org.specs2.specification.Scope
 import com.madgag.git.bfg.GitUtil._
 import org.eclipse.jgit.internal.storage.file.ObjectDirectory
+import org.eclipse.jgit.treewalk.TreeWalk
 
 class MainSpec extends Specification {
 
@@ -76,6 +77,12 @@ class MainSpec extends Specification {
         run(s"--strip-blobs-with-ids ${blobIdsFile.path}")
       }
     }
+
+    "not crash on encountering protected submodule" in new unpackedRepo("/sample-repos/unwantedSubmodule.git.zip") {
+      ensureRemovalOf(commitHistory(haveFile("foo.txt").atLeastOnce)) {
+        run("--delete-folders bar --delete-files foo.txt")
+      }
+    }
   }
 
   "Massive commit messages" should {
@@ -109,9 +116,12 @@ class unpackedRepo(filePath: String) extends Scope with MustThrownMatchers {
     }.toSet
   }
 
-  def haveFolder(name: String): Matcher[RevCommit] = be_==(name).atLeastOnce ^^ {
-    (c: RevCommit) => c.getTree.walk(postOrderTraversal = true).withFilter(_.isSubtree).map(_.getNameString).toList
-  }
+  def haveFile(name: String) = be_==(name).atLeastOnce ^^ { (c: RevCommit) => treeEntryNames(c, !_.isSubtree) }
+
+  def haveFolder(name: String) = be_==(name).atLeastOnce ^^ { (c: RevCommit) => treeEntryNames(c, _.isSubtree) }
+
+  def treeEntryNames(c: RevCommit, p: TreeWalk => Boolean): Seq[String] =
+    c.getTree.walk(postOrderTraversal = true).withFilter(p).map(_.getNameString).toList
 
   def run(options: String) {
     Main.main(options.split(' ') :+ repo.getDirectory.getAbsolutePath)

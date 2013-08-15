@@ -27,11 +27,20 @@ import com.madgag.text.{ByteSize, Text}
 import Text._
 import scala.Some
 import com.madgag.git._
+import org.eclipse.jgit.lib.FileMode.GITLINK
 
 object Reporter {
   def reportProtectedCommitsAndTheirDirt(reports: List[ProtectedObjectDirtReport], objectIdCleanerConfig: ObjectIdCleaner.Config)(implicit revWalk: RevWalk) {
     implicit val reader = revWalk.getObjectReader
-    def fileInfo(d: DiffEntry) = s"${d.getOldPath} (${ByteSize.format(d.getOldId.toObjectId.open.getSize)})"
+    def fileInfo(d: DiffEntry) = {
+      val oldId = d.getOldId.toObjectId
+      val extraInfo = d.getOldMode match {
+        case GITLINK => Some("submodule")
+        case _ => if (reader.has(oldId)) Some(ByteSize.format(oldId.open.getSize)) else None
+      }
+
+      s"${d.getOldPath}${extraInfo.map(e => s" ($e)").getOrElse("")}"
+    }
 
     reports.foreach {
       report =>
@@ -45,7 +54,7 @@ object Reporter {
               println(objectTitle + " - dirty")
             } else {
               println(objectTitle + " - contains " + plural(diffEntries, "dirty file") + " : ")
-              abbreviate(diffEntries.map(fileInfo), "...").foreach {
+              abbreviate(diffEntries.view.map(fileInfo), "...").foreach {
                 dirtyFile => println("\t- " + dirtyFile)
               }
             }
