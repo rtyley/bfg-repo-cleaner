@@ -141,8 +141,8 @@ package object git {
     def resolveUniquely(id: AbbreviatedObjectId): Try[ObjectId] = Try(reader.resolve(id).toList).flatMap {
       _ match {
         case fullId :: Nil => Success(fullId)
-        case ids => val message = if (ids.isEmpty) "no Git object" else s"${ids.size} objects : ${ids.map(reader.abbreviate).map(_.name).mkString(",")}"
-          throw new IllegalArgumentException(s"Abbreviated id '${id.name}' resolves to $message")
+        case ids => val resolution = if (ids.isEmpty) "no Git object" else s"${ids.size} objects : ${ids.map(reader.abbreviate).map(_.name).mkString(",")}"
+          throw new IllegalArgumentException(s"Abbreviated id '${id.name}' resolves to $resolution")
       }
     }
 
