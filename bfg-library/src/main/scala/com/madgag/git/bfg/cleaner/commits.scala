@@ -39,7 +39,7 @@ object CommitNodeCleaner {
   }
 
   def chain(cleaners: Seq[CommitNodeCleaner]) = new CommitNodeCleaner {
-    override def fixer(kit: CommitNodeCleaner.Kit) = Function.chain(cleaners.map(_.fixer(kit)))
+    def fixer(kit: CommitNodeCleaner.Kit) = Function.chain(cleaners.map(_.fixer(kit)))
   }
 }
 
