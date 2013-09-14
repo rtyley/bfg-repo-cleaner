@@ -1,3 +1,4 @@
+import com.madgag.textmatching.{Glob, TextMatcher}
 import scalax.file.defaultfs.DefaultPath
 import scalax.file.Path
 import scopt.immutable.OptionParser
@@ -14,6 +15,9 @@ object BenchmarkConfig {
       opt("repos", "Sample repos to test, eg github-gems,jgit,git") {
         (v: String, c: BenchmarkConfig) => c.copy(repoNames = v.split(",").toSeq)
       },
+      opt(None ,"commands", "<glob>", "commands to exercise") {
+        (v: String, c: BenchmarkConfig) => c.copy(commands = TextMatcher(v, defaultType = Glob))
+      },
       opt("scratch-dir", "Temp-dir for job runs - preferably ramdisk, eg tmpfs.") {
         (v: String, c: BenchmarkConfig) => c.copy(scratchDir = Path.fromString(v))
       }
@@ -23,6 +27,7 @@ object BenchmarkConfig {
 case class BenchmarkConfig(resourcesDirOption: Path = Path.fromString(System.getProperty("user.dir")) / "bfg-benchmark" / "resources",
                            scratchDir: DefaultPath = Path.fromString("/dev/shm/"),
                            bfgVersions: Seq[String] = Seq.empty,
+                           commands: TextMatcher = Glob("*"),
                            repoNames: Seq[String] = Seq.empty) {
 
   lazy val resourcesDir = Path.fromString(resourcesDirOption.path).toAbsolute

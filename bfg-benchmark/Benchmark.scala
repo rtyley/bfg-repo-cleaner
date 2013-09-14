@@ -43,14 +43,19 @@ object Benchmark extends App {
 
         println(s"Repo : $repoName")
 
-        (repoSpecDir / "commands").children().filter(IsDirectory).foreach { commandDir =>
+        val availableCommandDirs = (repoSpecDir / "commands").children().filter(IsDirectory)
+
+        println(s"Available commands for $repoName : ${availableCommandDirs.map(_.name).mkString(", ")}")
+
+        availableCommandDirs.filter(p => config.commands(p.name)).foreach { commandDir =>
 
           val commandName = commandDir.name
 
           def runJobFor(typ: String, processGen: ProcessGen):Option[Duration] = {
             val paramsPath = commandDir / s"$typ.txt"
-            val repoDir: DefaultPath = extractRepoFrom(repoSpecDir / "repo.git.zip")
             if (paramsPath.exists) {
+              val repoDir: DefaultPath = extractRepoFrom(repoSpecDir / "repo.git.zip")
+              commandDir.children().foreach(p => p.copyTo(repoDir / p.name))
               val process = processGen.genProcess(paramsPath, repoDir)
               Some(measureTask(s"$commandName - ${processGen.description}") {
                 process!(ProcessLogger(_ => Unit))

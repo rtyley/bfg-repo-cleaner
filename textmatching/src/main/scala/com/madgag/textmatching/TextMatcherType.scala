@@ -18,7 +18,7 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/ .
  */
 
-package com.madgag.git.bfg.textmatching
+package com.madgag.textmatching
 
 import util.matching.Regex
 import com.madgag.globs.openjdk.Globs

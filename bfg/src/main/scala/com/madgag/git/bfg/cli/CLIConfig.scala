@@ -27,10 +27,9 @@ import com.madgag.git.bfg.model.FileName.ImplicitConversions._
 import io.Source
 import com.madgag.git.bfg.GitUtil
 import org.eclipse.jgit.lib._
-import collection.immutable.SortedSet
 import protection.ProtectedObjectCensus
 import com.madgag.git.bfg.model.{TreeSubtrees, TreeBlobs, FileName, TreeBlobEntry}
-import com.madgag.git.bfg.textmatching.{Glob, TextMatcher}
+import com.madgag.textmatching.{Glob, TextMatcher}
 import com.madgag.inclusion._
 import com.madgag.text.ByteSize
 import scopt.immutable.OptionParser

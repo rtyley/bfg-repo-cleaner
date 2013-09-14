@@ -30,7 +30,7 @@ import PartialFunction.condOpt
 import org.apache.commons.io.FilenameUtils
 import com.madgag.git.bfg.model.TreeBlobEntry
 import scala.Some
-import com.madgag.git.bfg.textmatching.RegexReplacer._
+import com.madgag.textmatching.RegexReplacer._
 import com.madgag.git.bfg.GitUtil._
 import java.util.regex.Pattern._
 import ObjectIdSubstitutor._
@@ -38,7 +38,7 @@ import org.eclipse.jgit.revwalk.RevWalk
 import org.specs2.mutable._
 import com.madgag.git._
 import com.madgag.git.test._
-import com.madgag.git.bfg.textmatching.Literal
+import com.madgag.textmatching.Literal
 
 class RepoRewriteSpec extends Specification {
 
