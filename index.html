@@ -70,6 +70,7 @@ you should <strong>make a backup of it</strong> to ensure you don't lose anythin
 </code></pre>
 <p>The BFG will update your commits and all branches and tags so they are clean, but it doesn't physically delete the unwanted stuff. Examine the repo to make sure your history has been updated, and then use the standard <a href="http://git-scm.com/docs/git-gc"><code>git gc</code></a> command to strip out the unwanted dirty data, which Git will now recognise as surplus to requirements:</p>
 <pre><code>$ cd some-big-repo.git
+$ git reflog expire --expire=now --all
 $ git gc --prune=now --aggressive
 </code></pre>
 <p>Finally, once you're happy with the updated state of your repo, push it back up <em>(note that because your clone command used the <code>--mirror</code> flag, this push will update <strong>all</strong> refs on your remote server)</em>:</p>
