@@ -1,15 +1,21 @@
 package com.madgag.git.bfg.cleaner
 
-import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
-import org.eclipse.jgit.lib._
-import com.madgag.text.Tables
-import com.madgag.git.bfg.GitUtil._
-import com.madgag.text.Text._
-import org.eclipse.jgit.transport.ReceiveCommand
 import com.madgag.git._
 import com.madgag.git.bfg.cleaner.protection.ProtectedObjectDirtReport
-import scalax.file.Path
+import com.madgag.text.Text._
+import com.madgag.text.{ByteSize, Tables}
+import java.text.SimpleDateFormat
+import java.util.Date
+import org.eclipse.jgit.diff.DiffEntry.ChangeType._
+import org.eclipse.jgit.diff._
+import org.eclipse.jgit.lib.FileMode._
+import org.eclipse.jgit.lib._
+import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
+import org.eclipse.jgit.transport.ReceiveCommand
+import scala.Some
+import scala.collection.convert.wrapAll._
 import scala.collection.immutable.SortedMap
+import scalax.file.Path
 
 trait Reporter {
 
@@ -29,7 +35,8 @@ trait Reporter {
 class CLIReporter(repo: Repository) extends Reporter {
 
   lazy val reportsDir = {
-    val dir = Path.fromString(repo.getDirectory.getAbsolutePath + ".bfg-report")
+    val dateString = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm").format(new Date())
+    val dir = Path.fromString(repo.topDirectory.getAbsolutePath + ".bfg-report") / dateString
     dir.doCreateDirectory()
     dir
   }
@@ -68,10 +75,88 @@ class CLIReporter(repo: Repository) extends Reporter {
         "This isn't recommended - ideally, if your current commits are dirty, you should fix up your working copy and " +
         "commit that, check that your build still works, and only then run the BFG to clean up your history.")
     } else {
-      println("These are your latest commits, and so their contents will NOT be altered:\n")
+      println("These are your protected commits, and so their contents will NOT be altered:\n")
 
-      protection.Reporter.reportProtectedCommitsAndTheirDirt(objectIdCleaner.protectedDirt, objectIdCleanerConfig)
+      reportProtectedCommitsAndTheirDirt(objectIdCleaner.protectedDirt, objectIdCleanerConfig)
     }
+  }
+
+  case class DiffSideDetails(id: ObjectId, path: String, mode: FileMode, size: Option[Long])
+
+  def reportProtectedCommitsAndTheirDirt(reports: Seq[ProtectedObjectDirtReport], objectIdCleanerConfig: ObjectIdCleaner.Config)(implicit revWalk: RevWalk) {
+    implicit val reader = revWalk.getObjectReader
+
+    def diffDetails(d: DiffEntry) = {
+      val side = DiffEntry.Side.OLD
+      val id: ObjectId = d.getId(side).toObjectId
+      DiffSideDetails(id, d.getPath(side), d.getMode(side), id.sizeOpt)
+    }
+
+    def fileInfo(d: DiffSideDetails) = {
+      val extraInfo = (d.mode match {
+        case GITLINK => Some("submodule")
+        case _ => d.size.map(ByteSize.format(_))
+      }).map(e => s"($e)")
+
+      (d.path +: extraInfo.toSeq).mkString(" ")
+    }
+
+    val protectedDirtDir = reportsDir / "protected-dirt"
+    protectedDirtDir.doCreateDirectory()
+
+    reports.foreach {
+      report =>
+        val protectorRevs = objectIdCleanerConfig.protectedObjectCensus.protectorRevsByObject(report.revObject)
+        val objectTitle = s" * ${report.revObject.typeString} ${report.revObject.shortName} (protected by '${protectorRevs.mkString("', '")}')"
+
+        report.dirt match {
+          case None => println(objectTitle)
+          case Some(diffEntries) =>
+            if (diffEntries.isEmpty) {
+              println(objectTitle + " - dirty")
+            } else {
+              println(objectTitle + " - contains " + plural(diffEntries, "dirty file") + " : ")
+              abbreviate(diffEntries.view.map(diffDetails).map(fileInfo), "...").foreach {
+                dirtyFile => println("\t- " + dirtyFile)
+              }
+              val diffFile = protectedDirtDir / s"${report.revObject.shortName}-${protectorRevs.mkString("_")}.csv"
+
+              diffFile.writeStrings(diffEntries.map {
+                diffEntry =>
+                  val de = diffDetails(diffEntry)
+
+                  val modifiedLines = if (diffEntry.getChangeType == MODIFY) diffEntry.editList.map(changedLinesFor) else None
+
+                  val elems = Seq(de.id.name, diffEntry.getChangeType.name, de.mode.name, de.path, de.size.getOrElse(""), modifiedLines.getOrElse(""))
+
+                  elems.mkString(",")
+              }, "\n")
+              }
+            }
+        }
+
+    val dirtyReports = reports.filter(_.objectProtectsDirt)
+    if (dirtyReports.nonEmpty) {
+
+      println(s"""
+      |WARNING: The dirty content above may be removed from other commits, but as
+      |the *protected* commits still use it, it will STILL exist in your repository.
+      |
+      |Details of protected dirty content have been recorded here :
+      |
+      |${protectedDirtDir.path + protectedDirtDir.separator}
+      |
+      |If you *really* want this content gone, make a manual commit that removes it,
+      |and then run the BFG on a fresh copy of your repo.
+       """.stripMargin)
+      // TODO would like to abort here if we are cleaning 'private' data.
+    }
+  }
+
+  def changedLinesFor(edits: EditList): String = {
+    edits.map {
+      edit => Seq(edit.getBeginA + 1, edit.getEndA).distinct.mkString("-")
+    }.mkString(";")
   }
 
   def reportCleaningStart(commits: Seq[RevCommit]) {

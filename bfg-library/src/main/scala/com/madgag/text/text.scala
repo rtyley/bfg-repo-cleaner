@@ -24,12 +24,14 @@ import collection.GenTraversableOnce
 
 object Text {
 
-  def abbreviate[A](elems: Seq[A], truncationToken: A, truncationThreshold: Int = 2) =
-    if (elems.size > truncationThreshold + 1) {
-      elems.take(truncationThreshold) :+ truncationToken
+  def abbreviate[A](elems: Traversable[A], truncationToken: A, maxElements: Int = 3) = {
+    val firstElems = elems.take(maxElements + 1)
+    if (firstElems.size > maxElements) {
+      firstElems.take(maxElements-1).toSeq :+ truncationToken
     } else {
       elems
     }
+  }
 
   def plural[A](list: GenTraversableOnce[A], noun: String) = list.size + " " + noun + (if (list.size == 1) "" else "s")
 }

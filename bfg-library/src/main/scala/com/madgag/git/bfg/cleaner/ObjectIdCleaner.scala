@@ -140,7 +140,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     }.getOrElse(originalTag)
   }
 
-  lazy val protectedDirt: List[ProtectedObjectDirtReport] = {
+  lazy val protectedDirt: Seq[ProtectedObjectDirtReport] = {
     protectedObjectCensus.protectorRevsByObject.map {
       case (protectedRevObj, refNames) =>
         val originalContentObject = treeOrBlobPointedToBy(protectedRevObj).merge

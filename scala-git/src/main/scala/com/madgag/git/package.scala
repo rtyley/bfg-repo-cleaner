@@ -1,17 +1,19 @@
 package com.madgag
 
+import collection.convert.wrapAsScala._
+import collection.mutable
+import java.io.File
+import language.implicitConversions
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.diff.DiffAlgorithm.SupportedAlgorithm
+import org.eclipse.jgit.diff._
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk._
-import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.{AndTreeFilter, TreeFilter}
-import java.io.File
 import org.eclipse.jgit.util.FS
-import collection.mutable
-import scala.Some
-import collection.convert.wrapAsScala._
-import language.implicitConversions
-import scala.util.{Success, Failure, Try}
+import scala.util.Success
+import scala.util.Try
 
 
 package object git {
@@ -45,6 +47,8 @@ package object git {
 
   implicit class RichRepo(repo: Repository) {
     lazy val git = new Git(repo)
+
+    lazy val topDirectory = if (repo.isBare) repo.getDirectory else repo.getWorkTree
 
     def singleThreadedReaderTuple = {
       val revWalk=new RevWalk(repo)
@@ -123,8 +127,53 @@ package object git {
     lazy val typeString = Constants.typeString(revObject.getType)
   }
 
+  val FileModeNames = Map(
+    FileMode.EXECUTABLE_FILE -> "execeutable",
+    FileMode.REGULAR_FILE -> "regular-file",
+    FileMode.SYMLINK -> "symlink",
+    FileMode.TREE -> "tree",
+    FileMode.MISSING -> "missing",
+    FileMode.GITLINK -> "submodule"
+  )
+
+  implicit class RichFileMode(fileMode: FileMode) {
+    lazy val name = FileModeNames(fileMode)
+  }
+
+  implicit class RichDiffEntry(diffEntry: DiffEntry) {
+    import DiffEntry.Side
+    import Side.{OLD,NEW}
+
+    def isDiffableType(side: Side) =
+      // diffEntry.getMode(side) != FileMode.GITLINK &&
+        diffEntry.getId(side) != null && diffEntry.getMode(side).getObjectType == Constants.OBJ_BLOB
+
+    lazy val bothSidesDiffableType: Boolean = Side.values().map(isDiffableType).forall(d => d)
+
+    def editList(implicit objectReader: ObjectReader): Option[EditList] = {
+      def rawText(side: Side) = {
+        objectReader.resolveExistingUniqueId(diffEntry.getId(side)).map(_.open).toOption.filterNot(_.isLarge).flatMap {
+          l =>
+            val bytes = l.getCachedBytes
+            if (RawText.isBinary(bytes)) None else Some(new RawText(bytes))
+        }
+      }
+
+      if (bothSidesDiffableType) {
+        for (oldText <- rawText(OLD) ; newText <- rawText(NEW)) yield {
+          val algo = DiffAlgorithm.getAlgorithm(SupportedAlgorithm.HISTOGRAM)
+          val comp = RawTextComparator.DEFAULT
+          algo.diff(comp, oldText, newText)
+        }
+      } else None
+    }
+  }
+
   implicit class RichObjectId(objectId: AnyObjectId) {
     def open(implicit objectReader: ObjectReader): ObjectLoader = objectReader.open(objectId)
+
+    def sizeOpt(implicit objectReader: ObjectReader): Option[Long] =
+      if (objectReader.has(objectId)) Some(objectId.open.getSize) else None
 
     def asRevObject(implicit revWalk: RevWalk) = revWalk.parseAny(objectId)
 
