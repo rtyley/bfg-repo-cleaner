@@ -1,3 +1,9 @@
+import Dependencies._
+import common._
+import sbt._
+import Defaults._
+import com.typesafe.sbt.pgp.PgpKeys._
+
 organization in ThisBuild := "com.madgag"
 
 scalaVersion in ThisBuild := "2.10.2"
@@ -8,10 +14,22 @@ licenses in ThisBuild := Seq("GPLv3" -> url("http://www.gnu.org/licenses/gpl-3.0
 
 homepage in ThisBuild := Some(url("https://github.com/rtyley/bfg-repo-cleaner"))
 
-libraryDependencies in ThisBuild ++= Seq(
-  "com.madgag" % "org.eclipse.jgit" % "2.99.99.2.0-UNOFFICIAL-ROBERTO-RELEASE",
-  "org.specs2" %% "specs2" % "2.1.1" % "test"
-)
+libraryDependencies in ThisBuild += specs2 % "test"
+
+lazy val root = Project(id = "bfg-parent", base = file(".")) settings (signedReleaseSettings:_*) settings (
+    publishSigned := {} ) aggregate(textmatching, scalaGitTest, scalaGit, bfg, bfgLibrary, bfgBenchmark)
+
+lazy val bfg = bfgProject("bfg") dependsOn(bfgLibrary, scalaGitTest % "test")
+
+lazy val textmatching = bfgProject("textmatching")
+
+lazy val bfgLibrary = bfgProject("bfg-library") dependsOn(textmatching, scalaGit, scalaGitTest % "test")
+
+lazy val bfgBenchmark = bfgProject("bfg-benchmark") dependsOn(textmatching)
+
+lazy val scalaGit = bfgProject("scala-git") dependsOn (scalaGitTest % "test")
+
+lazy val scalaGitTest = bfgProject("scala-git-test")
 
 publishMavenStyle in ThisBuild := true
 

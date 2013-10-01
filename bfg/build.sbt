@@ -1,4 +1,5 @@
 import AssemblyKeys._
+import Dependencies._
 
 assemblySettings
 
@@ -9,6 +10,4 @@ publishArtifact in (Compile, packageBin) := false
 // replace the conventional main artifact with an uber-jar
 addArtifact(artifact in (Compile, packageBin), assembly)
 
-libraryDependencies ++= Seq(
-  "com.github.scopt" %% "scopt" % "2.1.0"
-)
+libraryDependencies += scopt
