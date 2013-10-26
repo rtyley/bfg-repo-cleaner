@@ -128,7 +128,7 @@ package object git {
   }
 
   val FileModeNames = Map(
-    FileMode.EXECUTABLE_FILE -> "execeutable",
+    FileMode.EXECUTABLE_FILE -> "executable",
     FileMode.REGULAR_FILE -> "regular-file",
     FileMode.SYMLINK -> "symlink",
     FileMode.TREE -> "tree",
