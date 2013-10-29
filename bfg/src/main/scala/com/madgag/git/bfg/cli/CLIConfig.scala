@@ -173,18 +173,16 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
         stripBiggestBlobs.map(num => (s: Stream[SizedObject]) => s.take(num))
       ).flatten
 
-      sizeBasedBlobTargetSources match {
-        case sources if sources.size > 0 =>
-          val sizedBadIds = sources.flatMap(_(biggestBlobs(repo.getObjectDatabase, progressMonitor))).toSet
-          if (sizedBadIds.isEmpty) {
-            println("Warning : no large blobs matching criteria found in packfiles - does the repo need to be packed?")
-            None
-          } else {
-            println("Found " + sizedBadIds.size + " blob ids for large blobs - biggest=" + sizedBadIds.max.size + " smallest=" + sizedBadIds.min.size)
-            println("Total size (unpacked)=" + sizedBadIds.map(_.size).sum)
-            Some(new BlobReplacer(sizedBadIds.map(_.objectId), new BlobInserter(repo.getObjectDatabase.threadLocalResources.inserter())))
-          }
-        case _ => None
+      if (sizeBasedBlobTargetSources.isEmpty) None else {
+        val sizedBadIds = sizeBasedBlobTargetSources.flatMap(_(biggestBlobs(repo.getObjectDatabase, progressMonitor))).toSet
+        if (sizedBadIds.isEmpty) {
+          println("Warning : no large blobs matching criteria found in packfiles - does the repo need to be packed?")
+          None
+        } else {
+          println("Found " + sizedBadIds.size + " blob ids for large blobs - biggest=" + sizedBadIds.max.size + " smallest=" + sizedBadIds.min.size)
+          println("Total size (unpacked)=" + sizedBadIds.map(_.size).sum)
+          Some(new BlobReplacer(sizedBadIds.map(_.objectId), new BlobInserter(repo.getObjectDatabase.threadLocalResources.inserter())))
+        }
       }
     }
 
