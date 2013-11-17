@@ -20,87 +20,85 @@
 
 package com.madgag.git.bfg.cli
 
-import java.io.File
+import com.madgag.git._
+import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.cleaner._
 import com.madgag.git.bfg.cleaner.kit.BlobInserter
 import com.madgag.git.bfg.model.FileName.ImplicitConversions._
-import io.Source
-import com.madgag.git.bfg.GitUtil
-import org.eclipse.jgit.lib._
-import protection.ProtectedObjectCensus
-import com.madgag.git.bfg.model.{TreeSubtrees, TreeBlobs, FileName, TreeBlobEntry}
-import com.madgag.textmatching.{Glob, TextMatcher}
+import com.madgag.git.bfg.model._
 import com.madgag.inclusion._
 import com.madgag.text.ByteSize
-import scopt.immutable.OptionParser
-import scala.Some
-import com.madgag.inclusion.IncExcExpression
+import com.madgag.textmatching.{TextMatcherType, Glob, TextMatcher}
+import io.Source
+import java.io.File
 import org.eclipse.jgit.internal.storage.file.FileRepository
+import org.eclipse.jgit.lib._
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
-import com.madgag.git._
-import GitUtil._
+import protection.ProtectedObjectCensus
+import scala.Some
+import scalax.file.ImplicitConversions._
+import scopt.{Read, OptionParser}
 
 
 object CLIConfig {
   val parser = new OptionParser[CLIConfig]("bfg") {
-    def options = Seq(
-      opt("b", "strip-blobs-bigger-than", "<size>", "strip blobs bigger than X (eg '128K', '1M', etc)") {
-        (v: String, c: CLIConfig) => c.copy(stripBlobsBiggerThan = Some(ByteSize.parse(v)))
-      },
-      intOpt("B", "strip-biggest-blobs", "NUM", "strip the top NUM biggest blobs") {
-        (v: Int, c: CLIConfig) => c.copy(stripBiggestBlobs = Some(v))
-      },
-      opt("bi", "strip-blobs-with-ids", "<blob-ids-file>", "strip blobs with the specified Git object ids") {
-        (v: String, c: CLIConfig) => c.copy(stripBlobsWithIds = Some(Source.fromFile(v).getLines().map(_.trim).filterNot(_.isEmpty).map(_.asObjectId).toSet))
-      },
-      opt("D", "delete-files", "<glob>", "delete files with the specified names (eg '*.class', '*.{txt,log}' - matches on file name, not path within repo)") {
-        (v: String, c: CLIConfig) => c.copy(deleteFiles = Some(FileMatcher(v)))
-      },
-      opt(None, "delete-folders", "<glob>", "delete folders with the specified names (eg '.svn', '*-tmp' - matches on folder name, not path within repo)") {
-        (v: String, c: CLIConfig) => c.copy(deleteFolders = Some(FileMatcher(v)))
-      },
-      opt("rt", "replace-text", "<expressions-file>", "filter content of files, replacing matched text. Match expressions should be listed in the file, one expression per line - " +
-        "by default, each expression is treated as a literal, but 'regex:' & 'glob:' prefixes are supported, with '==>' to specify a replacement " +
-        "string other than the default of '***REMOVED***'.") {
-        (v: String, c: CLIConfig) => c.copy(textReplacementExpressions = Source.fromFile(v).getLines().filterNot(_.trim.isEmpty).toSeq)
-      },
-      opt("fi", "filter-content-including", "<glob>", "do file-content filtering on files that match the specified expression (eg '*.{txt|properties}')") {
-        (v: String, c: CLIConfig) => c.copy(filenameFilters = c.filenameFilters :+ Include(FileMatcher(v)))
-      },
-      opt("fe", "filter-content-excluding", "<glob>", "don't do file-content filtering on files that match the specified expression (eg '*.{xml|pdf}')") {
-        (v: String, c: CLIConfig) => c.copy(filenameFilters = c.filenameFilters :+ Exclude(FileMatcher(v)))
-      },
-      opt("fs", "filter-content-size-threshold", "<size>", "only do file-content filtering on files smaller than <size> (default is %1$d bytes)".format(CLIConfig().filterSizeThreshold)) {
-        (v: String, c: CLIConfig) => c.copy(filterSizeThreshold = ByteSize.parse(v))
-      },
-      opt("p", "protect-blobs-from", "<refs>", "protect blobs that appear in the most recent versions of the specified refs (default is 'HEAD')") {
-        (v: String, c: CLIConfig) => c.copy(protectBlobsFromRevisions = v.split(',').toSet)
-      },
-      flag("no-blob-protection", "allow the BFG to modify even your *latest* commit. Not recommended: you should have already ensured your latest commit is clean.") {
-        (c: CLIConfig) => c.copy(protectBlobsFromRevisions = Set.empty)
-      },
-      //      flag("strict-object-checking", "perform additional checks on integrity of consumed & created objects") {
-      //        (c: CLIConfig) => c.copy(strictObjectChecking = true)
-      //      }
-      flag("private", "treat this repo-rewrite as removing private data (for example: omit old commit ids from commit messages)") {
-        (c: CLIConfig) => c.copy(sensitiveData = Some(true))
-      },
-      opt(None, "massive-non-file-objects-sized-up-to", "<size>", "increase memory usage to handle over-size Commits, Tags, and Trees that are up to X in size (eg '10M')") {
-        (v: String, c: CLIConfig) => c.copy(massiveNonFileObjects = Some(ByteSize.parse(v)))
-      },
-      argOpt("<repo>", "file path for Git repository to clean") {
-        (v: String, c: CLIConfig) => c.copy(repoLocation = new File(v).getCanonicalFile)
-      }
-    )
 
-    object FileMatcher {
-      def apply(possiblyPrefixedExpr: String): TextMatcher = {
-        if (possiblyPrefixedExpr.contains('/')) {
-          throw new IllegalArgumentException("*** Can only match on filename, NOT path *** - remove '/' path segments")
-        }
-        TextMatcher(possiblyPrefixedExpr, defaultType = Glob)
+    def fileMatcher(name: String, defaultType: TextMatcherType = Glob) = {
+      implicit val textMatcherRead = Read.reads { TextMatcher(_, defaultType) }
+
+      opt[TextMatcher](name).valueName(s"<${defaultType.expressionPrefix}>").validate { m =>
+        if (m.expression.contains('/')) {
+          failure("*** Can only match on filename, NOT path *** - remove '/' path segments")
+        } else success
       }
     }
+
+    opt[String]('b', "strip-blobs-bigger-than").valueName("<size>").text("strip blobs bigger than X (eg '128K', '1M', etc)").action {
+      (v , c) => c.copy(stripBlobsBiggerThan = Some(ByteSize.parse(v)))
+    }
+    opt[Int]('B', "strip-biggest-blobs").valueName("NUM").text("strip the top NUM biggest blobs").action {
+      (v, c) => c.copy(stripBiggestBlobs = Some(v))
+    }
+    opt[File]("strip-blobs-with-ids").abbr("bi").valueName("<blob-ids-file>").text("strip blobs with the specified Git object ids").action {
+      (v, c) => c.copy(stripBlobsWithIds = Some(v.lines().map(_.trim).filterNot(_.isEmpty).map(_.asObjectId).toSet))
+    }
+    fileMatcher("delete-files").abbr("D").text("delete files with the specified names (eg '*.class', '*.{txt,log}' - matches on file name, not path within repo)").action {
+      (v, c) => c.copy(deleteFiles = Some(v))
+    }
+    fileMatcher("delete-folders").text("delete folders with the specified names (eg '.svn', '*-tmp' - matches on folder name, not path within repo)").action {
+      (v, c) => c.copy(deleteFolders = Some(v))
+    }
+    opt[File]("replace-text").abbr("rt").valueName("<expressions-file>").text("filter content of files, replacing matched text. Match expressions should be listed in the file, one expression per line - " +
+      "by default, each expression is treated as a literal, but 'regex:' & 'glob:' prefixes are supported, with '==>' to specify a replacement " +
+      "string other than the default of '***REMOVED***'.").action {
+      (v, c) => c.copy(textReplacementExpressions = Source.fromFile(v).getLines().filterNot(_.trim.isEmpty).toSeq)
+    }
+    fileMatcher("filter-content-including").abbr("fi").text("do file-content filtering on files that match the specified expression (eg '*.{txt|properties}')").action {
+      (v, c) => c.copy(filenameFilters = c.filenameFilters :+ Include(v))
+    }
+    fileMatcher("filter-content-excluding").abbr("fe").text("don't do file-content filtering on files that match the specified expression (eg '*.{xml|pdf}')").action {
+      (v, c) => c.copy(filenameFilters = c.filenameFilters :+ Exclude(v))
+    }
+    opt[String]("filter-content-size-threshold").abbr("fs").valueName("<size>").text("only do file-content filtering on files smaller than <size> (default is %1$d bytes)".format(CLIConfig().filterSizeThreshold)).action {
+      (v, c) => c.copy(filterSizeThreshold = ByteSize.parse(v))
+    }
+    opt[String]('p', "protect-blobs-from").valueName("<refs>").text("protect blobs that appear in the most recent versions of the specified refs (default is 'HEAD')").action {
+      (v, c) => c.copy(protectBlobsFromRevisions = v.split(',').toSet)
+    }
+    opt[Unit]("no-blob-protection").text("allow the BFG to modify even your *latest* commit. Not recommended: you should have already ensured your latest commit is clean.").action {
+      (_, c) => c.copy(protectBlobsFromRevisions = Set.empty)
+    }
+    opt[Unit]("strict-object-checking").text("perform additional checks on integrity of consumed & created objects").hidden().action {
+      (_, c) => c.copy(strictObjectChecking = true)
+    }
+    opt[Unit]("private").text("treat this repo-rewrite as removing private data (for example: omit old commit ids from commit messages)").action {
+      (_, c) => c.copy(sensitiveData = Some(true))
+    }
+    opt[String]("massive-non-file-objects-sized-up-to").valueName("<size>").text("increase memory usage to handle over-size Commits, Tags, and Trees that are up to X in size (eg '10M')").action {
+      (v, c) => c.copy(massiveNonFileObjects = Some(ByteSize.parse(v)))
+    }
+    arg[File]("<repo>") optional() action { (x, c) =>
+      c.copy(repoLocation = x) } text("file path for Git repository to clean")
   }
 }
 

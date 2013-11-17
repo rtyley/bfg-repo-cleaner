@@ -8,7 +8,7 @@ object Dependencies {
 
   val madgagCompress = "com.madgag" % "util-compress" % "1.33"
 
-  val scopt = "com.github.scopt" %% "scopt" % "2.1.0"
+  val scopt = "com.github.scopt" %% "scopt" % "3.2.0"
 
   val globs = "com.madgag" % "globs-for-java" % "0.2"
 
