@@ -3,6 +3,14 @@ import Dependencies._
 
 assemblySettings
 
+buildInfoSettings
+
+sourceGenerators in Compile <+= buildInfo
+
+buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion)
+
+buildInfoPackage := "com.madgag.git.bfg"
+
 crossPaths := false
 
 publishArtifact in (Compile, packageBin) := false

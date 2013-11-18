@@ -21,11 +21,12 @@
 package com.madgag.git.bfg.cli
 
 import com.madgag.git._
+import com.madgag.git.bfg.BuildInfo
 import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.cleaner._
 import com.madgag.git.bfg.cleaner.kit.BlobInserter
 import com.madgag.git.bfg.model.FileName.ImplicitConversions._
-import com.madgag.git.bfg.model._
+import com.madgag.git.bfg.model.{TreeSubtrees, TreeBlobs, FileName, TreeBlobEntry}
 import com.madgag.inclusion._
 import com.madgag.text.ByteSize
 import com.madgag.textmatching.{TextMatcherType, Glob, TextMatcher}
@@ -52,6 +53,9 @@ object CLIConfig {
         } else success
       }
     }
+
+    head("bfg", BuildInfo.version)
+    version("version").hidden()
 
     opt[String]('b', "strip-blobs-bigger-than").valueName("<size>").text("strip blobs bigger than X (eg '128K', '1M', etc)").action {
       (v , c) => c.copy(stripBlobsBiggerThan = Some(ByteSize.parse(v)))
