@@ -30,7 +30,6 @@ import com.madgag.git.bfg.model.{TreeSubtrees, TreeBlobs, FileName, TreeBlobEntr
 import com.madgag.inclusion._
 import com.madgag.text.ByteSize
 import com.madgag.textmatching.{TextMatcherType, Glob, TextMatcher}
-import io.Source
 import java.io.File
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.lib._
@@ -75,7 +74,7 @@ object CLIConfig {
     opt[File]("replace-text").abbr("rt").valueName("<expressions-file>").text("filter content of files, replacing matched text. Match expressions should be listed in the file, one expression per line - " +
       "by default, each expression is treated as a literal, but 'regex:' & 'glob:' prefixes are supported, with '==>' to specify a replacement " +
       "string other than the default of '***REMOVED***'.").action {
-      (v, c) => c.copy(textReplacementExpressions = Source.fromFile(v).getLines().filterNot(_.trim.isEmpty).toSeq)
+      (v, c) => c.copy(textReplacementExpressions = v.lines().filterNot(_.trim.isEmpty).toSeq)
     }
     fileMatcher("filter-content-including").abbr("fi").text("do file-content filtering on files that match the specified expression (eg '*.{txt|properties}')").action {
       (v, c) => c.copy(filenameFilters = c.filenameFilters :+ Include(v))
