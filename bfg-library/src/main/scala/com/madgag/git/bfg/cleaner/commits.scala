@@ -25,32 +25,21 @@ import org.eclipse.jgit.revwalk.RevCommit
 import com.madgag.git.bfg.model._
 import com.madgag.git.ThreadLocalObjectDatabaseResources
 
-object CommitNodeCleaner {
+class CommitNodeCleanerKit(val threadLocalResources: ThreadLocalObjectDatabaseResources,
+          val originalRevCommit: RevCommit,
+          val originalCommit: Commit,
+          val updatedArcs: CommitArcs,
+          val mapper: Cleaner[ObjectId]) extends NodeMessageCleanerKit {
 
-  class Kit(val threadLocalResources: ThreadLocalObjectDatabaseResources,
-            val originalRevCommit: RevCommit,
-            val originalCommit: Commit,
-            val updatedArcs: CommitArcs,
-            val mapper: Cleaner[ObjectId]) {
+  val arcsChanged = originalCommit.arcs != updatedArcs
 
-    val arcsChanged = originalCommit.arcs != updatedArcs
-
-    def commitIsChanged(withThisNode: CommitNode) = arcsChanged || originalCommit.node != withThisNode
-  }
-
-  def chain(cleaners: Seq[CommitNodeCleaner]) = new CommitNodeCleaner {
-    def fixer(kit: CommitNodeCleaner.Kit) = Function.chain(cleaners.map(_.fixer(kit)))
-  }
-}
-
-trait CommitNodeCleaner {
-  def fixer(kit: CommitNodeCleaner.Kit): Cleaner[CommitNode]
+  def commitIsChanged(withThisNode: CommitNode) = arcsChanged || originalCommit.node != withThisNode
 }
 
 object FormerCommitFooter extends CommitNodeCleaner {
   val Key = "Former-commit-id"
 
-  override def fixer(kit: CommitNodeCleaner.Kit) = modifyIf(kit.commitIsChanged) {
+  override def fixer(kit: CommitNodeCleanerKit) = modifyIf(kit.commitIsChanged) {
     _ add Footer(Key, kit.originalRevCommit.name)
   }
 

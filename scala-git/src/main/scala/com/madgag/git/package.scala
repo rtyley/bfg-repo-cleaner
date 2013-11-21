@@ -7,13 +7,14 @@ import language.implicitConversions
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.diff.DiffAlgorithm.SupportedAlgorithm
 import org.eclipse.jgit.diff._
+import org.eclipse.jgit.lib.Constants.OBJ_TAG
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk._
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.{AndTreeFilter, TreeFilter}
 import org.eclipse.jgit.util.FS
-import scala.util.Success
-import scala.util.Try
+import scala.Some
+import scala.util.{Success, Try}
 
 
 package object git {
@@ -53,6 +54,11 @@ package object git {
     def singleThreadedReaderTuple = {
       val revWalk=new RevWalk(repo)
       (revWalk, revWalk.getObjectReader)
+    }
+
+    def annotatedTags(implicit revWalk: RevWalk): Set[RevTag] = {
+      implicit val reader = revWalk.getObjectReader
+      repo.getTags.values.map(_.getObjectId).filter(_.open.getType == OBJ_TAG).map(_.asRevTag).toSet
     }
   }
 
@@ -141,6 +147,7 @@ package object git {
   }
 
   implicit class RichDiffEntry(diffEntry: DiffEntry) {
+
     import DiffEntry.Side
     import Side.{OLD,NEW}
 

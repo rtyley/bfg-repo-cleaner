@@ -24,11 +24,16 @@ import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId, ObjectReader}
 import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.cleaner.ObjectIdSubstitutor._
 import com.madgag.git._
+import com.madgag.git.bfg.model.{HasMessage, TagNode, CommitNode}
 
-class CommitMessageObjectIdsUpdater(objectIdSubstitutor: ObjectIdSubstitutor) extends CommitNodeCleaner {
+class CommitMessageObjectIdsUpdater(val objectIdSubstitutor: ObjectIdSubstitutor) extends CommitNodeCleaner with MessageObjectIdsUpdater[CommitNode, CommitNodeCleanerKit]
 
-  override def fixer(kit: CommitNodeCleaner.Kit) = commitNode => commitNode.copy(message = objectIdSubstitutor.replaceOldIds(commitNode.message, kit.threadLocalResources.reader(), kit.mapper))
+class TagMessageObjectIdsUpdater(val objectIdSubstitutor: ObjectIdSubstitutor) extends TagNodeCleaner with MessageObjectIdsUpdater[TagNode, TagNodeCleanerKit]
 
+trait MessageObjectIdsUpdater[N <: HasMessage[N], K <: NodeMessageCleanerKit] {
+  val objectIdSubstitutor: ObjectIdSubstitutor
+
+  def fixer(kit: K): Cleaner[N] = _.updateMessageWith(message => objectIdSubstitutor.replaceOldIds(message, kit.threadLocalResources.reader(), kit.mapper))
 }
 
 object ObjectIdSubstitutor {

@@ -33,19 +33,27 @@ import com.madgag.git.bfg.GitUtil._
 
 object ObjectIdCleaner {
 
+  /*
+    for Commits and Tag node cleaners
+    Object-id-substitution should come first, followed by whatever other crazy ops you might want,
+    followed finally by the 'FormerCommitFooter' CommitNodeCleaner, if we want it (the former-commit footer
+    is only triggered if the commit can be seen to have changed- so must see message alteration if it occurs)
+     */
+
   case class Config(protectedObjectCensus: ProtectedObjectCensus,
-                    objectIdSubstitutor: ObjectIdSubstitutor = ObjectIdSubstitutor.OldIdsPublic,
                     commitNodeCleaners: Seq[CommitNodeCleaner] = Seq.empty,
+                    tagNodeCleaners: Seq[TagNodeCleaner] = Seq.empty,
                     treeBlobsCleaners: Seq[Cleaner[TreeBlobs]] = Seq.empty,
                     treeSubtreesCleaners: Seq[Cleaner[TreeSubtrees]] = Seq.empty,
-                    // messageCleaners? - covers both Tag and Commits
                     objectChecker: Option[ObjectChecker] = None) {
 
-    lazy val commitNodeCleaner = CommitNodeCleaner.chain(commitNodeCleaners)
+    lazy val commitNodeCleaner: CommitNodeCleaner = NodeCleaner.chain(commitNodeCleaners)
+
+    lazy val tagNodeCleaner: TagNodeCleaner = NodeCleaner.chain(tagNodeCleaners)
 
     lazy val treeBlobsCleaner = Function.chain(treeBlobsCleaners)
 
-    lazy val treeSubtreesCleaner:Cleaner[TreeSubtrees] = Function.chain(treeSubtreesCleaners)
+    lazy val treeSubtreesCleaner: Cleaner[TreeSubtrees] = Function.chain(treeSubtreesCleaners)
   }
 
 }
@@ -89,7 +97,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     val originalCommit = Commit(originalRevCommit)
 
     val cleanedArcs = originalCommit.arcs cleanWith this
-    val kit = new CommitNodeCleaner.Kit(threadLocalResources, originalRevCommit, originalCommit, cleanedArcs, apply)
+    val kit = new CommitNodeCleanerKit(threadLocalResources, originalRevCommit, originalCommit, cleanedArcs, apply)
     val updatedCommitNode = commitNodeCleaner.fixer(kit)(originalCommit.node)
     val updatedCommit = Commit(updatedCommitNode, cleanedArcs)
 
@@ -124,20 +132,28 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     }
   }
 
+  val kit = new TagNodeCleanerKit(threadLocalResources, apply)
+
   def cleanTag(id: ObjectId): ObjectId = {
     val originalTag = getTag(id)
+    val cleanedTagArc = apply(originalTag.getObject)
 
-    replacement(originalTag.getObject).map {
-      cleanedObj =>
-        val tb = new TagBuilder
-        tb.setTag(originalTag.getTagName)
-        tb.setObjectId(cleanedObj, originalTag.getObject.getType)
-        tb.setTagger(originalTag.getTaggerIdent)
-        tb.setMessage(objectIdSubstitutor.replaceOldIds(originalTag.getFullMessage, threadLocalResources.reader(), apply))
-        val cleanedTag: ObjectId = threadLocalResources.inserter().insert(tb)
-        objectChecker.foreach(_.checkTag(tb.toByteArray))
-        cleanedTag
-    }.getOrElse(originalTag)
+    val originalTagNode = TagNode(originalTag)
+    val cleanedTagNode = tagNodeCleaner.fixer(kit)(originalTagNode)
+
+    if (originalTag != cleanedTagArc || originalTagNode != cleanedTagNode) {
+      val tb = new TagBuilder
+      tb.setTag(originalTag.getTagName)
+      tb.setObjectId(cleanedTagArc, originalTag.getObject.getType)
+      cleanedTagNode.update(tb)
+
+      val cleanedTag: ObjectId = threadLocalResources.inserter().insert(tb)
+
+      objectChecker.foreach(_.checkTag(tb.toByteArray))
+      cleanedTag
+    } else {
+      originalTag
+    }
   }
 
   lazy val protectedDirt: Seq[ProtectedObjectDirtReport] = {

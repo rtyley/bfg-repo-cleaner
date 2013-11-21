@@ -20,6 +20,12 @@
 
 package com.madgag.git.bfg
 
+import com.madgag.git.bfg.model.{CommitNode, TagNode}
+
 package object cleaner {
   type Cleaner[V] = V => V
+
+  type CommitNodeCleaner = NodeCleaner[CommitNode, CommitNodeCleanerKit]
+
+  type TagNodeCleaner = NodeCleaner[TagNode, TagNodeCleanerKit]
 }

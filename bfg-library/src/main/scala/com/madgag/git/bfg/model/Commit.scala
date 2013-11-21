@@ -59,7 +59,8 @@ object CommitNode {
   def apply(c: RevCommit): CommitNode = CommitNode(c.getAuthorIdent, c.getCommitterIdent, c.getFullMessage, c.getEncoding)
 }
 
-case class CommitNode(author: PersonIdent, committer: PersonIdent, message: String, encoding: Charset = Constants.CHARSET) {
+case class CommitNode(author: PersonIdent, committer: PersonIdent, message: String, encoding: Charset = Constants.CHARSET)
+  extends HasMessage[CommitNode] {
   lazy val lastParagraphBreak = message.lastIndexOf("\n\n")
   lazy val messageWithoutFooters = if (footers.isEmpty) message else (message take lastParagraphBreak)
   lazy val footers: List[Footer] = message.drop(lastParagraphBreak).lines.collect {
@@ -67,4 +68,6 @@ case class CommitNode(author: PersonIdent, committer: PersonIdent, message: Stri
   }.toList
 
   def add(footer: Footer) = copy(message = message + "\n" + (if (footers.isEmpty) "\n" else "") + footer.toString)
+
+  def updateMessageWith(cleaner: String => String): CommitNode = copy(message = cleaner(message))
 }

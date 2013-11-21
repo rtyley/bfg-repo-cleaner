@@ -20,10 +20,10 @@
 
 package com.madgag.git.bfg.cli
 
-import org.specs2.mutable._
-import scalax.file.Path
 import com.madgag.git._
 import com.madgag.git.bfg.test.unpackedRepo
+import org.specs2.mutable._
+import scalax.file.Path
 
 class MainSpec extends Specification {
 
@@ -75,6 +75,28 @@ class MainSpec extends Specification {
         run("--delete-folders bar --delete-files foo.txt")
       }
     }
+
+    "replace commit and tag message text" in new unpackedRepo("/sample-repos/replaceTextInMessage.git.zip") {
+      implicit val r = reader
+
+      val bannedTextFile = newFileContaining("sausages==>cheese\n")
+
+      ensureRemovalOf(annotatedTags(haveTagWhereMessage(contain("sausages")).atLeastOnce)) {
+        ensureRemovalOf(commitHistory(haveCommitWhereMessage(contain("sausages")).atLeastOnce)) {
+          run(s"--replace-message-text ${bannedTextFile.path}")
+        }
+      }
+    }
+
+    "update annotated tag message even if that is the only dirty thing in repo" in new unpackedRepo("/sample-repos/onlyAnnotatedTagIsDirty.git.zip") {
+      implicit val r = reader
+
+      val bannedTextFile = newFileContaining("sin==>win\n")
+
+      ensureRemovalOf(annotatedTags(haveTagWhereMessage(contain("sin")).atLeastOnce)) {
+        run(s"--replace-message-text ${bannedTextFile.path}")
+      }
+    }
   }
 
   "Massive commit messages" should {
@@ -86,5 +108,10 @@ class MainSpec extends Specification {
       }
     }
   }
-}
 
+  def newFileContaining(content: String) = {
+    val file = Path.createTempFile()
+    file.write(content)
+    file
+  }
+}

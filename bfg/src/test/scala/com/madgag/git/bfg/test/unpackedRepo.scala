@@ -2,7 +2,7 @@ package com.madgag.git.bfg.test
 
 import scala.collection.convert.wrapAsScala._
 import org.eclipse.jgit.lib.{Constants, ObjectReader, ObjectId, Repository}
-import org.eclipse.jgit.revwalk.RevCommit
+import org.eclipse.jgit.revwalk.{RevTag, RevCommit}
 import org.specs2.matcher.{MustThrownMatchers, Matcher}
 import com.madgag.git._
 import com.madgag.git.test._
@@ -51,6 +51,18 @@ class unpackedRepo(filePath: String) extends Scope with MustThrownMatchers {
 
   def haveRef(refName: String, objectIdMatcher: Matcher[ObjectId]): Matcher[Repository] = objectIdMatcher ^^ {
     (r: Repository) => r resolve (refName) aka s"Ref [$refName]"
+  }
+
+  def haveCommitWhereMessage(boom: Matcher[String])(implicit reader: ObjectReader): Matcher[RevCommit] = boom ^^ {
+    (c: RevCommit) => c.getFullMessage
+  }
+
+  def haveTagWhereMessage(boom: Matcher[String])(implicit reader: ObjectReader): Matcher[RevTag] = boom ^^ {
+    (t: RevTag) => t.getFullMessage
+  }
+
+  def annotatedTags(tagMatcher: Matcher[Set[RevTag]]): Matcher[Repository] = tagMatcher ^^ {
+    (r: Repository) => r.annotatedTags
   }
 
   def commitHistory(histMatcher: Matcher[Seq[RevCommit]]): Matcher[Repository] = histMatcher ^^ {
