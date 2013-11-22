@@ -21,45 +21,46 @@
 package com.madgag.git.bfg.cli
 
 import com.madgag.git._
-import com.madgag.git.bfg.cleaner._
 import com.madgag.git.bfg.GitUtil._
+import com.madgag.git.bfg.cleaner._
 
-object Main extends App {
+object Main {
 
-  if (args.isEmpty) {
-    CLIConfig.parser.showUsage
-  } else {
+  def main(args: Array[String]) {
+    if (args.isEmpty) {
+      CLIConfig.parser.showUsage
+    } else {
 
-    CLIConfig.parser.parse(args, CLIConfig()) map {
-      config =>
+      CLIConfig.parser.parse(args, CLIConfig()) map {
+        config =>
 
-        tweakStaticJGitConfig(config.massiveNonFileObjects)
+          tweakStaticJGitConfig(config.massiveNonFileObjects)
 
-        if (config.gitdir.isEmpty) {
-          CLIConfig.parser.showUsage
-          Console.err.println("Aborting : " + config.repoLocation + " is not a valid Git repository.\n")
-        } else {
-          implicit val repo = config.repo
-
-          println("\nUsing repo : " + repo.getDirectory.getAbsolutePath + "\n")
-
-          // do this before implicitly initiating big-blob search
-          if (hasBeenProcessedByBFGBefore(repo)) {
-            println("\nThis repo has been processed by The BFG before! Will prune repo before proceeding - to avoid unnecessary cleaning work on unused objects...")
-            repo.git.gc.call()
-            println("Completed prune of old objects - will now proceed with the main job!\n")
-          }
-
-          if (config.definesNoWork) {
-            Console.err.println("Please specify tasks for The BFG :")
+          if (config.gitdir.isEmpty) {
             CLIConfig.parser.showUsage
+            Console.err.println("Aborting : " + config.repoLocation + " is not a valid Git repository.\n")
           } else {
-            println("Found " + config.objectProtection.fixedObjectIds.size + " objects to protect")
+            implicit val repo = config.repo
 
-            RepoRewriter.rewrite(repo, config.objectIdCleanerConfig)
+            println("\nUsing repo : " + repo.getDirectory.getAbsolutePath + "\n")
+
+            // do this before implicitly initiating big-blob search
+            if (hasBeenProcessedByBFGBefore(repo)) {
+              println("\nThis repo has been processed by The BFG before! Will prune repo before proceeding - to avoid unnecessary cleaning work on unused objects...")
+              repo.git.gc.call()
+              println("Completed prune of old objects - will now proceed with the main job!\n")
+            }
+
+            if (config.definesNoWork) {
+              Console.err.println("Please specify tasks for The BFG :")
+              CLIConfig.parser.showUsage
+            } else {
+              println("Found " + config.objectProtection.fixedObjectIds.size + " objects to protect")
+
+              RepoRewriter.rewrite(repo, config.objectIdCleanerConfig)
+            }
           }
-        }
+      }
     }
   }
-
 }
