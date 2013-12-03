@@ -45,18 +45,17 @@ object MemoUtil {
   def concurrentCleanerMemo[V](fixedEntries: Set[V] = Set.empty): Memo[V, V] = {
     memo[V, V] {
       (f: Cleaner[V]) =>
-        val permanentCache = loaderCacheFor(f)
+        lazy val permanentCache = loaderCacheFor(f)(fix)
 
-        def fix(v: V) = permanentCache.put(v, v)
+        def fix(v: V) {
+          // enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
+          permanentCache.put(v, v)
+        }
 
         fixedEntries foreach fix
 
         new MemoFunc[V, V] {
-          def apply(k: V) = {
-            val v = permanentCache.get(k)
-            fix(v) // enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
-            v
-          }
+          def apply(k: V) = permanentCache.get(k)
 
           def asMap() = permanentCache.asMap().asScala.view.filter {
             case (oldId, newId) => newId != oldId
@@ -65,9 +64,12 @@ object MemoUtil {
     }
   }
 
-  def loaderCacheFor[K, V](f: K => V): LoadingCache[K, V] = CacheBuilder.newBuilder.asInstanceOf[CacheBuilder[K, V]]
-    .build(new CacheLoader[K, V] {
-    def load(key: K): V = f(key)
-  })
-
+  def loaderCacheFor[K, V](calc: K => V)(postCalc: V => Unit): LoadingCache[K, V] =
+    CacheBuilder.newBuilder.asInstanceOf[CacheBuilder[K, V]].build(new CacheLoader[K, V] {
+      def load(key: K): V = {
+        val v = calc(key)
+        postCalc(v)
+        v
+      }
+    })
 }
