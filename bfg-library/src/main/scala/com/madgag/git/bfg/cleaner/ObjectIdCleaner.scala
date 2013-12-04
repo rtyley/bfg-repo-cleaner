@@ -49,7 +49,7 @@ object ObjectIdCleaner {
 
     lazy val treeBlobsCleaner = Function.chain(treeBlobsCleaners)
 
-    lazy val treeSubtreesCleaner:Cleaner[TreeSubtrees] = Function.chain(treeSubtreesCleaners)
+    lazy val treeSubtreesCleaner:BlockingCleaner[TreeSubtrees] = Function.chain(treeSubtreesCleaners)
   }
 
 }
@@ -64,7 +64,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
   val threadLocalResources = objectDB.threadLocalResources
 
   // want to enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
-  val memo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds)
+  val memo: Memo[ObjectId, Future[ObjectId]] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds)
 
   def apply(objectId: ObjectId): ObjectId = memoClean(objectId)
 
@@ -74,13 +74,13 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
   def cleanedObjectMap(): Map[ObjectId, ObjectId] = memoClean.asMap()
 
-  def uncachedClean: (ObjectId) => ObjectId = {
+  def uncachedClean: Cleaner[ObjectId] = {
     objectId =>
       threadLocalResources.reader().open(objectId).getType match {
         case OBJ_COMMIT => cleanCommit(objectId)
         case OBJ_TREE => cleanTree(objectId)
         case OBJ_TAG => cleanTag(objectId)
-        case _ => objectId // we don't currently clean isolated blobs... only clean within a tree context
+        case _ => Future.successful(objectId) // we don't currently clean isolated blobs... only clean within a tree context
       }
   }
 
@@ -88,22 +88,24 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
   def getTag(tagId: AnyObjectId): RevTag = revWalk synchronized (tagId asRevTag)
 
-  def cleanCommit(commitId: ObjectId): ObjectId = {
+  def cleanCommit(commitId: ObjectId): Future[ObjectId] = {
     val originalRevCommit = getCommit(commitId)
     val originalCommit = Commit(originalRevCommit)
 
-    val cleanedArcs = originalCommit.arcs cleanWith this
-    val kit = new CommitNodeCleaner.Kit(threadLocalResources, originalRevCommit, originalCommit, cleanedArcs, apply)
-    val updatedCommitNode = commitNodeCleaner.fixer(kit)(originalCommit.node)
-    val updatedCommit = Commit(updatedCommitNode, cleanedArcs)
+    for {
+      cleanedArcs <- originalCommit.arcs cleanWith this
+      updatedCommitNode <- commitNodeCleaner.fixer(new CommitNodeCleaner.Kit(threadLocalResources, originalRevCommit, originalCommit, cleanedArcs, apply))(originalCommit.node)
+    } yield {
+      val updatedCommit = Commit(updatedCommitNode, cleanedArcs)
 
-    if (updatedCommit != originalCommit) {
-      val commitBytes = updatedCommit.toBytes
-      objectChecker.foreach(_.checkCommit(commitBytes))
-      threadLocalResources.inserter().insert(OBJ_COMMIT, commitBytes)
-    } else {
-      originalRevCommit
+      if (updatedCommit != originalCommit) insert(updatedCommit) else originalRevCommit
     }
+  }
+
+  private def insert(commit: Commit) = {
+    val commitBytes = commit.toBytes
+    objectChecker.foreach(_.checkCommit(commitBytes))
+    threadLocalResources.inserter().insert(OBJ_COMMIT, commitBytes)
   }
 
   def cleanTree(originalObjectId: ObjectId): ObjectId = {

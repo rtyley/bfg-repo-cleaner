@@ -23,6 +23,8 @@ package com.madgag.git.bfg
 import com.google.common.cache.{CacheStats, CacheLoader, LoadingCache, CacheBuilder}
 import com.madgag.git.bfg.cleaner._
 import collection.convert.decorateAsScala._
+import scala.concurrent.Future
+import Future.successful
 
 trait Memo[K, V] {
   def apply(z: K => V): MemoFunc[K, V]
@@ -44,19 +46,21 @@ object MemoUtil {
    *
    * A caching wrapper for a function (V => V), backed by a no-eviction LoadingCache from Google Collections.
    */
-  def concurrentCleanerMemo[V](fixedEntries: Set[V] = Set.empty): Memo[V, V] = {
-    memo[V, V] {
+  def concurrentCleanerMemo[V](fixedEntries: Set[V] = Set.empty): Memo[V, Future[V]] = {
+    memo[V, Future[V]] {
       (f: Cleaner[V]) =>
-        lazy val permanentCache = loaderCacheFor(f)(fix)
+        lazy val permanentCache = loaderCacheFor(f) { fut =>
+          fut.onSuccess { case v => fix(v) } // also fix 'k' for mem-efficiency? KeptPromise lighter than DefaultPromise?
+        }
 
         def fix(v: V) {
           // enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
-          permanentCache.put(v, v)
+          permanentCache.put(v, successful(v))
         }
 
         fixedEntries foreach fix
 
-        new MemoFunc[V, V] {
+        new MemoFunc[V, Future[V]] {
           def apply(k: V) = permanentCache.get(k)
 
           def asMap() = permanentCache.asMap().asScala.view.filter {
