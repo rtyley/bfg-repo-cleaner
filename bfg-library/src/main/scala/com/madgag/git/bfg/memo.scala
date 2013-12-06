@@ -23,8 +23,9 @@ package com.madgag.git.bfg
 import com.google.common.cache.{CacheStats, CacheLoader, LoadingCache, CacheBuilder}
 import com.madgag.git.bfg.cleaner._
 import collection.convert.decorateAsScala._
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import Future.successful
+import ExecutionContext.Implicits.global
 
 trait Memo[K, V] {
   def apply(z: K => V): MemoFunc[K, V]
@@ -34,6 +35,8 @@ trait MemoFunc[K,V] extends (K => V) {
   def asMap(): Map[K,V]
 
   def stats(): CacheStats
+
+  val fix: K => Unit
 }
 
 object MemoUtil {
@@ -42,34 +45,34 @@ object MemoUtil {
     def apply(z: K => V) = f(z)
   }
 
-  /**
-   *
-   * A caching wrapper for a function (V => V), backed by a no-eviction LoadingCache from Google Collections.
-   */
-  def concurrentCleanerMemo[V](fixedEntries: Set[V] = Set.empty): Memo[V, Future[V]] = {
-    memo[V, Future[V]] {
-      (f: Cleaner[V]) =>
-        lazy val permanentCache = loaderCacheFor(f) { fut =>
-          fut.onSuccess { case v => fix(v) } // also fix 'k' for mem-efficiency? KeptPromise lighter than DefaultPromise?
-        }
+  def concurrentAsyncCleanerMemo[V] = concurrentCleanerMemo[V, Future[V]](_.foreach)(successful)
 
-        def fix(v: V) {
-          // enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
-          permanentCache.put(v, successful(v))
-        }
+  def concurrentBlockingCleanerMemo[V] = concurrentCleanerMemo[V, V](v => _(v))(identity)
 
-        fixedEntries foreach fix
+  def concurrentCleanerMemo[K, V](postCalc: V => (K => Unit) => Unit)(ident: K => V): Memo[K, V] = memo[K, V] {
+    (f: K => V) =>
+      lazy val permanentCache = loaderCacheFor(f) { v =>
+        postCalc(v)(fix) // also fix 'k' for mem-efficiency? KeptPromise lighter than DefaultPromise?
+      }
 
-        new MemoFunc[V, Future[V]] {
-          def apply(k: V) = permanentCache.get(k)
+      def fix(k: K) {
+        // enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
+        permanentCache.put(k, ident(k))
+      }
 
-          def asMap() = permanentCache.asMap().asScala.view.filter {
-            case (oldId, newId) => newId != oldId
-          }.toMap
+      memoFunc(permanentCache, fix)
+  }
 
-          override def stats(): CacheStats = permanentCache.stats()
-        }
-    }
+  def memoFunc[K, V](loadingCache: LoadingCache[K, V], fixer: K => Unit) = new MemoFunc[K, V] {
+    def apply(k: K) = loadingCache.get(k)
+
+    def asMap() = loadingCache.asMap().asScala.view.filter {
+      case (oldId, newId) => newId != oldId
+    }.toMap
+
+    override def stats(): CacheStats = permanentCache.stats()
+
+    val fix = fixer
   }
 
   def loaderCacheFor[K, V](calc: K => V)(postCalc: V => Unit): LoadingCache[K, V] =

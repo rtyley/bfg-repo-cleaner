@@ -4,7 +4,8 @@ import com.madgag.git.bfg.cleaner._
 import java.nio.charset.Charset
 import org.eclipse.jgit.lib.{Constants, PersonIdent, ObjectId, CommitBuilder}
 import org.eclipse.jgit.revwalk.RevCommit
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
+import ExecutionContext.Implicits.global
 
 /*
  * Copyright (c) 2012, 2013 Roberto Tyley

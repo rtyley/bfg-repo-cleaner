@@ -91,9 +91,9 @@ object RepoRewriter {
 
     reporter.reportRefsForScan(allRefs)
 
-    val objectIdCleaner = new ObjectIdCleaner(objectIdCleanerConfig, repo.getObjectDatabase, revWalk)
+    reporter.reportObjectProtection(objectIdCleanerConfig)
 
-    reporter.reportObjectProtection(objectIdCleanerConfig, objectIdCleaner)
+    val objectIdCleaner = new ObjectIdCleaner(objectIdCleanerConfig, repo.getObjectDatabase, revWalk)
 
     val commits = revWalk.toList
 

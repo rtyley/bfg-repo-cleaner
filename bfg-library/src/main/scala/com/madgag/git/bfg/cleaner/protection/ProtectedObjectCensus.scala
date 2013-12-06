@@ -57,7 +57,7 @@ import com.madgag.git._
  */
 object ProtectedObjectCensus {
 
-  def none(implicit repo: Repository): ProtectedObjectCensus = apply(Set.empty)
+  val None = ProtectedObjectCensus()
 
   def apply(revisions: Set[String])(implicit repo: Repository): ProtectedObjectCensus = {
 
@@ -82,10 +82,10 @@ object ProtectedObjectCensus {
   }
 }
 
-case class ProtectedObjectCensus(protectorRevsByObject: Map[RevObject, Set[String]],
-                            treeProtection: Map[RevTree, Set[RevObject]],
-                            directBlobProtection: Map[ObjectId, Set[RevObject]],
-                            indirectBlobProtection: Map[ObjectId, Set[RevTree]]) {
+case class ProtectedObjectCensus(protectorRevsByObject: Map[RevObject, Set[String]] = Map.empty,
+                            treeProtection: Map[RevTree, Set[RevObject]] = Map.empty,
+                            directBlobProtection: Map[ObjectId, Set[RevObject]] = Map.empty,
+                            indirectBlobProtection: Map[ObjectId, Set[RevTree]] = Map.empty) {
 
   val isEmpty = protectorRevsByObject.isEmpty
 

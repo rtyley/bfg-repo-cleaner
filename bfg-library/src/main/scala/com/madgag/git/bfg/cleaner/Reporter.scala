@@ -1,7 +1,7 @@
 package com.madgag.git.bfg.cleaner
 
 import com.madgag.git._
-import com.madgag.git.bfg.cleaner.protection.ProtectedObjectDirtReport
+import com.madgag.git.bfg.cleaner.protection.{ProtectedObjectCensus, ProtectedObjectDirtReport}
 import com.madgag.text.Text._
 import com.madgag.text.{ByteSize, Tables}
 import java.text.SimpleDateFormat
@@ -67,7 +67,7 @@ class CLIReporter(repo: Repository) extends Reporter {
   // abort due to Dirty Tips on Private run - user needs to manually clean
   // warn due to Dirty Tips on Public run - it's not so serious if users publicise dirty tips.
   // if no protection
-  def reportObjectProtection(objectIdCleanerConfig: ObjectIdCleaner.Config, objectIdCleaner: ObjectIdCleaner)(implicit revWalk: RevWalk) {
+  def reportObjectProtection(objectIdCleanerConfig: ObjectIdCleaner.Config)(implicit revWalk: RevWalk) {
     println(title("Protected commits"))
 
     if (objectIdCleanerConfig.protectedObjectCensus.isEmpty) {
@@ -77,13 +77,15 @@ class CLIReporter(repo: Repository) extends Reporter {
     } else {
       println("These are your protected commits, and so their contents will NOT be altered:\n")
 
-      reportProtectedCommitsAndTheirDirt(objectIdCleaner.protectedDirt, objectIdCleanerConfig)
+      val unprotectedConfig = objectIdCleanerConfig.copy(protectedObjectCensus = ProtectedObjectCensus.None)
+
+      reportProtectedCommitsAndTheirDirt(objectIdCleanerConfig)
     }
   }
 
   case class DiffSideDetails(id: ObjectId, path: String, mode: FileMode, size: Option[Long])
 
-  def reportProtectedCommitsAndTheirDirt(reports: Seq[ProtectedObjectDirtReport], objectIdCleanerConfig: ObjectIdCleaner.Config)(implicit revWalk: RevWalk) {
+  def reportProtectedCommitsAndTheirDirt(objectIdCleanerConfig: ObjectIdCleaner.Config)(implicit revWalk: RevWalk) {
     implicit val reader = revWalk.getObjectReader
 
     def diffDetails(d: DiffEntry) = {
@@ -104,7 +106,7 @@ class CLIReporter(repo: Repository) extends Reporter {
     val protectedDirtDir = reportsDir / "protected-dirt"
     protectedDirtDir.doCreateDirectory()
 
-    reports.foreach {
+    ProtectedObjectDirtReport.reportsFor(objectIdCleanerConfig, null, revWalk).foreach {
       report =>
         val protectorRevs = objectIdCleanerConfig.protectedObjectCensus.protectorRevsByObject(report.revObject)
         val objectTitle = s" * ${report.revObject.typeString} ${report.revObject.shortName} (protected by '${protectorRevs.mkString("', '")}')"

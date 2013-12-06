@@ -24,22 +24,27 @@ import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.RevCommit
 import com.madgag.git.bfg.model._
 import com.madgag.git.ThreadLocalObjectDatabaseResources
+import scala.concurrent.{ExecutionContext, Future}
+import ExecutionContext.Implicits.global
 
 object CommitNodeCleaner {
 
   class Kit(val threadLocalResources: ThreadLocalObjectDatabaseResources,
             val originalRevCommit: RevCommit,
             val originalCommit: Commit,
-            val updatedArcs: CommitArcs,
+            val updatedArcs: Future[CommitArcs],
             val mapper: Cleaner[ObjectId]) {
 
-    val arcsChanged = originalCommit.arcs != updatedArcs
+    lazy val arcsChanged = updatedArcs.map(_ != originalCommit.arcs)
 
-    def commitIsChanged(withThisNode: CommitNode) = arcsChanged || originalCommit.node != withThisNode
+    def commitIsChangedWith(newNode: CommitNode) =
+      if (originalCommit.node != newNode) Future.successful(true) else arcsChanged
   }
 
-  def chain(cleaners: Seq[CommitNodeCleaner]) = new CommitNodeCleaner {
-    def fixer(kit: CommitNodeCleaner.Kit) = Function.chain(cleaners.map(_.fixer(kit)))
+  def chain[a](fs: Seq[Cleaner[a]]): Cleaner[a] = { x => (Future.successful(x) /: fs) ((x, f) => x.flatMap(f)) }
+
+  def chain(cleaners: Seq[CommitNodeCleaner]): CommitNodeCleaner = new CommitNodeCleaner {
+    def fixer(kit: CommitNodeCleaner.Kit) = commitNode => chain(cleaners.map(_.fixer(kit)))(commitNode)
   }
 }
 
@@ -50,9 +55,10 @@ trait CommitNodeCleaner {
 object FormerCommitFooter extends CommitNodeCleaner {
   val Key = "Former-commit-id"
 
-  override def fixer(kit: CommitNodeCleaner.Kit) = modifyIf(kit.commitIsChanged) {
+  override def fixer(kit: CommitNodeCleaner.Kit) = modifyIf(kit.commitIsChangedWith) {
     _ add Footer(Key, kit.originalRevCommit.name)
   }
 
-  def modifyIf[A](predicate: A => Boolean)(modifier: A => A): (A => A) = v => if (predicate(v)) modifier(v) else v
+  def modifyIf[A](predicate: A => Future[Boolean])(modifier: A => A): (A => Future[A]) =
+    v => for (p <- predicate(v)) yield { if (p) modifier(v) else v }
 }

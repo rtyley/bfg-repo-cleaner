@@ -20,7 +20,7 @@
 
 package com.madgag.git.bfg.cleaner
 
-import org.eclipse.jgit.revwalk.{RevWalk, RevTag, RevCommit}
+import org.eclipse.jgit.revwalk.{RevObject, RevWalk, RevTag, RevCommit}
 import org.eclipse.jgit.lib.Constants._
 import com.madgag.git.bfg.cleaner.protection.{ProtectedObjectDirtReport, ProtectedObjectCensus}
 import com.madgag.git.bfg.{Memo, CleaningMapper, MemoUtil}
@@ -31,15 +31,17 @@ import bfg.model.TreeSubtrees
 import org.eclipse.jgit.lib._
 import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.model.Tree.Entry
+import scala.concurrent.{ExecutionContext, Future}
+import ExecutionContext.Implicits.global
 
 object ObjectIdCleaner {
 
   case class Config(protectedObjectCensus: ProtectedObjectCensus,
                     objectIdSubstitutor: ObjectIdSubstitutor = ObjectIdSubstitutor.OldIdsPublic,
                     commitNodeCleaners: Seq[CommitNodeCleaner] = Seq.empty,
-                    treeEntryListCleaners: Seq[Cleaner[Seq[Tree.Entry]]] = Seq.empty,
-                    treeBlobsCleaners: Seq[Cleaner[TreeBlobs]] = Seq.empty,
-                    treeSubtreesCleaners: Seq[Cleaner[TreeSubtrees]] = Seq.empty,
+                    treeEntryListCleaners: Seq[BlockingCleaner[Seq[Tree.Entry]]] = Seq.empty,
+                    treeBlobsCleaners: Seq[BlockingCleaner[TreeBlobs]] = Seq.empty,
+                    treeSubtreesCleaners: Seq[BlockingCleaner[TreeSubtrees]] = Seq.empty,
                     // messageCleaners? - covers both Tag and Commits
                     objectChecker: Option[ObjectChecker] = None) {
 
@@ -61,24 +63,39 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
   import config._
 
-  val threadLocalResources = objectDB.threadLocalResources
+  val threadLocalResources: ThreadLocalObjectDatabaseResources = objectDB.threadLocalResources
 
   // want to enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
-  val memo: Memo[ObjectId, Future[ObjectId]] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds)
+  val memo: Memo[ObjectId, Future[ObjectId]] = MemoUtil.concurrentAsyncCleanerMemo
 
-  def apply(objectId: ObjectId): ObjectId = memoClean(objectId)
+  val commitMemo: Memo[ObjectId, Future[ObjectId]] = MemoUtil.concurrentAsyncCleanerMemo
+  val tagMemo: Memo[ObjectId, Future[ObjectId]] = MemoUtil.concurrentAsyncCleanerMemo
 
-  val memoClean = memo {
-    uncachedClean
+  val treeMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentBlockingCleanerMemo
+
+  def apply(objectId: ObjectId): Future[ObjectId] = memoClean(objectId)
+
+  /**
+   * A cleaning function for types we know are synchronously-cleaned types (tree, blob)
+   * A cleaning function for types we know are async-cleaned types (commit, tag)
+   *
+   * memo-ising must be applied to all functions that get called directly (ie, that might be called without
+   * memoisation above them)
+   */
+
+  val memoClean = {
+    val mc = memo { uncachedClean }
+    protectedObjectCensus.fixedObjectIds.foreach(mc.fix)
+    mc
   }
 
-  def cleanedObjectMap(): Map[ObjectId, ObjectId] = memoClean.asMap()
+  def cleanedObjectMap(): Map[ObjectId, ObjectId] = memoClean.asMap().mapValues(_.value.get.get)
 
   def uncachedClean: Cleaner[ObjectId] = {
     objectId =>
       threadLocalResources.reader().open(objectId).getType match {
+        case OBJ_TREE => Future.successful(cleanTree(objectId))
         case OBJ_COMMIT => cleanCommit(objectId)
-        case OBJ_TREE => cleanTree(objectId)
         case OBJ_TAG => cleanTag(objectId)
         case _ => Future.successful(objectId) // we don't currently clean isolated blobs... only clean within a tree context
       }
@@ -88,13 +105,14 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
   def getTag(tagId: AnyObjectId): RevTag = revWalk synchronized (tagId asRevTag)
 
-  def cleanCommit(commitId: ObjectId): Future[ObjectId] = {
+  val cleanCommit: Cleaner[ObjectId] = commitMemo { commitId =>
     val originalRevCommit = getCommit(commitId)
     val originalCommit = Commit(originalRevCommit)
 
+    val cleanedArcsFuture = originalCommit.arcs cleanWith this
     for {
-      cleanedArcs <- originalCommit.arcs cleanWith this
-      updatedCommitNode <- commitNodeCleaner.fixer(new CommitNodeCleaner.Kit(threadLocalResources, originalRevCommit, originalCommit, cleanedArcs, apply))(originalCommit.node)
+      updatedCommitNode <- commitNodeCleaner.fixer(new CommitNodeCleaner.Kit(threadLocalResources, originalRevCommit, originalCommit, cleanedArcsFuture, apply))(originalCommit.node)
+      cleanedArcs <- cleanedArcsFuture
     } yield {
       val updatedCommit = Commit(updatedCommitNode, cleanedArcs)
 
@@ -108,7 +126,9 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     threadLocalResources.inserter().insert(OBJ_COMMIT, commitBytes)
   }
 
-  def cleanTree(originalObjectId: ObjectId): ObjectId = {
+  val cleanBlob: BlockingCleaner[ObjectId] = identity // Currently a NO-OP, we only clean at treeblob level
+
+  val cleanTree: BlockingCleaner[ObjectId] = treeMemo { originalObjectId =>
     val entries = Tree.entriesFor(originalObjectId)(threadLocalResources.reader())
     val cleanedTreeEntries = treeEntryListCleaner(entries)
 
@@ -116,7 +136,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
     val fixedTreeBlobs = treeBlobsCleaner(tree.blobs)
     val cleanedSubtrees = TreeSubtrees(treeSubtreesCleaner(tree.subtrees).entryMap.map {
-      case (name, treeId) => (name, apply(treeId))
+      case (name, treeId) => (name, cleanTree(treeId))
     }).withoutEmptyTrees
 
     if (entries != cleanedTreeEntries || fixedTreeBlobs != tree.blobs || cleanedSubtrees != tree.subtrees) {
@@ -133,29 +153,29 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     }
   }
 
-  def cleanTag(id: ObjectId): ObjectId = {
+  val cleanTag: Cleaner[ObjectId] = tagMemo { id =>
     val originalTag = getTag(id)
 
-    replacement(originalTag.getObject).map {
-      cleanedObj =>
-        val tb = new TagBuilder
-        tb.setTag(originalTag.getTagName)
-        tb.setObjectId(cleanedObj, originalTag.getObject.getType)
-        tb.setTagger(originalTag.getTaggerIdent)
-        tb.setMessage(objectIdSubstitutor.replaceOldIds(originalTag.getFullMessage, threadLocalResources.reader(), apply))
-        val cleanedTag: ObjectId = threadLocalResources.inserter().insert(tb)
-        objectChecker.foreach(_.checkTag(tb.toByteArray))
-        cleanedTag
-    }.getOrElse(originalTag)
-  }
+    val originalMessage = originalTag.getFullMessage
+    val updatedMessageFuture = objectIdSubstitutor.replaceOldIds(originalMessage, threadLocalResources.reader(), apply)
 
-  lazy val protectedDirt: Seq[ProtectedObjectDirtReport] = {
-    protectedObjectCensus.protectorRevsByObject.map {
-      case (protectedRevObj, refNames) =>
-        val originalContentObject = treeOrBlobPointedToBy(protectedRevObj).merge
-        val replacementTreeOrBlob = uncachedClean.replacement(originalContentObject)
-        ProtectedObjectDirtReport(protectedRevObj, originalContentObject, replacementTreeOrBlob)
-    }.toList
+    // TODO Clean message text even if tagged object has not changed
+    val revObject = originalTag.getObject
+    for {
+      newObjectId <- apply(revObject)
+      updatedMessage <- updatedMessageFuture
+    } yield {
+      if (newObjectId != revObject || updatedMessage != originalMessage) {
+          val tb = new TagBuilder
+          tb.setTag(originalTag.getTagName)
+          tb.setObjectId(newObjectId, revObject.getType)
+          tb.setTagger(originalTag.getTaggerIdent)
+          tb.setMessage(updatedMessage)
+          val cleanedTag: ObjectId = threadLocalResources.inserter().insert(tb)
+          objectChecker.foreach(_.checkTag(tb.toByteArray))
+          cleanedTag
+      } else originalTag
+    }
   }
 
   def stats() = Map("apply"->memoClean.stats())
