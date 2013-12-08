@@ -215,7 +215,14 @@ $.ajax({ dataType: "jsonp", timeout: 5000,
     var u = "http://repo1.maven.org/maven2/com/madgag/bfg/"+v+"/bfg-"+v+".jar"
     $('.latest-version').text('v' + v);
     $('.latest-download-link').prop("href", u).click(function() {
-      ga('send', 'event', 'download-link', 'click', 'download');
+      ga('send', 'event', {
+        'eventCategory' : 'download-link',
+        'eventAction' : 'click',
+        'eventLabel' : 'download',
+        'hitCallback' : function () {
+            document.location = href;
+        }
+      });
     });
 });
 
