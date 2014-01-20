@@ -219,16 +219,19 @@ $.ajax({ dataType: "jsonp", timeout: 5000,
     var v = data.response.docs[0].latestVersion;
     var u = "http://repo1.maven.org/maven2/com/madgag/bfg/"+v+"/bfg-"+v+".jar"
     $('.latest-version').text('v' + v);
+
     $('.latest-download-link').prop("href", u).click(function() {
-      ga('send', 'event', {
-        'eventCategory' : 'download-link',
-        'eventAction' : 'click',
-        'eventLabel' : 'download',
-        'hitCallback' : function () {
-            document.location = u;
+        if (ga.hasOwnProperty('loaded') && ga.loaded === true) {
+            ga('send', 'event', {
+                'eventCategory' : 'download-link',
+                'eventAction' : 'click',
+                'eventLabel' : 'download',
+                'hitCallback' : function () {
+                    document.location = u;
+                }
+            });
+            return false;
         }
-      });
-      return false;
     });
 });
 
