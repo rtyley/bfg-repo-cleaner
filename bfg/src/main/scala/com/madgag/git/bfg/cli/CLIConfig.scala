@@ -32,12 +32,18 @@ import com.madgag.text.ByteSize
 import com.madgag.textmatching.{TextMatcherType, Glob, TextMatcher}
 import java.io.File
 import org.eclipse.jgit.internal.storage.file.FileRepository
-import org.eclipse.jgit.lib._
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import protection.ProtectedObjectCensus
-import scala.Some
 import scalax.file.ImplicitConversions._
 import scopt.{Read, OptionParser}
+import org.eclipse.jgit.lib._
+import com.madgag.git.bfg.model.Tree
+import scopt.OptionParser
+import com.madgag.git.bfg.model.TreeSubtrees
+import scala.Some
+import com.madgag.git.SizedObject
+import com.madgag.git.bfg.model.TreeBlobEntry
+import com.madgag.inclusion.IncExcExpression
 
 
 object CLIConfig {
@@ -100,6 +106,12 @@ object CLIConfig {
     opt[String]("massive-non-file-objects-sized-up-to").valueName("<size>").text("increase memory usage to handle over-size Commits, Tags, and Trees that are up to X in size (eg '10M')").action {
       (v, c) => c.copy(massiveNonFileObjects = Some(ByteSize.parse(v)))
     }
+    opt[String]("fix-filename-duplicates-preferring").valueName("<filemode>").text("Fix corrupt trees which contain multiple entries with the same filename, favouring the 'tree' or 'blob'").action {
+      (v, c) =>
+        val ord: Option[Ordering[FileMode]] = Some(Ordering.by[FileMode, Int](filemode => if (filemode==FileMode.TREE) 0 else 1))
+
+        c.copy(fixFilenameDuplicatesPreferring = ord)
+    }
     arg[File]("<repo>") optional() action { (x, c) =>
       c.copy(repoLocation = x) } text("file path for Git repository to clean")
   }
@@ -110,6 +122,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      protectBlobsFromRevisions: Set[String] = Set("HEAD"),
                      deleteFiles: Option[TextMatcher] = None,
                      deleteFolders: Option[TextMatcher] = None,
+                     fixFilenameDuplicatesPreferring: Option[Ordering[FileMode]] = None,
                      filenameFilters: Seq[Filter[String]] = Nil,
                      filterSizeThreshold: Int = BlobTextModifier.DefaultSizeThreshold,
                      textReplacementExpressions: Traversable[String] = List.empty,
@@ -137,6 +150,13 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     }
   }
 
+  lazy val fixFileNameDuplication: Option[Cleaner[Seq[Tree.Entry]]] = fixFilenameDuplicatesPreferring.map {
+    implicit preferredFileModes =>
+    { treeEntries: Seq[Tree.Entry] =>
+      treeEntries.groupBy(_.name).values.map(_.minBy(_.fileMode)).toSeq
+    }
+  }
+
   lazy val lineModifier: Option[String => String] = TextReplacementConfig(textReplacementExpressions)
 
   lazy val filterContentPredicate: (FileName => Boolean) = f => IncExcExpression(filenameFilters) includes (f.string)
@@ -155,6 +175,8 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
   lazy val privateDataRemoval = sensitiveData.getOrElse(Seq(fileDeletion, folderDeletion, blobTextModifier).flatten.nonEmpty)
 
   lazy val objectIdSubstitutor = if (privateDataRemoval) ObjectIdSubstitutor.OldIdsPrivate else ObjectIdSubstitutor.OldIdsPublic
+
+  lazy val treeEntryListCleaners = fixFileNameDuplication.toSeq
 
   lazy val commitNodeCleaners = {
     lazy val formerCommitFooter = if (privateDataRemoval) None else Some(FormerCommitFooter)
@@ -190,13 +212,14 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier).flatten
   }
 
-  lazy val definesNoWork = treeBlobCleaners.isEmpty && folderDeletion.isEmpty
+  lazy val definesNoWork = treeBlobCleaners.isEmpty && folderDeletion.isEmpty && treeEntryListCleaners.isEmpty
 
   def objectIdCleanerConfig: ObjectIdCleaner.Config =
     ObjectIdCleaner.Config(
       objectProtection,
       objectIdSubstitutor,
       commitNodeCleaners,
+      treeEntryListCleaners,
       treeBlobCleaners,
       folderDeletion.toSeq,
       objectChecker

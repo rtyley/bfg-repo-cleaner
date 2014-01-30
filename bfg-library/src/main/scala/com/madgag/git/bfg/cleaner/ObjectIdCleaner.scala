@@ -30,18 +30,22 @@ import bfg.model.Tree
 import bfg.model.TreeSubtrees
 import org.eclipse.jgit.lib._
 import com.madgag.git.bfg.GitUtil._
+import com.madgag.git.bfg.model.Tree.Entry
 
 object ObjectIdCleaner {
 
   case class Config(protectedObjectCensus: ProtectedObjectCensus,
                     objectIdSubstitutor: ObjectIdSubstitutor = ObjectIdSubstitutor.OldIdsPublic,
                     commitNodeCleaners: Seq[CommitNodeCleaner] = Seq.empty,
+                    treeEntryListCleaners: Seq[Cleaner[Seq[Tree.Entry]]] = Seq.empty,
                     treeBlobsCleaners: Seq[Cleaner[TreeBlobs]] = Seq.empty,
                     treeSubtreesCleaners: Seq[Cleaner[TreeSubtrees]] = Seq.empty,
                     // messageCleaners? - covers both Tag and Commits
                     objectChecker: Option[ObjectChecker] = None) {
 
     lazy val commitNodeCleaner = CommitNodeCleaner.chain(commitNodeCleaners)
+
+    lazy val treeEntryListCleaner = Function.chain(treeEntryListCleaners)
 
     lazy val treeBlobsCleaner = Function.chain(treeBlobsCleaners)
 
@@ -103,14 +107,17 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
   }
 
   def cleanTree(originalObjectId: ObjectId): ObjectId = {
-    val tree = Tree(originalObjectId)(threadLocalResources.reader())
+    val entries = Tree.entriesFor(originalObjectId)(threadLocalResources.reader())
+    val cleanedTreeEntries = treeEntryListCleaner(entries)
+
+    val tree = Tree(cleanedTreeEntries)
 
     val fixedTreeBlobs = treeBlobsCleaner(tree.blobs)
     val cleanedSubtrees = TreeSubtrees(treeSubtreesCleaner(tree.subtrees).entryMap.map {
       case (name, treeId) => (name, apply(treeId))
     }).withoutEmptyTrees
 
-    if (fixedTreeBlobs != tree.blobs || cleanedSubtrees != tree.subtrees) {
+    if (entries != cleanedTreeEntries || fixedTreeBlobs != tree.blobs || cleanedSubtrees != tree.subtrees) {
 
       val updatedTree = tree copyWith(cleanedSubtrees, fixedTreeBlobs)
 
