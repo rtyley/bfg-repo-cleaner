@@ -42,7 +42,7 @@ object FileName {
 class FileName(val bytes: Array[Byte]) {
 
   override def equals(that: Any): Boolean = that match {
-    case that: FileName => java.util.Arrays.equals(bytes, that.bytes)
+    case that: FileName => (hashCode == that.hashCode) && java.util.Arrays.equals(bytes, that.bytes)
     case _ => false
   }
 

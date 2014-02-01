@@ -34,7 +34,7 @@ object Tree {
     entry => entry.name ->(entry.fileMode, entry.objectId)
   }.toMap)
 
-  def apply(objectId: ObjectId)(implicit objectReader: ObjectReader): Tree = {
+  def entriesFor(objectId: ObjectId)(implicit objectReader: ObjectReader): Seq[Entry] = {
     val treeParser = new CanonicalTreeParser
     treeParser.reset(objectReader, objectId)
     val entries = collection.mutable.Buffer[Entry]()
@@ -42,8 +42,10 @@ object Tree {
       entries += Entry(treeParser)
       treeParser.next()
     }
-    Tree(entries)
+    entries
   }
+
+  // def apply(objectId: ObjectId)(implicit objectReader: ObjectReader) = Tree(entriesFor(objectId))
 
   case class Entry(name: FileName, fileMode: FileMode, objectId: ObjectId) extends Ordered[Entry] {
 

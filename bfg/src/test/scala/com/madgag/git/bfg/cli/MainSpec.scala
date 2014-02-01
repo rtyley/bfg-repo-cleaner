@@ -86,5 +86,13 @@ class MainSpec extends Specification {
       }
     }
   }
+
+  "Corrupt trees containing duplicate filenames" should {
+    "be cleaned by removing the file with the duplicate FileName, leaving the folder" in new unpackedRepo("/sample-repos/corruptTreeDupFileName.git.zip") {
+      ensureRemovalOf(commitHistory(haveFile("2.0.0").atLeastOnce)) {
+        run("--fix-filename-duplicates-preferring tree")
+      }
+    }
+  }
 }
 
