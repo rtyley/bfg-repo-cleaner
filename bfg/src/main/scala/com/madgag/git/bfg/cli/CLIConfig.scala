@@ -144,17 +144,17 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   lazy val objectChecker = if (strictObjectChecking) Some(new ObjectChecker()) else None
 
-  lazy val fileDeletion: Option[Cleaner[TreeBlobs]] = deleteFiles.map {
+  lazy val fileDeletion: Option[BlockingCleaner[TreeBlobs]] = deleteFiles.map {
     textMatcher => new FileDeleter(textMatcher)
   }
 
-  lazy val folderDeletion: Option[Cleaner[TreeSubtrees]] = deleteFolders.map {
+  lazy val folderDeletion: Option[BlockingCleaner[TreeSubtrees]] = deleteFolders.map {
     textMatcher => { subtrees: TreeSubtrees =>
       TreeSubtrees(subtrees.entryMap.filterKeys(filename => !textMatcher(filename)))
     }
   }
 
-  lazy val fixFileNameDuplication: Option[Cleaner[Seq[Tree.Entry]]] = fixFilenameDuplicatesPreferring.map {
+  lazy val fixFileNameDuplication: Option[BlockingCleaner[Seq[Tree.Entry]]] = fixFilenameDuplicatesPreferring.map {
     implicit preferredFileModes =>
     { treeEntries: Seq[Tree.Entry] => treeEntries.groupBy(_.name).values.map(_.minBy(_.fileMode)).toSeq }
   }
@@ -186,11 +186,11 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     Seq(new CommitMessageObjectIdsUpdater(objectIdSubstitutor)) ++ formerCommitFooter
   }
 
-  lazy val treeBlobCleaners: Seq[Cleaner[TreeBlobs]] = {
+  lazy val treeBlobCleaners: Seq[BlockingCleaner[TreeBlobs]] = {
 
     lazy val blobsByIdRemover: Option[BlobRemover] = stripBlobsWithIds.map(new BlobRemover(_))
 
-    lazy val blobRemover: Option[Cleaner[TreeBlobs]] = {
+    lazy val blobRemover: Option[BlockingCleaner[TreeBlobs]] = {
       implicit val progressMonitor: ProgressMonitor = new TextProgressMonitor()
 
       val sizeBasedBlobTargetSources = Seq(

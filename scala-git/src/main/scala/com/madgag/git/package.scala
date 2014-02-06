@@ -54,6 +54,8 @@ package object git {
       val revWalk=new RevWalk(repo)
       (revWalk, revWalk.getObjectReader)
     }
+
+    def nonSymbolicRefs = repo.getAllRefs.values.filterNot(_.isSymbolic)
   }
 
   implicit class RichString(str: String) {

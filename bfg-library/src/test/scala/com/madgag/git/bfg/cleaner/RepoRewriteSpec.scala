@@ -76,7 +76,7 @@ class RepoRewriteSpec extends Specification {
 
       commitMessageForRev("pure") must contain("6e76960ede2addbbe7e")
 
-      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus.none, OldIdsPrivate, Seq(new CommitMessageObjectIdsUpdater(OldIdsPrivate)), treeBlobsCleaners = Seq(new FileDeleter(Literal("sin")))))
+      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus.None, OldIdsPrivate, Seq(new CommitMessageObjectIdsUpdater(OldIdsPrivate)), treeBlobsCleaners = Seq(new FileDeleter(Literal("sin")))))
 
       commitMessageForRev("pure") must not contain ("6e76960ede2addbbe7e")
     }
@@ -133,7 +133,7 @@ class RepoRewriteSpec extends Specification {
 
         val threadLocalObjectDBResources = repo.getObjectDatabase.threadLocalResources
       }
-      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus.none, treeBlobsCleaners = Seq(blobTextModifier)))
+      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus.None, treeBlobsCleaners = Seq(blobTextModifier)))
 
       val cleanedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-ORIGINAL.$fileNamePostfix")
       val expectedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-MODIFIED-$before-$after.$fileNamePostfix")

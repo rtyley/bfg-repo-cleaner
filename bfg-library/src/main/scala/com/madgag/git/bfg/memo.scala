@@ -70,7 +70,7 @@ object MemoUtil {
       case (oldId, newId) => newId != oldId
     }.toMap
 
-    override def stats(): CacheStats = permanentCache.stats()
+    override def stats(): CacheStats = loadingCache.stats()
 
     val fix = fixer
   }

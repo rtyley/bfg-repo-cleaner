@@ -32,7 +32,7 @@ import com.madgag.git.bfg.cleaner.ObjectIdCleaner
 import com.madgag.git.bfg.GitUtil._
 
 object ProtectedObjectDirtReport {
-  def reportsFor(objectIdCleanerConfig: ObjectIdCleaner.Config, objectDB: ObjectDatabase, revWalk: RevWalk) = {
+  def reportsFor(objectIdCleanerConfig: ObjectIdCleaner.Config, objectDB: ObjectDatabase)(implicit revWalk: RevWalk) = {
     val uncaringCleaner: ObjectIdCleaner = new ObjectIdCleaner(
       objectIdCleanerConfig.copy(protectedObjectCensus = ProtectedObjectCensus.None),
       objectDB,
