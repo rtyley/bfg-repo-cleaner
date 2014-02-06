@@ -200,12 +200,15 @@ class CLIReporter(repo: Repository) extends Reporter {
     reportTreeDirtHistory()
 
     lazy val mapFile = reportsDir / "object-id-map.old-new.txt"
+    lazy val cacheStatsFile = reportsDir / "cache-stats.txt"
 
     val changedIds = objectIdCleaner.cleanedObjectMap()
 
     println(s"\n\nIn total, ${changedIds.size} object ids were changed - a record of these will be written to:\n\n\t${mapFile.path}")
 
     mapFile.writeStrings(SortedMap[AnyObjectId, ObjectId](changedIds.toSeq: _*).view.map { case (o,n) => s"${o.name} ${n.name}"}, "\n")
+
+    cacheStatsFile.writeStrings(objectIdCleaner.stats().seq.map(_.toString()), "\n")
 
     println("\nBFG run is complete!")
 
