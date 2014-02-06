@@ -20,7 +20,7 @@
 
 package com.madgag.git.bfg
 
-import com.google.common.cache.{CacheLoader, LoadingCache, CacheBuilder}
+import com.google.common.cache.{CacheStats, CacheLoader, LoadingCache, CacheBuilder}
 import com.madgag.git.bfg.cleaner._
 import collection.convert.decorateAsScala._
 
@@ -30,6 +30,8 @@ trait Memo[K, V] {
 
 trait MemoFunc[K,V] extends (K => V) {
   def asMap(): Map[K,V]
+
+  def stats(): CacheStats
 }
 
 object MemoUtil {
@@ -60,12 +62,14 @@ object MemoUtil {
           def asMap() = permanentCache.asMap().asScala.view.filter {
             case (oldId, newId) => newId != oldId
           }.toMap
+
+          override def stats(): CacheStats = permanentCache.stats()
         }
     }
   }
 
   def loaderCacheFor[K, V](calc: K => V)(postCalc: V => Unit): LoadingCache[K, V] =
-    CacheBuilder.newBuilder.asInstanceOf[CacheBuilder[K, V]].build(new CacheLoader[K, V] {
+    CacheBuilder.newBuilder.asInstanceOf[CacheBuilder[K, V]].recordStats().build(new CacheLoader[K, V] {
       def load(key: K): V = {
         val v = calc(key)
         postCalc(v)

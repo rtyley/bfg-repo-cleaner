@@ -145,6 +145,8 @@ object RepoRewriter {
 
     updateRefsWithCleanedIds()
 
+    objectIdCleaner.stats()
+
     objectIdCleaner.cleanedObjectMap()
   }
 
