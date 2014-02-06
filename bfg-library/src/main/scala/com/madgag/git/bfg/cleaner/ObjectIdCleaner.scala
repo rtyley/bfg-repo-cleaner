@@ -155,4 +155,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
         ProtectedObjectDirtReport(protectedRevObj, originalContentObject, replacementTreeOrBlob)
     }.toList
   }
+
+  def stats() = Map("apply"->memoClean.stats())
+
 }
