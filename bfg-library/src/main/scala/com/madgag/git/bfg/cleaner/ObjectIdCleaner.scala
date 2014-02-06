@@ -23,7 +23,7 @@ package com.madgag.git.bfg.cleaner
 import org.eclipse.jgit.revwalk.{RevObject, RevWalk, RevTag, RevCommit}
 import org.eclipse.jgit.lib.Constants._
 import com.madgag.git.bfg.cleaner.protection.{ProtectedObjectDirtReport, ProtectedObjectCensus}
-import com.madgag.git.bfg.{Memo, CleaningMapper, MemoUtil}
+import com.madgag.git.bfg._
 import com.madgag.git.bfg.model._
 import com.madgag.git._
 import bfg.model.Tree
@@ -33,6 +33,7 @@ import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.model.Tree.Entry
 import scala.concurrent.{ExecutionContext, Future}
 import ExecutionContext.Implicits.global
+import com.madgag.git.bfg.model.TreeSubtrees
 
 object ObjectIdCleaner {
 
@@ -105,7 +106,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
   def getTag(tagId: AnyObjectId): RevTag = revWalk synchronized (tagId asRevTag)
 
-  val cleanCommit: Cleaner[ObjectId] = commitMemo { commitId =>
+  val cleanCommit: MemoFunc[ObjectId, Future[ObjectId]] = commitMemo { commitId =>
     val originalRevCommit = getCommit(commitId)
     val originalCommit = Commit(originalRevCommit)
 
@@ -128,7 +129,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
   val cleanBlob: BlockingCleaner[ObjectId] = identity // Currently a NO-OP, we only clean at treeblob level
 
-  val cleanTree: BlockingCleaner[ObjectId] = treeMemo { originalObjectId =>
+  val cleanTree: MemoFunc[ObjectId, ObjectId] = treeMemo { originalObjectId =>
     val entries = Tree.entriesFor(originalObjectId)(threadLocalResources.reader())
     val cleanedTreeEntries = treeEntryListCleaner(entries)
 
@@ -153,7 +154,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     }
   }
 
-  val cleanTag: Cleaner[ObjectId] = tagMemo { id =>
+  val cleanTag: MemoFunc[ObjectId, Future[ObjectId]] = tagMemo { id =>
     val originalTag = getTag(id)
 
     val originalMessage = originalTag.getFullMessage
@@ -178,6 +179,6 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     }
   }
 
-  def stats() = Map("apply"->memoClean.stats())
+  def stats() = Map("apply"->memoClean.stats(), "tree" -> cleanTree.stats(), "commit" -> cleanCommit.stats(), "tag" -> cleanTag.stats())
 
 }
