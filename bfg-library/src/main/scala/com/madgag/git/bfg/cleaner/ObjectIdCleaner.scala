@@ -90,7 +90,8 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     mc
   }
 
-  def cleanedObjectMap(): Map[ObjectId, ObjectId] = memoClean.asMap().mapValues(_.value.get.get)
+  def cleanedObjectMap(): Map[ObjectId, ObjectId] =
+    cleanTree.asMap() ++ Seq(memoClean, cleanCommit, cleanTag).map(_.asMap().mapValues(_.value.get.get)).reduce(_ ++ _)
 
   def uncachedClean: Cleaner[ObjectId] = {
     objectId =>
