@@ -101,7 +101,7 @@ object RepoRewriter {
     def clean(commits: Seq[RevCommit]) = {
       reporter.reportCleaningStart(commits)
 
-      Future.traverse(commits)(objectIdCleaner) // .cleanCommit
+      Future.traverse(commits)(objectIdCleaner.cleanCommit)
     }
 
     lazy val requiredRefUpdatesFuture: Future[Iterable[ReceiveCommand]] = Future.sequence(
