@@ -22,12 +22,14 @@ object BenchmarkConfig {
     opt[File]("scratch-dir").text("Temp-dir for job runs - preferably ramdisk, eg tmpfs.").action {
       (v, c) => c.copy(scratchDir = v)
     }
+    opt[Unit]("only-bfg") action { (_, c) => c.copy(onlyBfg = true) } text("Don't benchmark git-filter-branch")
   }
 }
 case class BenchmarkConfig(resourcesDirOption: Path = Path.fromString(System.getProperty("user.dir")) / "bfg-benchmark" / "resources",
                            scratchDir: DefaultPath = Path.fromString("/dev/shm/"),
                            bfgVersions: Seq[String] = Seq.empty,
                            commands: TextMatcher = Glob("*"),
+                           onlyBfg: Boolean = false,
                            repoNames: Seq[String] = Seq.empty) {
 
   lazy val resourcesDir = Path.fromString(resourcesDirOption.path).toAbsolute

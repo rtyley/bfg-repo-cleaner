@@ -74,7 +74,7 @@ object Benchmark extends App {
             duration.map(d => desc -> d)
           }.flatten
 
-          val gfbDuration: Option[Duration] = runJobFor("gfb", new ProcessGen {
+          val gfbDuration: Option[Duration] = if (config.onlyBfg) None else runJobFor("gfb", new ProcessGen {
             lazy val description = "git filter-branch"
             def genProcess(paramsInput: Input, repoPath: DefaultPath) =
               Process(Seq("git", "filter-branch") ++ paramsInput.lines(), repoPath)
