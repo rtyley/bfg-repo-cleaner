@@ -24,11 +24,12 @@ import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import org.eclipse.jgit.transport.ReceiveCommand
 import org.eclipse.jgit.revwalk.RevSort._
 import com.madgag.git.bfg.Timing
-import concurrent.future
+import scala.concurrent.{Await, Future, future}
 import concurrent.ExecutionContext.Implicits.global
 import scala.collection.convert.wrapAll._
 import com.madgag.git._
 import org.eclipse.jgit.lib.ObjectId
+import scala.concurrent.duration.Duration
 
 /*
 Encountering a blob ->
@@ -91,59 +92,55 @@ object RepoRewriter {
 
     reporter.reportRefsForScan(allRefs)
 
-    val objectIdCleaner = new ObjectIdCleaner(objectIdCleanerConfig, repo.getObjectDatabase, revWalk)
+    reporter.reportObjectProtection(objectIdCleanerConfig)(repo.getObjectDatabase, revWalk)
 
-    reporter.reportObjectProtection(objectIdCleanerConfig, objectIdCleaner)
+    val objectIdCleaner = new ObjectIdCleaner(objectIdCleanerConfig, repo.getObjectDatabase, revWalk)
 
     val commits = revWalk.toList
 
-    def clean(commits: Seq[RevCommit]) {
+    def clean(commits: Seq[RevCommit]) = {
       reporter.reportCleaningStart(commits)
 
-      Timing.measureTask("Cleaning commits", commits.size) {
-        future {
-          commits.par.foreach {
-            commit => objectIdCleaner(commit.getTree)
-          }
-        }
+      Future.traverse(commits)(objectIdCleaner) // .cleanCommit
+    }
 
-        commits.foreach {
-          commit =>
-            objectIdCleaner(commit)
-            progressMonitor update 1
+    lazy val requiredRefUpdatesFuture: Future[Iterable[ReceiveCommand]] = Future.sequence(
+      for (ref <- repo.nonSymbolicRefs)
+      yield for (substitutionOpt <- objectIdCleaner.substitution(ref.getObjectId))
+      yield for { (oldId, newId) <- substitutionOpt }
+      yield new ReceiveCommand(oldId, newId, ref.getName)
+    ).map(_.flatten)
+
+    def updateRefsWithCleanedIds() = {
+      for (refUpdateCommands <- requiredRefUpdatesFuture) yield {
+        if (refUpdateCommands.isEmpty) {
+          println("\nBFG aborting: No refs to update - no dirty commits found??\n")
+        } else {
+          reporter.reportRefUpdateStart(refUpdateCommands)
+
+          Timing.measureTask("...Ref update", refUpdateCommands.size) {
+            // Hack a fix for issue #23 : Short-cut the calculation that determines an update is NON-FF
+            val quickMergeCalcRevWalk = new RevWalk(revWalk.getObjectReader) {
+              override def isMergedInto(base: RevCommit, tip: RevCommit) =
+                if (tip == objectIdCleaner(base)) false else super.isMergedInto(base, tip)
+            }
+
+            refDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands)
+              .execute(quickMergeCalcRevWalk, progressMonitor)
+          }
+
+          reporter.reportResults(commits, objectIdCleaner)
         }
       }
     }
 
-    def updateRefsWithCleanedIds() {
-      val refUpdateCommands = for (ref <- repo.getAllRefs.values if !ref.isSymbolic;
-                                   (oldId, newId) <- objectIdCleaner.substitution(ref.getObjectId)
-      ) yield new ReceiveCommand(oldId, newId, ref.getName)
 
-      if (refUpdateCommands.isEmpty) {
-        println("\nBFG aborting: No refs to update - no dirty commits found??\n")
-      } else {
-        reporter.reportRefUpdateStart(refUpdateCommands)
+    val boo = clean(commits)
+    Await.ready(boo, Duration.Inf)
 
-        Timing.measureTask("...Ref update", refUpdateCommands.size) {
-          // Hack a fix for issue #23 : Short-cut the calculation that determines an update is NON-FF
-          val quickMergeCalcRevWalk = new RevWalk(revWalk.getObjectReader) {
-            override def isMergedInto(base: RevCommit, tip: RevCommit) =
-              if (tip == objectIdCleaner(base)) false else super.isMergedInto(base, tip)
-          }
+    println(s"Waited on ${Await.result(requiredRefUpdatesFuture, Duration.Inf)}")
 
-          refDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands)
-            .execute(quickMergeCalcRevWalk, progressMonitor)
-        }
-
-        reporter.reportResults(commits, objectIdCleaner)
-      }
-    }
-
-
-    clean(commits)
-
-    updateRefsWithCleanedIds()
+    Await.ready(updateRefsWithCleanedIds(), Duration.Inf)
 
     objectIdCleaner.stats()
 

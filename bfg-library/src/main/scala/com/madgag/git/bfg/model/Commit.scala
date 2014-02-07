@@ -4,6 +4,8 @@ import com.madgag.git.bfg.cleaner._
 import java.nio.charset.Charset
 import org.eclipse.jgit.lib.{Constants, PersonIdent, ObjectId, CommitBuilder}
 import org.eclipse.jgit.revwalk.RevCommit
+import scala.concurrent.{ExecutionContext, Future, future}
+import ExecutionContext.Implicits.global
 
 /*
  * Copyright (c) 2012, 2013 Roberto Tyley
@@ -52,7 +54,13 @@ object CommitArcs {
 }
 
 case class CommitArcs(parents: Seq[ObjectId], tree: ObjectId) {
-  def cleanWith(cleaner: Cleaner[ObjectId]) = CommitArcs(parents map cleaner, cleaner(tree))
+  def cleanWith(cleaner: ObjectIdCleaner) = {
+    val parentsF = Future.traverse(parents)(cleaner.cleanCommit)
+    val treeF = future { cleaner.cleanTree(tree) }
+    for { updatedParents <- parentsF; updatedTree <- treeF } yield CommitArcs(updatedParents, updatedTree)
+  }
+
+
 }
 
 object CommitNode {

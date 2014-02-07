@@ -25,8 +25,11 @@ import org.specs2.mutable._
 import ObjectIdSubstitutor.hexRegex
 import com.madgag.git._
 import com.madgag.git.test._
+import scala.concurrent.Future
+import Future.successful
+import org.specs2.matcher.FutureMatchers
 
-class ObjectIdSubstitutorSpec extends Specification {
+class ObjectIdSubstitutorSpec extends Specification with FutureMatchers {
 
   "Object Id Substitutor regex" should {
     "match hex strings" in {
@@ -50,9 +53,9 @@ class ObjectIdSubstitutorSpec extends Specification {
       implicit val repo = unpackRepo("/sample-repos/example.git.zip")
       implicit val reader = repo.newObjectReader
 
-      val cleanedMessage = ObjectIdSubstitutor.OldIdsPublic.replaceOldIds("See 3699910d2baab1 for backstory", reader, (_: ObjectId) => abbrId("06d7405020018d"))
+      val cleanedMessage = ObjectIdSubstitutor.OldIdsPublic.replaceOldIds("See 3699910d2baab1 for backstory", reader, (_: ObjectId) => successful(abbrId("06d7405020018d")))
 
-      cleanedMessage mustEqual "See 06d7405020018d [formerly 3699910d2baab1] for backstory"
+      cleanedMessage must be_==("See 06d7405020018d [formerly 3699910d2baab1] for backstory").await
     }
   }
 

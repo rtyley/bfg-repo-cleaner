@@ -24,10 +24,15 @@ import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId, ObjectReader}
 import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.cleaner.ObjectIdSubstitutor._
 import com.madgag.git._
+import scala.concurrent._
+import scala.concurrent.{ExecutionContext, Future}
+import ExecutionContext.Implicits.global
 
 class CommitMessageObjectIdsUpdater(objectIdSubstitutor: ObjectIdSubstitutor) extends CommitNodeCleaner {
 
-  override def fixer(kit: CommitNodeCleaner.Kit) = commitNode => commitNode.copy(message = objectIdSubstitutor.replaceOldIds(commitNode.message, kit.threadLocalResources.reader(), kit.mapper))
+  override def fixer(kit: CommitNodeCleaner.Kit) = commitNode => (objectIdSubstitutor.replaceOldIds(commitNode.message, kit.threadLocalResources.reader(), kit.mapper)).map {
+    updatedMessage => commitNode.copy(message = updatedMessage)
+  }
 
 }
 
@@ -50,12 +55,14 @@ trait ObjectIdSubstitutor {
   def format(oldIdText: String, newIdText: String): String
 
   // slow!
-  def replaceOldIds(message: String, reader: ObjectReader, mapper: Cleaner[ObjectId]): String = {
-    hexRegex.replaceAllIn(message, m => {
-      Some(AbbreviatedObjectId.fromString(m.matched)).flatMap(id=> reader.resolveExistingUniqueId(id).toOption).flatMap(mapper.substitution).map {
-        case (oldId, newId) =>
-          format(m.matched, reader.abbreviate(newId, m.matched.length).name)
-      }.getOrElse(m.matched)
-    })
+  def replaceOldIds(message: String, reader: ObjectReader, mapper: Cleaner[ObjectId]): Future[String] = {
+    val substitutionsFuture: Future[Map[String, String]] = Future.sequence(for {
+      m: String <- hexRegex.findAllIn(message).toSet
+      objectId <- reader.resolveExistingUniqueId(AbbreviatedObjectId.fromString(m)).toOption
+    } yield mapper.replacement(objectId).map(_.map(newId => m -> format(m, reader.abbreviate(newId, m.length).name)))).map(_.flatten.toMap)
+
+    substitutionsFuture.map { substitutions =>
+      if (substitutions.isEmpty) message else hexRegex.replaceSomeIn(message, m => substitutions.get(m.matched))
+    }
   }
 }
