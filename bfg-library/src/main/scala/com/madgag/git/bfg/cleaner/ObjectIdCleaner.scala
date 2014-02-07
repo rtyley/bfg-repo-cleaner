@@ -23,7 +23,7 @@ package com.madgag.git.bfg.cleaner
 import org.eclipse.jgit.revwalk.{RevWalk, RevTag, RevCommit}
 import org.eclipse.jgit.lib.Constants._
 import com.madgag.git.bfg.cleaner.protection.{ProtectedObjectDirtReport, ProtectedObjectCensus}
-import com.madgag.git.bfg.{Memo, CleaningMapper, MemoUtil}
+import com.madgag.git.bfg.{MemoFunc, Memo, CleaningMapper, MemoUtil}
 import com.madgag.git.bfg.model._
 import com.madgag.git._
 import bfg.model.Tree
@@ -66,6 +66,11 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
   // want to enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
   val memo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds)
 
+  val commitMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds)
+  val tagMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds)
+
+  val treeMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds)
+
   def apply(objectId: ObjectId): ObjectId = memoClean(objectId)
 
   val memoClean = memo {
@@ -88,7 +93,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
   def getTag(tagId: AnyObjectId): RevTag = revWalk synchronized (tagId asRevTag)
 
-  def cleanCommit(commitId: ObjectId): ObjectId = {
+  val cleanCommit: MemoFunc[ObjectId, ObjectId] = commitMemo { commitId =>
     val originalRevCommit = getCommit(commitId)
     val originalCommit = Commit(originalRevCommit)
 
@@ -106,7 +111,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     }
   }
 
-  def cleanTree(originalObjectId: ObjectId): ObjectId = {
+  val cleanTree: MemoFunc[ObjectId, ObjectId] = treeMemo { originalObjectId =>
     val entries = Tree.entriesFor(originalObjectId)(threadLocalResources.reader())
     val cleanedTreeEntries = treeEntryListCleaner(entries)
 
@@ -131,7 +136,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     }
   }
 
-  def cleanTag(id: ObjectId): ObjectId = {
+  val cleanTag: MemoFunc[ObjectId, ObjectId] = tagMemo { id =>
     val originalTag = getTag(id)
 
     replacement(originalTag.getObject).map {
@@ -156,6 +161,6 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     }.toList
   }
 
-  def stats() = Map("apply"->memoClean.stats())
+  def stats() = Map("apply"->memoClean.stats(), "tree" -> cleanTree.stats(), "commit" -> cleanCommit.stats(), "tag" -> cleanTag.stats())
 
 }
