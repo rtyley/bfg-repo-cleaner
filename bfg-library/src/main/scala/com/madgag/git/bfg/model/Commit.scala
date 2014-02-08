@@ -52,7 +52,7 @@ object CommitArcs {
 }
 
 case class CommitArcs(parents: Seq[ObjectId], tree: ObjectId) {
-  def cleanWith(cleaner: Cleaner[ObjectId]) = CommitArcs(parents map cleaner, cleaner(tree))
+  def cleanWith(cleaner: ObjectIdCleaner) = CommitArcs(parents map cleaner.cleanCommit, cleaner.cleanTree(tree))
 }
 
 object CommitNode {
