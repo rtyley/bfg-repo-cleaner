@@ -58,7 +58,9 @@ object CLIConfig {
       }
     }
 
-    head("bfg", BuildInfo.version)
+    val exactVersion = BuildInfo.version + (if (BuildInfo.version.contains("-SNAPSHOT")) s" (${BuildInfo.gitDescription})" else "")
+
+    head("bfg", exactVersion)
     version("version").hidden()
 
     opt[String]('b', "strip-blobs-bigger-than").valueName("<size>").text("strip blobs bigger than X (eg '128K', '1M', etc)").action {

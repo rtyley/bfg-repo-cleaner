@@ -8,6 +8,8 @@ import sbtrelease.ReleaseStateTransformations._
 
 object common {
 
+  val VersionEndingInSnapshot = """(.*)-SNAPSHOT""".r
+
   lazy val signedReleaseSettings = releaseSettings ++ Seq(
     releaseProcess ~= {
       s: Seq[ReleaseStep] =>
