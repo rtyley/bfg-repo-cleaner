@@ -35,8 +35,9 @@ trait Reporter {
 class CLIReporter(repo: Repository) extends Reporter {
 
   lazy val reportsDir = {
-    val dateString = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm").format(new Date())
-    val dir = Path.fromString(repo.topDirectory.getAbsolutePath + ".bfg-report") / dateString
+    val now = new Date()
+    def format(s: String) = new SimpleDateFormat(s).format(now)
+    val dir = Path.fromString(repo.topDirectory.getAbsolutePath + ".bfg-report") / format("yyyy-MM-dd") / format("HH-mm-ss")
     dir.doCreateDirectory()
     dir
   }
