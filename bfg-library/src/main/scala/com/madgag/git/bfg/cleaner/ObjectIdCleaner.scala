@@ -112,6 +112,8 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     }
   }
 
+  val cleanBlob: Cleaner[ObjectId] = identity // Currently a NO-OP, we only clean at treeblob level
+
   val cleanTree: MemoFunc[ObjectId, ObjectId] = treeMemo { originalObjectId =>
     val entries = Tree.entriesFor(originalObjectId)(threadLocalResources.reader())
     val cleanedTreeEntries = treeEntryListCleaner(entries)

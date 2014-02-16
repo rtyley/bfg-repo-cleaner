@@ -20,17 +20,39 @@
 
 package com.madgag.git.bfg.cleaner.protection
 
-import org.eclipse.jgit.revwalk.{RevWalk, RevObject}
-import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.revwalk.{RevTree, RevBlob, RevWalk, RevObject}
+import org.eclipse.jgit.lib.{ObjectDatabase, ObjectId}
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.TreeFilter
 import com.madgag.git._
 import scala.collection.convert.wrapAsScala._
 import org.eclipse.jgit.diff.DiffEntry
 import org.eclipse.jgit.diff.DiffEntry.ChangeType._
+import com.madgag.git.bfg.cleaner.ObjectIdCleaner
+import com.madgag.git.bfg.GitUtil._
+
+object ProtectedObjectDirtReport {
+  def reportsFor(objectIdCleanerConfig: ObjectIdCleaner.Config, objectDB: ObjectDatabase)(implicit revWalk: RevWalk) = {
+    val uncaringCleaner: ObjectIdCleaner = new ObjectIdCleaner(
+      objectIdCleanerConfig.copy(protectedObjectCensus = ProtectedObjectCensus.None),
+      objectDB,
+      revWalk
+    )
+
+    for (protectedRevObj <- objectIdCleanerConfig.protectedObjectCensus.protectorRevsByObject.keys) yield {
+      val originalContentTreeOrBlob = treeOrBlobPointedToBy(protectedRevObj)
+      val replacementTreeOrBlob = originalContentTreeOrBlob.fold(uncaringCleaner.cleanBlob.replacement, uncaringCleaner.cleanTree.replacement)
+      ProtectedObjectDirtReport(protectedRevObj, originalContentTreeOrBlob.merge, replacementTreeOrBlob)
+    }
+  }
+}
 
 /**
- * @param revObject - the protected object (eg protected because it is the HEAD commit)
+ * The function of the ProtectedObjectDirtReport is tell the user that this is the stuff they've decided
+ * to protect in their latest commits - it's the stuff The BFG /would/ remove if you hadn't told it to
+ * hold back,
+ *
+ * @param revObject - the protected object (eg protected because it is the HEAD commit, or even by additional refs)
  * @param originalTreeOrBlob - the unmodified content-object referred to by the protected object (may be same object)
  * @param replacementTreeOrBlob - an option, populated if cleaning creates a replacement for the content-object
  */
