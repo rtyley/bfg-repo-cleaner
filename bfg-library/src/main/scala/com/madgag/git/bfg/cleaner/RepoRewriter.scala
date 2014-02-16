@@ -116,7 +116,7 @@ object RepoRewriter {
     }
 
     def updateRefsWithCleanedIds() {
-      val refUpdateCommands = for (ref <- repo.getAllRefs.values if !ref.isSymbolic;
+      val refUpdateCommands = for (ref <- repo.nonSymbolicRefs;
                                    (oldId, newId) <- objectIdCleaner.substitution(ref.getObjectId)
       ) yield new ReceiveCommand(oldId, newId, ref.getName)
 
