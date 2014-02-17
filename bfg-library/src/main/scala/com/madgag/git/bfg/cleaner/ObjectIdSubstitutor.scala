@@ -51,11 +51,12 @@ trait ObjectIdSubstitutor {
 
   // slow!
   def replaceOldIds(message: String, reader: ObjectReader, mapper: Cleaner[ObjectId]): String = {
-    hexRegex.replaceAllIn(message, m => {
-      Some(AbbreviatedObjectId.fromString(m.matched)).flatMap(id=> reader.resolveExistingUniqueId(id).toOption).flatMap(mapper.substitution).map {
-        case (oldId, newId) =>
-          format(m.matched, reader.abbreviate(newId, m.matched.length).name)
-      }.getOrElse(m.matched)
-    })
+    val substitutionOpts = for {
+      m: String <- hexRegex.findAllIn(message).toSet
+      objectId <- reader.resolveExistingUniqueId(AbbreviatedObjectId.fromString(m)).toOption
+    } yield mapper.replacement(objectId).map(newId => m -> format(m, reader.abbreviate(newId, m.length).name))
+
+    val substitutions = substitutionOpts.flatten.toMap
+    if (substitutions.isEmpty) message else hexRegex.replaceSomeIn(message, m => substitutions.get(m.matched))
   }
 }
