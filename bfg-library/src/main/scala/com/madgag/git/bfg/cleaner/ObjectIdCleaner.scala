@@ -65,12 +65,12 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
   val deletionsByFilename = new ConcurrentMultiMap[FileName, ObjectId]
 
   // want to enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
-  val memo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds)
+  val memo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentBlockingCleanerMemo(protectedObjectCensus.fixedObjectIds)
 
-  val commitMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo()
-  val tagMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo()
+  val commitMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentBlockingCleanerMemo()
+  val tagMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentBlockingCleanerMemo()
 
-  val treeMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.treeIds.toSet[ObjectId])
+  val treeMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentBlockingCleanerMemo(protectedObjectCensus.treeIds.toSet[ObjectId])
 
   def apply(objectId: ObjectId): ObjectId = memoClean(objectId)
 
