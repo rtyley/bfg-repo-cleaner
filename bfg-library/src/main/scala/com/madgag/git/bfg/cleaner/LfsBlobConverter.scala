@@ -52,7 +52,7 @@ class LfsBlobConverter(
 
   implicit val UTF_8 = Charset.forName("UTF-8")
 
-  val lfsPointerMemo = MemoUtil.concurrentCleanerMemo[ObjectId]()
+  val lfsPointerMemo = MemoUtil.concurrentBlockingCleanerMemo[ObjectId](Set.empty)
   
   override def apply(dirtyBlobs: TreeBlobs) = {
     val cleanedBlobs = super.apply(dirtyBlobs)
