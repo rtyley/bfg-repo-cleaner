@@ -58,7 +58,7 @@ object Benchmark extends App {
               commandDir.children().foreach(p => p.copyTo(repoDir / p.name))
               val process = processGen.genProcess(paramsPath, repoDir)
               Some(measureTask(s"$commandName - ${processGen.description}") {
-                process!(ProcessLogger(_ => Unit))
+                process!ProcessLogger(_ => Unit)
               })
             } else None
           }
