@@ -2,8 +2,8 @@ package com.madgag.git.bfg.test
 
 import scala.collection.convert.wrapAsScala._
 import org.eclipse.jgit.lib.{Constants, ObjectReader, ObjectId, Repository}
-import org.eclipse.jgit.revwalk.RevCommit
-import org.specs2.matcher.{MustThrownMatchers, Matcher}
+import org.eclipse.jgit.revwalk.{RevObject, RevTree, RevCommit}
+import org.specs2.matcher.{Matcher, MustThrownMatchers}
 import com.madgag.git._
 import com.madgag.git.test._
 import org.specs2.specification.Scope
@@ -32,18 +32,28 @@ class unpackedRepo(filePath: String) extends Scope with MustThrownMatchers {
     }.toSet
   }
 
-  def haveFile(name: String) = be_==(name).atLeastOnce ^^ { (c: RevCommit) => treeEntryNames(c, !_.isSubtree) }
+  def haveFile(name: String) = haveTreeEntry(name, !_.isSubtree)
 
-  def haveFolder(name: String) = be_==(name).atLeastOnce ^^ { (c: RevCommit) => treeEntryNames(c, _.isSubtree) }
+  def haveFolder(name: String) = haveTreeEntry(name, _.isSubtree)
 
-  def treeEntryNames(c: RevCommit, p: TreeWalk => Boolean): Seq[String] =
-    c.getTree.walk(postOrderTraversal = true).withFilter(p).map(_.getNameString).toList
+  def haveTreeEntry(name: String, p: TreeWalk => Boolean) = be_==(name).atLeastOnce ^^ { (treeish: ObjectId) =>
+    treeOrBlobPointedToBy(treeish.asRevObject) match {
+      case Right(tree) => treeEntryNames(tree, p)
+      case Left(blob) => Seq.empty[String]
+    }
+  }
+
+  def treeEntryNames(t: RevTree, p: TreeWalk => Boolean): Seq[String] =
+    t.walk(postOrderTraversal = true).withFilter(p).map(_.getNameString).toList
 
   def run(options: String) {
     Main.main(options.split(' ') :+ repo.getDirectory.getAbsolutePath)
   }
 
-  def commitHist(implicit repo: Repository) = repo.git.log.all.call.toSeq.reverse
+  def commitHist(specificRefs: String*)(implicit repo: Repository) = {
+    val logCommand = repo.git.log
+    if (specificRefs.isEmpty) logCommand.all else specificRefs.foldLeft(logCommand)((lc, ref) => lc.add(repo.resolve(ref)))
+  }.call.toSeq.reverse
 
   def haveCommitWhereObjectIds(boom: Matcher[Traversable[ObjectId]])(implicit reader: ObjectReader): Matcher[RevCommit] = boom ^^ {
     (c: RevCommit) => c.getTree.walk().map(_.getObjectId(0)).toSeq
@@ -53,8 +63,12 @@ class unpackedRepo(filePath: String) extends Scope with MustThrownMatchers {
     (r: Repository) => r resolve (refName) aka s"Ref [$refName]"
   }
 
-  def commitHistory(histMatcher: Matcher[Seq[RevCommit]]): Matcher[Repository] = histMatcher ^^ {
-    (r: Repository) => commitHist(r)
+  def commitHistory(histMatcher: Matcher[Seq[RevCommit]]) = histMatcher ^^ {
+    r: Repository => commitHist()(r)
+  }
+
+  def commitHistoryFor(refs: String*)(histMatcher: Matcher[Seq[RevCommit]]) = histMatcher ^^ {
+    r: Repository => commitHist(refs:_*)(r)
   }
 
   def ensureRemovalOfBadEggs[S,T](expr : => Traversable[S], exprResultMatcher: Matcher[Traversable[S]])(block: => T) = {
@@ -79,5 +93,11 @@ class unpackedRepo(filePath: String) extends Scope with MustThrownMatchers {
     val originalValue = f
     block
     f mustEqual originalValue
+  }
+
+  def ensureInvariant[T](repoMatcher: Matcher[Repository])(block: => T) = {
+    repo must repoMatcher
+    block
+    repo must repoMatcher
   }
 }

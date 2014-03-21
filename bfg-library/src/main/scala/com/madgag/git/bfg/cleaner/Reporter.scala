@@ -125,7 +125,9 @@ class CLIReporter(repo: Repository) extends Reporter {
               abbreviate(diffEntries.view.map(diffDetails).map(fileInfo), "...").foreach {
                 dirtyFile => println("\t- " + dirtyFile)
               }
-              val diffFile = protectedDirtDir / s"${report.revObject.shortName}-${protectorRevs.mkString("_")}.csv"
+
+              val protectorRefsFileNameSafe = protectorRevs.mkString("_").replace(protectedDirtDir.separator, "-")
+              val diffFile = protectedDirtDir / s"${report.revObject.shortName}-${protectorRefsFileNameSafe}.csv"
 
               diffFile.writeStrings(diffEntries.map {
                 diffEntry =>

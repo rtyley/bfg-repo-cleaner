@@ -33,7 +33,7 @@ class MainSpec extends Specification {
     "not change commits unnecessarily" in new unpackedRepo("/sample-repos/exampleWithInitialCleanHistory.git.zip") {
       implicit val r = reader
 
-      ensureInvariant(commitHist take 2) {
+      ensureInvariant(commitHist() take 2) {
         ensureRemovalOf(commitHistory(haveCommitWhereObjectIds(contain(be_==(abbrId("294f")))).atLeastOnce)) {
           run("--strip-blobs-bigger-than 1K")
         }
@@ -55,6 +55,14 @@ class MainSpec extends Specification {
     "remove bad folder named '.git'" in new unpackedRepo("/sample-repos/badRepoContainingDotGitFolder.git.zip") {
       ensureRemovalOf(commitHistory(haveFolder(".git").atLeastOnce)) {
         run("--delete-folders .git --no-blob-protection")
+      }
+    }
+
+    "not crash when facing a protected branch containing a slash in it's name" in new unpackedRepo("/sample-repos/branchNameWithASlash.git.zip") {
+      ensureInvariant(haveRef("feature/slashes-are-ugly", haveFile("bar"))) {
+        ensureRemovalOf(commitHistoryFor("master")(haveFile("bar").atLeastOnce)) {
+          run("--delete-files bar --protect-blobs-from feature/slashes-are-ugly")
+        }
       }
     }
 
