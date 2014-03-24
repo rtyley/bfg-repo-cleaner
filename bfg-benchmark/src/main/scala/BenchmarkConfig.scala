@@ -1,7 +1,8 @@
 import com.madgag.textmatching.{Glob, TextMatcher}
 import java.io.File
+import java.nio.file.FileSystems
 import scalax.file.defaultfs.DefaultPath
-import scalax.file.Path
+import scalax.file.{FileSystem, Path}
 import scalax.file.ImplicitConversions._
 import scopt.OptionParser
 
@@ -9,6 +10,9 @@ object BenchmarkConfig {
   val parser = new OptionParser[BenchmarkConfig]("benchmark") {
     opt[File]("resources-dir").text("benchmark resources folder - contains jars and repos").action {
       (v, c) => c.copy(resourcesDirOption = v)
+    }
+    opt[String]("java").text("Java command paths").action {
+      (v, c) => c.copy(javaCmds = v.split(',').toSeq)
     }
     opt[String]("versions").text("BFG versions to time - bfg-[version].jar - eg 1.4.0,1.5.0,1.6.0").action {
       (v, c) => c.copy(bfgVersions = v.split(",").toSeq)
@@ -27,6 +31,7 @@ object BenchmarkConfig {
 }
 case class BenchmarkConfig(resourcesDirOption: Path = Path.fromString(System.getProperty("user.dir")) / "bfg-benchmark" / "resources",
                            scratchDir: DefaultPath = Path.fromString("/dev/shm/"),
+                           javaCmds: Seq[String] = Seq("java"),
                            bfgVersions: Seq[String] = Seq.empty,
                            commands: TextMatcher = Glob("*"),
                            onlyBfg: Boolean = false,
