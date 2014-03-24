@@ -58,6 +58,14 @@ class MainSpec extends Specification {
       }
     }
 
+    "not crash when protecting an annotated tag" in new unpackedRepo("/sample-repos/annotatedTagExample.git.zip") {
+      ensureInvariant(haveRef("chapter1", haveFile("chapter1.txt"))) {
+        ensureRemovalOf(commitHistoryFor("master")(haveFile("chapter2.txt").atLeastOnce)) {
+          run("--strip-blobs-bigger-than 10 --protect-blobs-from chapter1")
+        }
+      }
+    }
+
     "not crash when facing a protected branch containing a slash in it's name" in new unpackedRepo("/sample-repos/branchNameWithASlash.git.zip") {
       ensureInvariant(haveRef("feature/slashes-are-ugly", haveFile("bar"))) {
         ensureRemovalOf(commitHistoryFor("master")(haveFile("bar").atLeastOnce)) {

@@ -208,7 +208,7 @@ package object git {
     case commit: RevCommit => Right(commit.getTree)
     case tree: RevTree => Right(tree)
     case blob: RevBlob => Left(blob)
-    case tag: RevTag => treeOrBlobPointedToBy(tag.getObject)
+    case tag: RevTag => treeOrBlobPointedToBy(revWalk.peel(tag))
   }
 
   def allBlobsUnder(tree: RevTree)(implicit reader: ObjectReader): Set[ObjectId] = {
