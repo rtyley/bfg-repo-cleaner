@@ -8,6 +8,8 @@ import scalax.file.ImplicitConversions._
 import java.lang.System.nanoTime
 import scalax.file.PathMatcher.IsDirectory
 import scalax.io.{Input, Codec}
+import scala.concurrent._
+import ExecutionContext.Implicits.global
 
 object Benchmark extends App {
 
@@ -24,6 +26,9 @@ object Benchmark extends App {
       val missingJars = config.bfgJars.filterNot(_.exists).map(_.toAbsolute.path)
       require(missingJars.isEmpty, s"Missing BFG jars : ${missingJars.mkString(",")}")
 
+      def javaVersions(): Future[Map[String, String]] =
+        Future.traverse(config.javaCmds)(jc => JavaVersion.version(jc).map(jc -> _)).map(_.toMap)
+
       def extractRepoFrom(zipPath: Path) = {
         val repoDir = config.scratchDir / "repo.git"
 
@@ -38,50 +43,59 @@ object Benchmark extends App {
         repoDir
       }
 
-      config.repoSpecDirs.foreach { repoSpecDir =>
-        val repoName = repoSpecDir.name
+      for (jvs <- javaVersions()) {
+        config.repoSpecDirs.foreach {
+          repoSpecDir =>
+            val repoName = repoSpecDir.name
 
-        println(s"Repo : $repoName")
+            println(s"Repo : $repoName")
 
-        val availableCommandDirs = (repoSpecDir / "commands").children().filter(IsDirectory)
+            val availableCommandDirs = (repoSpecDir / "commands").children().filter(IsDirectory)
 
-        println(s"Available commands for $repoName : ${availableCommandDirs.map(_.name).mkString(", ")}")
+            println(s"Available commands for $repoName : ${availableCommandDirs.map(_.name).mkString(", ")}")
 
-        availableCommandDirs.filter(p => config.commands(p.name)).foreach { commandDir =>
+            availableCommandDirs.filter(p => config.commands(p.name)).foreach {
+              commandDir =>
 
-          val commandName = commandDir.name
+                val commandName = commandDir.name
 
-          def runJobFor(typ: String, processGen: ProcessGen):Option[Duration] = {
-            val paramsPath = commandDir / s"$typ.txt"
-            if (paramsPath.exists) {
-              val repoDir: DefaultPath = extractRepoFrom(repoSpecDir / "repo.git.zip")
-              commandDir.children().foreach(p => p.copyTo(repoDir / p.name))
-              val process = processGen.genProcess(paramsPath, repoDir)
-              Some(measureTask(s"$commandName - ${processGen.description}") {
-                process!ProcessLogger(_ => Unit)
-              })
-            } else None
-          }
+                def runJobFor(typ: String, processGen: ProcessGen): Option[Duration] = {
+                  val paramsPath = commandDir / s"$typ.txt"
+                  if (paramsPath.exists) {
+                    val repoDir: DefaultPath = extractRepoFrom(repoSpecDir / "repo.git.zip")
+                    commandDir.children().foreach(p => p.copyTo(repoDir / p.name))
+                    val process = processGen.genProcess(paramsPath, repoDir)
+                    Some(measureTask(s"$commandName - ${processGen.description}") {
+                      process ! ProcessLogger(_ => Unit)
+                    })
+                  } else None
+                }
 
-          val bfgExecutions: Seq[(String, Duration)] = config.bfgJars.map { bfgJar =>
-            val desc = bfgJar.simpleName
-            val duration = runJobFor("bfg", new ProcessGen {
-              def genProcess(paramsInput: Input, repoPath: DefaultPath) =
-                Process(s"java -jar ${bfgJar.path} ${paramsInput.string}", repoPath)
+                val bfgExecutions: Seq[(String, Duration)] = (for {
+                  bfgJar <- config.bfgJars
+                  (javaCmd, javaVersion) <- jvs
+                } yield {
+                  val desc = s"${bfgJar.simpleName}_java-$javaVersion"
+                  val duration = runJobFor("bfg", new ProcessGen {
+                    def genProcess(paramsInput: Input, repoPath: DefaultPath) =
+                      Process(s"$javaCmd -jar ${bfgJar.path} ${paramsInput.string}", repoPath)
 
-              val description = desc
-            })
-            duration.map(d => desc -> d)
-          }.flatten
+                    val description = desc
+                  })
+                  duration.map(d => desc -> d)
+                }).flatten
 
-          val gfbDuration: Option[Duration] = if (config.onlyBfg) None else runJobFor("gfb", new ProcessGen {
-            lazy val description = "git filter-branch"
-            def genProcess(paramsInput: Input, repoPath: DefaultPath) =
-              Process(Seq("git", "filter-branch") ++ paramsInput.lines(), repoPath)
-          })
+                val gfbDuration: Option[Duration] = if (config.onlyBfg) None
+                else runJobFor("gfb", new ProcessGen {
+                  lazy val description = "git filter-branch"
 
-          val samples = TaskExecutionSamples(bfgExecutions, gfbDuration)
-          println(s"$repoName $commandName :: ${samples.summary}")
+                  def genProcess(paramsInput: Input, repoPath: DefaultPath) =
+                    Process(Seq("git", "filter-branch") ++ paramsInput.lines(), repoPath)
+                })
+
+                val samples = TaskExecutionSamples(bfgExecutions, gfbDuration)
+                println(s"$repoName $commandName :: ${samples.summary}")
+            }
         }
       }
   }
@@ -103,6 +117,7 @@ object Benchmark extends App {
     println(s"$description completed in %,d ms.".format(duration.toMillis))
     duration
   }
+
 
   case class BFGExecution(bfgJar: Path, bfgParams: Path, repoDir: Path)
 
