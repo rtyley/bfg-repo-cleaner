@@ -4,7 +4,7 @@ object Dependencies {
 
   val jgit = "com.madgag" % "org.eclipse.jgit" % "2.99.99.2.0-UNOFFICIAL-ROBERTO-RELEASE"
 
-  val specs2 = "org.specs2" %% "specs2" % "2.1.1"
+  val specs2 = "org.specs2" %% "specs2" % "2.3.10"
 
   val madgagCompress = "com.madgag" % "util-compress" % "1.33"
 
