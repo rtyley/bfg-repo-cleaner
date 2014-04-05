@@ -48,7 +48,7 @@ class MainSpec extends Specification {
 
     "remove all big blobs, even if they have identical size" in new unpackedRepo("/sample-repos/moreThanOneBigBlobWithTheSameSize.git.zip") {
       ensureRemovalOfBadEggs(packedBlobsOfSize(1024), contain(allOf(abbrId("06d7"), abbrId("cb2c")))) {
-        run("--strip-blobs-bigger-than 512")
+        run("--strip-blobs-bigger-than 512B")
       }
     }
 
@@ -61,7 +61,7 @@ class MainSpec extends Specification {
     "not crash when protecting an annotated tag" in new unpackedRepo("/sample-repos/annotatedTagExample.git.zip") {
       ensureInvariant(haveRef("chapter1", haveFile("chapter1.txt"))) {
         ensureRemovalOf(commitHistoryFor("master")(haveFile("chapter2.txt").atLeastOnce)) {
-          run("--strip-blobs-bigger-than 10 --protect-blobs-from chapter1")
+          run("--strip-blobs-bigger-than 10B --protect-blobs-from chapter1")
         }
       }
     }

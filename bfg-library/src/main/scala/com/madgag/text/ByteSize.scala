@@ -24,15 +24,12 @@ object ByteSize {
 
   import math._
 
-  val magnitudeChars = List('K', 'M', 'G', 'T', 'P)
+  val magnitudeChars = Seq('B', 'K', 'M', 'G', 'T', 'P')
   val unit = 1024
 
-  def parse(v: String): Int = {
-
-    (1+magnitudeChars.indexOf(v.takeRight(1)(0).toUpper)) match {
-      case -1 => throw new IllegalArgumentException("Size unit is missing (ie %s)".format(magnitudeChars.mkString(", ")))
-      case index => v.dropRight(1).toInt << (index * 10)
-    }
+  def parse(v: String): Int = magnitudeChars.indexOf(v.takeRight(1)(0).toUpper) match {
+    case -1 => throw new IllegalArgumentException(s"Size unit is missing (ie ${magnitudeChars.mkString(", ")})")
+    case index => v.dropRight(1).toInt << (index * 10)
   }
 
   def format(bytes: Long): String = {
@@ -40,7 +37,7 @@ object ByteSize {
       bytes + " B"
     } else {
       val exp = (log(bytes) / log(unit)).toInt
-      val pre = "KMGTPE".charAt(exp - 1)
+      val pre = magnitudeChars(exp)
       "%.1f %sB".format(bytes / pow(unit, exp), pre)
     }
   }

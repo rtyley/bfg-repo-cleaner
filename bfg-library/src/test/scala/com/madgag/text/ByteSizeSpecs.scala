@@ -24,11 +24,23 @@ import org.specs2.mutable._
 
 class ByteSizeSpecs extends Specification {
   "Size parser" should {
+    "understand 1B" in {
+      ByteSize.parse("0B") mustEqual 0
+      ByteSize.parse("1B") mustEqual 1
+      ByteSize.parse("2B") mustEqual 2
+      ByteSize.parse("10B") mustEqual 10
+    }
     "understand 1M" in {
       ByteSize.parse("1M") mustEqual 1024 * 1024
     }
     "understand 1K" in {
       ByteSize.parse("1K") mustEqual 1024
+    }
+    "understand 5K" in {
+      ByteSize.parse("5K") mustEqual 5 * 1024
+    }
+    "reject strings without a unit" in {
+      ByteSize.parse("1232") must throwAn[IllegalArgumentException]
     }
   }
 
