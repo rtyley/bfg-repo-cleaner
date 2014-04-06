@@ -1,12 +1,11 @@
 package com.madgag.git.bfg.model
 
 import java.nio.charset.Charset
-
 import com.madgag.git._
 import com.madgag.git.bfg.cleaner._
 import org.eclipse.jgit.lib.Constants.OBJ_COMMIT
 import org.eclipse.jgit.lib._
-import org.eclipse.jgit.revwalk.RevCommit
+import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
 
 /*
  * Copyright (c) 2012, 2013 Roberto Tyley
@@ -56,6 +55,10 @@ case class Commit(node: CommitNode, arcs: CommitArcs) {
 
 case class CommitArcs(parents: Seq[ObjectId], tree: ObjectId) {
   def cleanWith(cleaner: ObjectIdCleaner) = CommitArcs(parents map cleaner.cleanCommit, cleaner.cleanTree(tree))
+
+  def isEmptyCommit(implicit revWalk: RevWalk) =
+    parents.size == 1 && parents.head.asRevCommit.getTree == tree
+
 }
 
 object CommitNode {
