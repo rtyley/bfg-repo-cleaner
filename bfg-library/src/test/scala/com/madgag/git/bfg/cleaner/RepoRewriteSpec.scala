@@ -50,7 +50,7 @@ class RepoRewriteSpec extends Specification {
       hasBeenProcessedByBFGBefore(repo) must beFalse
 
       val blobsToRemove = Set(abbrId("06d740"))
-      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), OldIdsPublic, Seq(FormerCommitFooter), treeBlobsCleaners = Seq(new BlobRemover(blobsToRemove))))
+      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), OldIdsPublic, false, Seq(FormerCommitFooter), treeBlobsCleaners = Seq(new BlobRemover(blobsToRemove))))
 
       val allCommits = repo.git.log.all.call.toSeq
 
@@ -72,11 +72,11 @@ class RepoRewriteSpec extends Specification {
       implicit val repo = unpackRepo("/sample-repos/taleOfTwoBranches.git.zip")
       implicit val revWalk = new RevWalk(repo)
 
-      def commitMessageForRev(rev: String) = repo.resolve(rev).asRevCommit.getFullMessage
+      def commitMessageForRev(rev: String) = repo.resolve (rev).asRevCommit.getFullMessage
 
       commitMessageForRev("pure") must contain("6e76960ede2addbbe7e")
 
-      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus.None, OldIdsPrivate, Seq(new CommitMessageObjectIdsUpdater(OldIdsPrivate)), treeBlobsCleaners = Seq(new FileDeleter(Literal("sin")))))
+      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus.None, OldIdsPrivate, false, Seq(new CommitMessageObjectIdsUpdater(OldIdsPrivate)), treeBlobsCleaners = Seq(new FileDeleter(Literal("sin")))))
 
       commitMessageForRev("pure") must not contain ("6e76960ede2addbbe7e")
     }

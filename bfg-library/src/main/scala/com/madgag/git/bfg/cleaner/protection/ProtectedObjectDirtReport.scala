@@ -54,19 +54,14 @@ object ProtectedObjectDirtReport {
  *
  * @param revObject - the protected object (eg protected because it is the HEAD commit, or even by additional refs)
  * @param originalTreeOrBlob - the unmodified content-object referred to by the protected object (may be same object)
- * @param replacementTreeOrBlob - an option, populated if cleaning creates a replacement for the content-object
+ * @param replacementOpt - an option, populated if cleaning would create a replacement for the content-object
  */
-case class ProtectedObjectDirtReport(revObject: RevObject, originalTreeOrBlob: RevObject, replacementTreeOrBlob: Option[ObjectId]) {
-  val objectProtectsDirt: Boolean = replacementTreeOrBlob.isDefined
+case class ProtectedObjectDirtReport(revObject: RevObject, originalTreeOrBlob: RevObject, replacementOpt: Option[ObjectId]) {
+  val objectProtectsDirt: Boolean = replacementOpt.isDefined
 
-  def dirt(implicit revWalk: RevWalk): Option[Seq[DiffEntry]] = replacementTreeOrBlob.map { newId =>
-    val tw = new TreeWalk(revWalk.getObjectReader)
-    tw.setRecursive(true)
-    tw.reset
-
-    tw.addTree(originalTreeOrBlob.asRevTree)
-    tw.addTree(newId.asRevTree)
-    tw.setFilter(TreeFilter.ANY_DIFF)
-    DiffEntry.scan(tw).filterNot(_.getChangeType == ADD)
-  }
+  def dirt(implicit revWalk: RevWalk): Option[Seq[DiffEntry]] = for {
+    replacementTree <- replacementOpt
+    oldTree <- originalTreeOrBlob.toTree
+    replacement <- replacementOpt
+  } yield diff(oldTree, replacement.asRevTree).filterNot(_.getChangeType == ADD)
 }
