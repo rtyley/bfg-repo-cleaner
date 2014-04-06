@@ -50,7 +50,7 @@ class RepoRewriteSpec extends FlatSpec with Matchers {
     hasBeenProcessedByBFGBefore(repo) shouldBe false
 
     val blobsToRemove = Set(abbrId("06d740"))
-    RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), OldIdsPublic, Seq(FormerCommitFooter), treeBlobsCleaners = Seq(new BlobRemover(blobsToRemove))))
+    RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), OldIdsPublic, false, Seq(FormerCommitFooter), treeBlobsCleaners = Seq(new BlobRemover(blobsToRemove))))
 
     val allCommits = repo.git.log.all.call.toSeq
 
@@ -74,7 +74,7 @@ class RepoRewriteSpec extends FlatSpec with Matchers {
 
     commitMessageForRev("pure") should include("6e76960ede2addbbe7e")
 
-    RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus.None, OldIdsPrivate, Seq(new CommitMessageObjectIdsUpdater(OldIdsPrivate)), treeBlobsCleaners = Seq(new FileDeleter(Literal("sin")))))
+    RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus.None, OldIdsPrivate, false, Seq(new CommitMessageObjectIdsUpdater(OldIdsPrivate)), treeBlobsCleaners = Seq(new FileDeleter(Literal("sin")))))
 
     commitMessageForRev("pure") should not include "6e76960ede2addbbe7e"
   }

@@ -103,6 +103,9 @@ object CLIConfig {
     opt[Unit]("private").text("treat this repo-rewrite as removing private data (for example: omit old commit ids from commit messages)").action {
       (_, c) => c.copy(sensitiveData = Some(true))
     }
+    opt[Unit]("prune-empty-commits").text("prune commits which don't make file changes (ie because content relating to the original commit change has been removed)").action {
+      (v, c) => c.copy(pruneEmptyCommits = true)
+    }
     opt[String]("massive-non-file-objects-sized-up-to").valueName("<size>").text("increase memory usage to handle over-size Commits, Tags, and Trees that are up to X in size (eg '10M')").action {
       (v, c) => c.copy(massiveNonFileObjects = Some(ByteSize.parse(v)))
     }
@@ -127,6 +130,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      protectBlobsFromRevisions: Set[String] = Set("HEAD"),
                      deleteFiles: Option[TextMatcher] = None,
                      deleteFolders: Option[TextMatcher] = None,
+                     pruneEmptyCommits: Boolean = false,
                      fixFilenameDuplicatesPreferring: Option[Ordering[FileMode]] = None,
                      filenameFilters: Seq[Filter[String]] = Nil,
                      filterSizeThreshold: Long = BlobTextModifier.DefaultSizeThreshold,
@@ -227,6 +231,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     ObjectIdCleaner.Config(
       objectProtection,
       objectIdSubstitutor,
+      pruneEmptyCommits,
       commitNodeCleaners,
       treeEntryListCleaners,
       treeBlobCleaners,
