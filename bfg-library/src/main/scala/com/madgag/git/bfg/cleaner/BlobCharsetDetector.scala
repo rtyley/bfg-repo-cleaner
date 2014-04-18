@@ -39,13 +39,13 @@ trait BlobCharsetDetector {
 
 object QuickBlobCharsetDetector extends BlobCharsetDetector {
 
-  val charSets = Seq(Charset.forName("UTF-8"), Charset.defaultCharset(), Charset.forName("ISO-8859-1")).distinct
+  val CharSets = Seq(Charset.forName("UTF-8"), Charset.defaultCharset(), Charset.forName("ISO-8859-1")).distinct
 
   def charsetFor(entry: TreeBlobEntry, streamResource: InputStreamResource[ObjectStream]): Option[Charset] =
     Some(streamResource.bytes.take(8000).toArray).filterNot(RawText.isBinary).flatMap {
       sampleBytes =>
         val b = ByteBuffer.wrap(sampleBytes)
-        charSets.find(cs => Try(decode(b, cs)).isSuccess)
+        CharSets.find(cs => Try(decode(b, cs)).isSuccess)
     }
 
   private def decode(b: ByteBuffer, charset: Charset) {
