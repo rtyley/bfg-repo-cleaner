@@ -27,4 +27,7 @@ publishArtifact in (Compile, packageBin) := false
 // replace the conventional main artifact with an uber-jar
 addArtifact(artifact in (Compile, packageBin), assembly)
 
-libraryDependencies += scopt
+libraryDependencies ++= Seq(
+  scopt,
+  scalaGitTest % "test"
+)
