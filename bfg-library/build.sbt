@@ -1,4 +1,4 @@
 import Dependencies._
 
-libraryDependencies ++= guava :+ scalaIoFile :+ jgit
+libraryDependencies ++= guava :+ scalaIoFile :+ jgit :+ textmatching
 
