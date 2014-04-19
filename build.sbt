@@ -6,7 +6,7 @@ import com.typesafe.sbt.pgp.PgpKeys._
 
 organization in ThisBuild := "com.madgag"
 
-scalaVersion in ThisBuild := "2.10.4"
+scalaVersion in ThisBuild := "2.11.0"
 
 scalacOptions in ThisBuild ++= Seq("-deprecation", "-feature", "-language:postfixOps")
 
