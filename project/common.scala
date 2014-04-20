@@ -21,6 +21,8 @@ object common {
         s map {
           case `publishArtifacts` => publishArtifacts.copy(action = publishArtifactsAction)
           case s => s
+        } map {
+          _.copy(enableCrossBuild = false)
         }
     }
   )
