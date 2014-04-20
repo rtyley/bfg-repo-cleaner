@@ -24,7 +24,7 @@ import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import org.eclipse.jgit.transport.ReceiveCommand
 import org.eclipse.jgit.revwalk.RevSort._
 import com.madgag.git.bfg.Timing
-import concurrent.future
+import scala.concurrent.Future
 import concurrent.ExecutionContext.Implicits.global
 import scala.collection.convert.wrapAll._
 import com.madgag.git._
@@ -101,7 +101,7 @@ object RepoRewriter {
       reporter.reportCleaningStart(commits)
 
       Timing.measureTask("Cleaning commits", commits.size) {
-        future {
+        Future {
           commits.par.foreach {
             commit => objectIdCleaner(commit.getTree)
           }
