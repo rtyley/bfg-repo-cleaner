@@ -18,6 +18,6 @@ object Dependencies {
 
   val guava = Seq("com.google.guava" % "guava" % "16.0.1", "com.google.code.findbugs" % "jsr305" % "2.0.1")
 
-  val scalaIoFile = "com.madgag" %% "scala-io-file" % "0.4.2"
+  val scalaIoFile = "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.3"
 
 }
