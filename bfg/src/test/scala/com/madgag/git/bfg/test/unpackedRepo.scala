@@ -26,7 +26,7 @@ class unpackedRepo(filePath: String) extends Scope with MustThrownMatchers {
 
   def packedBlobsOfSize(sizeInBytes: Long): Set[ObjectId] = {
     implicit val reader = repo.newObjectReader()
-    packedObjects.filter { objectId =>
+    objectDirectory.packedObjects.filter { objectId =>
       val objectLoader = objectId.open
       objectLoader.getType == Constants.OBJ_BLOB && objectLoader.getSize == sizeInBytes
     }.toSet

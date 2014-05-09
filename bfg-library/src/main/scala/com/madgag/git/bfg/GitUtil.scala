@@ -68,13 +68,10 @@ object GitUtil {
     def apply(v: V) = f(v)
   }
 
-  def packedObjects(implicit objectDB: ObjectDirectory): Iterable[ObjectId] =
-    for { pack <- objectDB.getPacks ; entry <- pack } yield entry.toObjectId
-
   def biggestBlobs(implicit objectDB: ObjectDirectory, progressMonitor: ProgressMonitor = NullProgressMonitor.INSTANCE): Stream[SizedObject] = {
     Timing.measureTask("Scanning packfile for large blobs", ProgressMonitor.UNKNOWN) {
       val reader = objectDB.newReader
-      packedObjects.map {
+      objectDB.packedObjects.map {
             objectId =>
               progressMonitor update 1
               SizedObject(objectId, reader.getObjectSize(objectId, OBJ_ANY))
