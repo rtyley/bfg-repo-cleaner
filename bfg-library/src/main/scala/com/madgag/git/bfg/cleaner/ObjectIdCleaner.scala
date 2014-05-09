@@ -102,7 +102,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
     val cleanedArcs = originalCommit.arcs cleanWith this
 
-    if (config.pruneEmptyCommits && cleanedArcs.isEmptyCommit) cleanedArcs.parents.head else {
+    if (config.pruneEmptyCommits && cleanedArcs.isEmptyCommit) cleanedArcs.parents.headOption.getOrElse(ObjectId.zeroId()) else {
       val kit = new CommitNodeCleaner.Kit(threadLocalResources, originalRevCommit, originalCommit, cleanedArcs, apply)
       val updatedCommitNode = commitNodeCleaner.fixer(kit)(originalCommit.node)
       val updatedCommit = Commit(updatedCommitNode, cleanedArcs)
