@@ -7,10 +7,10 @@ import org.specs2.matcher.{Matcher, MustThrownMatchers}
 import com.madgag.git._
 import com.madgag.git.test._
 import org.specs2.specification.Scope
-import com.madgag.git.bfg.GitUtil._
 import org.eclipse.jgit.internal.storage.file.ObjectDirectory
 import org.eclipse.jgit.treewalk.TreeWalk
-import com.madgag.git.bfg.cli.Main
+// import com.madgag.git.bfg.cli.Main
+// import com.madgag.git.bfg.GitUtil._
 
 class unpackedRepo(filePath: String) extends Scope with MustThrownMatchers {
 
@@ -45,10 +45,6 @@ class unpackedRepo(filePath: String) extends Scope with MustThrownMatchers {
 
   def treeEntryNames(t: RevTree, p: TreeWalk => Boolean): Seq[String] =
     t.walk(postOrderTraversal = true).withFilter(p).map(_.getNameString).toList
-
-  def run(options: String) {
-    Main.main(options.split(' ') :+ repo.getDirectory.getAbsolutePath)
-  }
 
   def commitHist(specificRefs: String*)(implicit repo: Repository) = {
     val logCommand = repo.git.log

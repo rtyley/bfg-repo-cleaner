@@ -17,11 +17,13 @@ homepage in ThisBuild := Some(url("https://github.com/rtyley/bfg-repo-cleaner"))
 libraryDependencies in ThisBuild += specs2 % "test"
 
 lazy val root = Project(id = "bfg-parent", base = file(".")) settings (signedReleaseSettings:_*) settings (
-    publishSigned := {} ) aggregate(bfg, bfgLibrary)
+    publishSigned := {} ) aggregate(bfg, bfgTest, bfgLibrary)
 
-lazy val bfg = bfgProject("bfg") dependsOn(bfgLibrary)
+lazy val bfgTest = bfgProject("bfg-test")
 
-lazy val bfgLibrary = bfgProject("bfg-library")
+lazy val bfgLibrary = bfgProject("bfg-library") dependsOn(bfgTest % "test")
+
+lazy val bfg = bfgProject("bfg") dependsOn(bfgLibrary, bfgTest % "test")
 
 lazy val bfgBenchmark = bfgProject("bfg-benchmark")
 

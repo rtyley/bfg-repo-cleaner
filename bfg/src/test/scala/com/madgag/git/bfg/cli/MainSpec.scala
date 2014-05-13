@@ -23,7 +23,7 @@ package com.madgag.git.bfg.cli
 import org.specs2.mutable._
 import scalax.file.Path
 import com.madgag.git._
-import com.madgag.git.bfg.test.unpackedRepo
+import com.madgag.git.bfg.cli.test.unpackedRepo
 
 class MainSpec extends Specification {
 
