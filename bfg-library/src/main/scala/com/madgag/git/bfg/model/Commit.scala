@@ -2,8 +2,10 @@ package com.madgag.git.bfg.model
 
 import com.madgag.git.bfg.cleaner._
 import java.nio.charset.Charset
-import org.eclipse.jgit.lib.{Constants, PersonIdent, ObjectId, CommitBuilder}
+import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.RevCommit
+import com.madgag.git._
+import org.eclipse.jgit.lib.Constants.OBJ_COMMIT
 
 /*
  * Copyright (c) 2012, 2013 Roberto Tyley
@@ -45,6 +47,10 @@ case class Commit(node: CommitNode, arcs: CommitArcs) {
 
     c.toByteArray
   }
+
+  lazy val id = new ObjectInserter.Formatter().idFor(OBJ_COMMIT, toBytes)
+
+  override lazy val toString = s"commit[${id.shortName}${node.subject.map(s=> s" '${s.take(50)}'").getOrElse("")}]"
 }
 
 object CommitArcs {
@@ -60,6 +66,7 @@ object CommitNode {
 }
 
 case class CommitNode(author: PersonIdent, committer: PersonIdent, message: String, encoding: Charset = Constants.CHARSET) {
+  lazy val subject = message.lines.toStream.headOption
   lazy val lastParagraphBreak = message.lastIndexOf("\n\n")
   lazy val messageWithoutFooters = if (footers.isEmpty) message else (message take lastParagraphBreak)
   lazy val footers: List[Footer] = message.drop(lastParagraphBreak).lines.collect {
