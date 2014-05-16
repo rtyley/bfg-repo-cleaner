@@ -31,3 +31,5 @@ libraryDependencies ++= Seq(
   scopt,
   scalaGitTest % "test"
 )
+
+fork in Test := true // JGit uses static (ie JVM-wide) config

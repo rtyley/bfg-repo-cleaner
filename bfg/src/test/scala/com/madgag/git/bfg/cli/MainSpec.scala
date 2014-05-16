@@ -23,7 +23,7 @@ package com.madgag.git.bfg.cli
 import org.specs2.mutable._
 import scalax.file.Path
 import com.madgag.git._
-import com.madgag.git.bfg.cli.test.unpackedRepo
+import bfg.cli.test.unpackedRepo
 
 class MainSpec extends Specification {
 
@@ -89,16 +89,6 @@ class MainSpec extends Specification {
     "not crash on encountering protected submodule" in new unpackedRepo("/sample-repos/unwantedSubmodule.git.zip") {
       ensureRemovalOf(commitHistory(haveFile("foo.txt").atLeastOnce)) {
         run("--delete-folders bar --delete-files foo.txt")
-      }
-    }
-  }
-
-  "Massive commit messages" should {
-    "be handled without crash (ie LargeObjectException) if the user specifies that the repo contains massive non-file objects" in
-      new unpackedRepo("/sample-repos/huge10MBCommitMessage.git.zip") {
-
-      ensureRemovalOf(haveRef("master", be_===(abbrId("d887")))) {
-        run("--strip-blobs-bigger-than 1K --massive-non-file-objects-sized-up-to 20M")
       }
     }
   }
