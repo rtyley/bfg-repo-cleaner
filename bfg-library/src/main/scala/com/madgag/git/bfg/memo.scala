@@ -23,6 +23,7 @@ package com.madgag.git.bfg
 import com.google.common.cache.{CacheStats, CacheLoader, LoadingCache, CacheBuilder}
 import com.madgag.git.bfg.cleaner._
 import collection.convert.decorateAsScala._
+import scalax.file.Path
 
 trait Memo[K, V] {
   def apply(z: K => V): MemoFunc[K, V]
@@ -34,7 +35,17 @@ trait MemoFunc[K,V] extends (K => V) {
   def stats(): CacheStats
 }
 
+trait Instrumentation[V] {
+  def recordStart(v: V)
+
+  def recordEnd(v: V)
+}
+
 object MemoUtil {
+
+  val poof = Path.createTempFile()
+
+  println("poof "+poof.path)
 
   def memo[K, V](f: (K => V) => MemoFunc[K, V]): Memo[K, V] = new Memo[K, V] {
     def apply(z: K => V) = f(z)
@@ -44,10 +55,18 @@ object MemoUtil {
    *
    * A caching wrapper for a function (V => V), backed by a no-eviction LoadingCache from Google Collections.
    */
-  def concurrentCleanerMemo[V](fixedEntries: Set[V] = Set.empty): Memo[V, V] = {
+  def concurrentCleanerMemo[V](fixedEntries: Set[V] = Set.empty, i: Option[Instrumentation[V]] = None): Memo[V, V] = {
     memo[V, V] {
       (f: Cleaner[V]) =>
-        lazy val permanentCache = loaderCacheFor(f)(fix)
+        lazy val permanentCache = i match {
+          case None => loaderCacheFor(f)(fix)
+          case Some(instrumentation) =>
+            def prefix[A,B](ab: A => B, preAction: A => Unit): (A=> B) = { a: A =>
+              preAction(a)
+              ab(a)
+            }
+            loaderCacheFor(prefix(f, instrumentation.recordStart))(prefix(fix, instrumentation.recordEnd))
+        }
 
         def fix(v: V) {
           // enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well

@@ -27,6 +27,7 @@ import com.madgag.git.bfg.model.TreeBlobEntry
 
 trait TreeBlobModifier extends Cleaner[TreeBlobs] {
 
+  // not gathering cache stats on this?!
   val memoisedCleaner: Cleaner[TreeBlobEntry] = MemoUtil.concurrentCleanerMemo[TreeBlobEntry](Set.empty) {
     entry =>
       val (mode, objectId) = fix(entry)
