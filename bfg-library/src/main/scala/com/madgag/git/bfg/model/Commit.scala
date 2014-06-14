@@ -29,7 +29,7 @@ import org.eclipse.jgit.lib.Constants.OBJ_COMMIT
 
 
 object Commit {
-  def apply(revCommit: RevCommit): Commit = Commit(CommitNode(revCommit), CommitArcs(revCommit))
+  def apply(revCommit: RevCommit): Commit = Commit(CommitNode(revCommit), revCommit.arcs)
 }
 
 case class Commit(node: CommitNode, arcs: CommitArcs) {
@@ -51,10 +51,6 @@ case class Commit(node: CommitNode, arcs: CommitArcs) {
   lazy val id = new ObjectInserter.Formatter().idFor(OBJ_COMMIT, toBytes)
 
   override lazy val toString = s"commit[${id.shortName}${node.subject.map(s=> s" '${s.take(50)}'").getOrElse("")}]"
-}
-
-object CommitArcs {
-  def apply(revCommit: RevCommit): CommitArcs = CommitArcs(revCommit.getParents, revCommit.getTree)
 }
 
 case class CommitArcs(parents: Seq[ObjectId], tree: ObjectId) {
