@@ -59,7 +59,7 @@ object Main extends App {
           } else {
             logger.info(s"Found ${config.objectProtection.fixedObjectIds.size} objects to protect")
 
-            RepoRewriter.rewrite(repo, config.objectIdCleanerConfig)
+            new RepoRewriter(repo, config.objectIdCleanerConfig).rewrite()
           }
         }
     }

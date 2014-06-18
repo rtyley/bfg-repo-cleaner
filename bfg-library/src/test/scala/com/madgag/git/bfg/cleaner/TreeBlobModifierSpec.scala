@@ -48,7 +48,7 @@ class TreeBlobModifierSpec extends Specification {
 
       val countingTreeBlobModifier = new CountingTreeBlobModifier()
 
-      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), OldIdsPublic, treeBlobsCleaners = Seq(countingTreeBlobModifier)))
+      new RepoRewriter(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), OldIdsPublic, treeBlobsCleaners = Seq(countingTreeBlobModifier))).rewrite()
 
       countingTreeBlobModifier.counts.values must beEqualTo(1).foreach
     }
