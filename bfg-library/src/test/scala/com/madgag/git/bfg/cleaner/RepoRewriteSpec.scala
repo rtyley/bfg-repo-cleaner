@@ -54,7 +54,7 @@ class RepoRewriteSpec extends Specification {
       hasBeenProcessedByBFGBefore(repo) must beFalse
 
       val blobsToRemove = Set(abbrId("06d740"))
-      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), OldIdsPublic, Seq(FormerCommitFooter), treeBlobsCleaners = Seq(new BlobRemover(blobsToRemove))))
+      new RepoRewriter(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), OldIdsPublic, Seq(FormerCommitFooter), treeBlobsCleaners = Seq(new BlobRemover(blobsToRemove)))).rewrite()
 
       val allCommits = repo.git.log.all.call.toSeq
 
@@ -81,7 +81,7 @@ class RepoRewriteSpec extends Specification {
 
       commitMessageForRev("pure") must contain("6e76960ede2addbbe7e")
 
-      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus.None, OldIdsPrivate, Seq(new CommitMessageObjectIdsUpdater(OldIdsPrivate)), treeBlobsCleaners = Seq(new FileDeleter(Literal("sin")))))
+      new RepoRewriter(repo, ObjectIdCleaner.Config(ProtectedObjectCensus.None, OldIdsPrivate, Seq(new CommitMessageObjectIdsUpdater(OldIdsPrivate)), treeBlobsCleaners = Seq(new FileDeleter(Literal("sin"))))).rewrite()
 
       commitMessageForRev("pure") must not contain ("6e76960ede2addbbe7e")
     }
@@ -113,7 +113,7 @@ class RepoRewriteSpec extends Specification {
 
         val threadLocalObjectDBResources = repo.getObjectDatabase.threadLocalResources
       }
-      val cleanedObjectMap = RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), treeBlobsCleaners = Seq(blobTextModifier)))
+      val cleanedObjectMap = new RepoRewriter(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), treeBlobsCleaners = Seq(blobTextModifier))).rewrite()
 
       val oldCommitContainingPasswords = abbrId("37bcc89")
 
@@ -140,7 +140,7 @@ class RepoRewriteSpec extends Specification {
 
         val threadLocalObjectDBResources = repo.getObjectDatabase.threadLocalResources
       }
-      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus.None, treeBlobsCleaners = Seq(blobTextModifier)))
+      new RepoRewriter(repo, ObjectIdCleaner.Config(ProtectedObjectCensus.None, treeBlobsCleaners = Seq(blobTextModifier))).rewrite()
 
       val beforeAndAfter = Seq(before, after).map(URLEncoder.encode(_, "UTF-8")).mkString("-")
 

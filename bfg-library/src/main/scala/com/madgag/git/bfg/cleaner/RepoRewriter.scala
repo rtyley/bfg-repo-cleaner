@@ -62,41 +62,42 @@ in a new commit, we don't care about history.
 When updating a Tree, the User has no right to muck with sub-trees. They can only alter the blob contents.
  */
 
-object RepoRewriter {
+class RepoRewriter(repo: Repository, objectIdCleanerConfig: ObjectIdCleaner.Config)(implicit jl: JobLogContext) {
 
-  def rewrite(repo: Repository, objectIdCleanerConfig: ObjectIdCleaner.Config)(implicit jl: JobLogContext): Map[ObjectId, ObjectId] = {
-    assert(!repo.getAllRefs.isEmpty, "Can't find any refs in repo at " + repo.getDirectory.getAbsolutePath)
+  implicit val refDatabase = repo.getRefDatabase
+  val allRefs = repo.getAllRefs.values
+  assert(!repo.getAllRefs.isEmpty, "Can't find any refs in repo at " + repo.getDirectory.getAbsolutePath)
+
+  def createRevWalk: RevWalk = {
+
+    val revWalk = new RevWalk(repo)
+
+    revWalk.sort(TOPO) // crucial to ensure we visit parents BEFORE children, otherwise blow stack
+    revWalk.sort(REVERSE, true) // we want to start with the earliest commits and work our way up...
+
+    val startCommits = allRefs.map(_.targetObjectId.asRevObject(revWalk)).collect { case c: RevCommit => c }
+
+    revWalk.markStart(startCommits)
+    revWalk
+  }
+
+  implicit val revWalk = createRevWalk
+
+  implicit val reader = revWalk.getObjectReader
+
+  val objectIdCleaner = new ObjectIdCleaner(objectIdCleanerConfig, repo.getObjectDatabase, revWalk, jl)
+
+  val commits = revWalk.toList
+
+  def rewrite(): ObjectIdCleaner = {
 
     val logger = jl.logContext.getLogger("rr")
-    implicit val refDatabase = repo.getRefDatabase
 
     val reporter: Reporter = new CLIReporter(repo, jl)
-
-    val allRefs = repo.getAllRefs.values
-
-    def createRevWalk: RevWalk = {
-
-      val revWalk = new RevWalk(repo)
-
-      revWalk.sort(TOPO) // crucial to ensure we visit parents BEFORE children, otherwise blow stack
-      revWalk.sort(REVERSE, true) // we want to start with the earliest commits and work our way up...
-
-      val startCommits = allRefs.map(_.targetObjectId.asRevObject(revWalk)).collect { case c: RevCommit => c }
-
-      revWalk.markStart(startCommits)
-      revWalk
-    }
-
-    implicit val revWalk = createRevWalk
-    implicit val reader = revWalk.getObjectReader
 
     reporter.reportRefsForScan(allRefs)
 
     reporter.reportObjectProtection(objectIdCleanerConfig)(repo.getObjectDatabase, revWalk)
-
-    val objectIdCleaner = new ObjectIdCleaner(objectIdCleanerConfig, repo.getObjectDatabase, revWalk, jl)
-
-    val commits = revWalk.toList
 
     def clean(commits: Seq[RevCommit]) {
       reporter.reportCleaningStart(commits)
@@ -148,7 +149,7 @@ object RepoRewriter {
 
     objectIdCleaner.stats()
 
-    objectIdCleaner.cleanedObjectMap()
+    objectIdCleaner
   }
 
 }

@@ -21,8 +21,8 @@
 package com.madgag.git.bfg.cli
 
 import com.madgag.git._
-import com.madgag.git.bfg.cleaner._
 import com.madgag.git.bfg.GitUtil._
+import com.madgag.git.bfg.cleaner._
 
 object Main extends App {
 
@@ -59,7 +59,8 @@ object Main extends App {
           } else {
             logger.info(s"Found ${config.objectProtection.fixedObjectIds.size} objects to protect")
 
-            RepoRewriter.rewrite(repo, config.objectIdCleanerConfig)
+            new RepoRewriter(repo, config.objectIdCleanerConfig).rewrite()
+
             repo.close()
 
             println("\n\nHas the BFG saved you time?  Support the BFG on BountySource:  https://j.mp/fund-bfg\n\n")
