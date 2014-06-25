@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012 Roberto Tyley
+ * Copyright (c) 2012, 2013 Roberto Tyley
  *
  * This file is part of 'BFG Repo-Cleaner' - a tool for removing large
  * or troublesome blobs from Git repositories.
@@ -18,24 +18,13 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/ .
  */
 
-package com.madgag.git.bfg.cleaner
+package com.madgag.git.bfg.memo
 
-import org.eclipse.jgit.lib.ObjectId
-import com.madgag.git.bfg.model._
-import com.madgag.git.bfg.memo.MemoUtil
-import com.madgag.git.bfg.model.TreeBlobEntry
+/**
+ * Created by roberto on 20/06/14.
+ */
+trait Instrumentation[T] {
+  def recordStart(k: T)
 
-trait TreeBlobModifier extends Cleaner[TreeBlobs] {
-
-  // not gathering cache stats on this?!
-  val memoisedCleaner: Cleaner[TreeBlobEntry] = MemoUtil.concurrentCleanerMemo[TreeBlobEntry](Set.empty) {
-    entry =>
-      val (mode, objectId) = fix(entry)
-      TreeBlobEntry(entry.filename, mode, objectId)
-  }
-
-  def fix(entry: TreeBlobEntry): (BlobFileMode, ObjectId) // implementing code can not safely know valid filename
-
-  override def apply(treeBlobs: TreeBlobs) = treeBlobs.entries.map(memoisedCleaner)
-
+  def recordEnd(k: T, v: T)
 }

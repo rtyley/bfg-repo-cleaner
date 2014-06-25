@@ -21,10 +21,11 @@
 package com.madgag.git.bfg.cleaner
 
 import com.madgag.git.bfg.log.JobLogContext
+import com.madgag.git.bfg.memo.{LoadHooks, MemoFunc, Memo, MemoUtil}
 import org.eclipse.jgit.revwalk.{RevWalk, RevTag, RevCommit}
 import org.eclipse.jgit.lib.Constants._
 import com.madgag.git.bfg.cleaner.protection.{ProtectedObjectDirtReport, ProtectedObjectCensus}
-import com.madgag.git.bfg.{MemoFunc, Memo, CleaningMapper, MemoUtil}
+import com.madgag.git.bfg._
 import com.madgag.git.bfg.model._
 import com.madgag.git._
 import bfg.model.Tree
@@ -32,6 +33,8 @@ import bfg.model.TreeSubtrees
 import org.eclipse.jgit.lib._
 import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.model.Tree.Entry
+import com.madgag.git.bfg.model.TreeSubtrees
+import java.util.concurrent.atomic.AtomicInteger
 
 object ObjectIdCleaner {
 
@@ -64,13 +67,36 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
   val threadLocalResources = objectDB.threadLocalResources
 
+  val cleanedLog = collection.mutable.ArrayStack[ObjectId]()
+
+  val i = new LoadHooks[ObjectId, ObjectId] {
+
+    val logger = jl.logContext.getLogger("instrumentation")
+
+    val (startCount,endCount)= (new AtomicInteger, new AtomicInteger)
+
+    override def start(k: ObjectId): Unit =  {
+      val c = startCount.incrementAndGet()
+      cleanedLog.synchronized {
+        cleanedLog.push(k)
+      }
+      logger.debug(s"s ${k.name()} $c")
+    }
+
+    override def end(k: ObjectId, v: ObjectId): Unit = {
+      val c = endCount.incrementAndGet()
+      logger.debug(s"e ${k.name()} $c")
+    }
+
+  }
+
   // want to enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
-  val memo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds)
+  val memo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds, Some(i))
 
-  val commitMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds)
-  val tagMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds)
+  val commitMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds, Some(i))
+  val tagMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds, Some(i))
 
-  val treeMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds)
+  val treeMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds, Some(i))
 
   def apply(objectId: ObjectId): ObjectId = memoClean(objectId)
 

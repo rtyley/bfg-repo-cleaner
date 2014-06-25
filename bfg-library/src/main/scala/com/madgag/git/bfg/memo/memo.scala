@@ -18,11 +18,12 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/ .
  */
 
-package com.madgag.git.bfg
+package com.madgag.git.bfg.memo
 
 import com.google.common.cache.{CacheStats, CacheLoader, LoadingCache, CacheBuilder}
 import com.madgag.git.bfg.cleaner._
 import collection.convert.decorateAsScala._
+import scalax.file.Path
 
 trait Memo[K, V] {
   def apply(z: K => V): MemoFunc[K, V]
@@ -32,6 +33,24 @@ trait MemoFunc[K,V] extends (K => V) {
   def asMap(): Map[K,V]
 
   def stats(): CacheStats
+}
+
+object LoadHooks {
+  def aggregate[K,V](l: Seq[LoadHooks[K,V]]): LoadHooks[K,V] = l match {
+    case Seq() => new LoadHooks[K, V] {}
+    case Seq(one) => one
+    case multiple => new LoadHooks[K,V] {
+      override def start(k: K) { multiple.foreach(_.start(k)) }
+
+      override def end(k: K, v: V) { multiple.foreach(_.end(k, v)) }
+    }
+  }
+}
+
+trait LoadHooks[K,V] {
+  def start(k: K) {}
+
+  def end(k: K, v: V) {}
 }
 
 object MemoUtil {
@@ -44,10 +63,14 @@ object MemoUtil {
    *
    * A caching wrapper for a function (V => V), backed by a no-eviction LoadingCache from Google Collections.
    */
-  def concurrentCleanerMemo[V](fixedEntries: Set[V] = Set.empty): Memo[V, V] = {
+  def concurrentCleanerMemo[V](fixedEntries: Set[V] = Set.empty, additionalLoadHooks: Option[LoadHooks[V,V]] = None): Memo[V, V] = {
     memo[V, V] {
       (f: Cleaner[V]) =>
-        lazy val permanentCache = loaderCacheFor(f)(fix)
+        lazy val defaultLoadHooks = new LoadHooks[V,V] {
+          override def end(k: V, v: V) { fix(v) }
+        }
+
+        lazy val permanentCache = loaderCacheFor(f, LoadHooks.aggregate(additionalLoadHooks.toSeq :+ defaultLoadHooks) )
 
         def fix(v: V) {
           // enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
@@ -68,11 +91,12 @@ object MemoUtil {
     }
   }
 
-  def loaderCacheFor[K, V](calc: K => V)(postCalc: V => Unit): LoadingCache[K, V] =
+  def loaderCacheFor[K, V](calc: K => V, loadHooks: LoadHooks[K,V]): LoadingCache[K, V] =
     CacheBuilder.newBuilder.asInstanceOf[CacheBuilder[K, V]].recordStats().build(new CacheLoader[K, V] {
       def load(key: K): V = {
+        loadHooks.start(key)
         val v = calc(key)
-        postCalc(v)
+        loadHooks.end(key, v)
         v
       }
     })
