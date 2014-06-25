@@ -7,11 +7,23 @@
         </encoder>
     </appender>
 
+    <appender name="INSTRUMENTATION_FILE" class="ch.qos.logback.core.FileAppender">
+        <file>${reports-dir}/instrumentation.log</file>
+        <encoder>
+            <pattern>%-6relative %msg%n</pattern>
+            <immediateFlush>true</immediateFlush>
+        </encoder>
+    </appender>
+
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%msg%n</pattern>
         </encoder>
     </appender>
+
+    <logger name="instrumentation" level="DEBUG">
+        <appender-ref ref="INSTRUMENTATION_FILE"/>
+    </logger>
 
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
