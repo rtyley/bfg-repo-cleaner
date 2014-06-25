@@ -26,6 +26,7 @@ import ObjectIdSubstitutor._
 import org.specs2.mutable._
 import com.madgag.git.test._
 import scala.collection.mutable
+import com.madgag.git.bfg.log.{BFGLogConfiguration, JobLogContext}
 
 class TreeBlobModifierSpec extends Specification {
 
@@ -43,6 +44,7 @@ class TreeBlobModifierSpec extends Specification {
       }
 
       implicit val repo = unpackRepo("/sample-repos/taleOfTwoBranches.git.zip")
+      implicit val jl = BFGLogConfiguration.generateJobLogContextFor(repo)
 
       val countingTreeBlobModifier = new CountingTreeBlobModifier()
 

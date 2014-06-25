@@ -17,10 +17,9 @@ import scala.collection.convert.wrapAll._
 import scala.collection.immutable.SortedMap
 import scalax.file.Path
 import com.madgag.git.bfg.GitUtil._
+import com.madgag.git.bfg.log.JobLogContext
 
 trait Reporter {
-
-  val progressMonitor: ProgressMonitor
 
   def reportRefsForScan(allRefs: Traversable[Ref])(implicit objReader: ObjectReader)
 
@@ -33,26 +32,28 @@ trait Reporter {
   def reportResults(commits: List[RevCommit], objectIdCleaner: ObjectIdCleaner)
 }
 
-class CLIReporter(repo: Repository) extends Reporter {
-
-  lazy val reportsDir = {
+object ReportsDir {
+  def generateReportsDirFor(repo: Repository) = {
     val now = new Date()
     def format(s: String) = new SimpleDateFormat(s).format(now)
     val dir = Path.fromString(repo.topDirectory.getAbsolutePath + ".bfg-report") / format("yyyy-MM-dd") / format("HH-mm-ss")
     dir.doCreateDirectory()
     dir
   }
+}
 
-  lazy val progressMonitor = new TextProgressMonitor
+class CLIReporter(repo: Repository, implicit val jl: JobLogContext) extends Reporter {
+
+  val logger = jl.logContext.getLogger("cli")
+
+  lazy val reportsDir = jl.reportsDir
 
   def reportRefUpdateStart(refUpdateCommands: Traversable[ReceiveCommand]) {
-    println(title("Updating " + plural(refUpdateCommands, "Ref")))
+    logger.info(title(s"Updating ${plural(refUpdateCommands, "Ref")}"))
 
     val summaryTableCells = refUpdateCommands.map(update => (update.getRefName, update.getOldId.shortName, update.getNewId.shortName))
 
-    Tables.formatTable(("Ref", "Before", "After"), summaryTableCells.toSeq).map("\t" + _).foreach(println)
-
-    println
+    logger.info(Tables.tableText(("Ref", "Before", "After"), summaryTableCells.toSeq))
   }
 
   def reportRefsForScan(allRefs: Traversable[Ref])(implicit objReader: ObjectReader) {
@@ -61,7 +62,7 @@ class CLIReporter(repo: Repository) extends Reporter {
     } withDefault Seq.empty
 
     refsByObjType.foreach {
-      case (typ, refs) => println("Found " + refs.size + " " + Constants.typeString(typ) + "-pointing refs : " + abbreviate(refs.map(_.getName).toSeq, "...", 4).mkString(", "))
+      case (typ, refs) => logger.info("Found " + refs.size + " " + Constants.typeString(typ) + "-pointing refs : " + abbreviate(refs.map(_.getName).toSeq, "...", 4).mkString(", "))
     }
   }
 
@@ -70,14 +71,14 @@ class CLIReporter(repo: Repository) extends Reporter {
   // warn due to Dirty Tips on Public run - it's not so serious if users publicise dirty tips.
   // if no protection
   def reportObjectProtection(objectIdCleanerConfig: ObjectIdCleaner.Config)(implicit objectDB: ObjectDatabase, revWalk: RevWalk) {
-    println(title("Protected commits"))
+    logger.info(title("Protected commits"))
 
     if (objectIdCleanerConfig.protectedObjectCensus.isEmpty) {
-      println("You're not protecting any commits, which means the BFG will modify the contents of even *current* commits.\n\n" +
+      logger.info("You're not protecting any commits, which means the BFG will modify the contents of even *current* commits.\n\n" +
         "This isn't recommended - ideally, if your current commits are dirty, you should fix up your working copy and " +
         "commit that, check that your build still works, and only then run the BFG to clean up your history.")
     } else {
-      println("These are your protected commits, and so their contents will NOT be altered:\n")
+      logger.info("These are your protected commits, and so their contents will NOT be altered:\n")
 
       val unprotectedConfig = objectIdCleanerConfig.copy(protectedObjectCensus = ProtectedObjectCensus.None)
 
@@ -116,14 +117,14 @@ class CLIReporter(repo: Repository) extends Reporter {
         val objectTitle = s" * ${report.revObject.typeString} ${report.revObject.shortName} (protected by '${protectorRevs.mkString("', '")}')"
 
         report.dirt match {
-          case None => println(objectTitle)
+          case None => logger.info(objectTitle)
           case Some(diffEntries) =>
             if (diffEntries.isEmpty) {
-              println(objectTitle + " - dirty")
+              logger.info(objectTitle + " - dirty")
             } else {
-              println(objectTitle + " - contains " + plural(diffEntries, "dirty file") + " : ")
+              logger.info(objectTitle + " - contains " + plural(diffEntries, "dirty file") + " : ")
               abbreviate(diffEntries.view.map(diffDetails).map(fileInfo), "...").foreach {
-                dirtyFile => println("\t- " + dirtyFile)
+                dirtyFile => logger.info("\t- " + dirtyFile)
               }
 
               val protectorRefsFileNameSafe = protectorRevs.mkString("_").replace(protectedDirtDir.separator, "-")
@@ -146,13 +147,9 @@ class CLIReporter(repo: Repository) extends Reporter {
     val dirtyReports = reports.filter(_.objectProtectsDirt)
     if (dirtyReports.nonEmpty) {
 
-      println(s"""
+      logger.info(s"""
       |WARNING: The dirty content above may be removed from other commits, but as
       |the *protected* commits still use it, it will STILL exist in your repository.
-      |
-      |Details of protected dirty content have been recorded here :
-      |
-      |${protectedDirtDir.path + protectedDirtDir.separator}
       |
       |If you *really* want this content gone, make a manual commit that removes it,
       |and then run the BFG on a fresh copy of your repo.
@@ -168,8 +165,7 @@ class CLIReporter(repo: Repository) extends Reporter {
   }
 
   def reportCleaningStart(commits: Seq[RevCommit]) {
-    println(title("Cleaning"))
-    println("Found " + commits.size + " commits")
+    logger.info(s"${title("Cleaning")}\n\nFound ${commits.size} commits")
   }
 
   def reportResults(commits: List[RevCommit], objectIdCleaner: ObjectIdCleaner) {
@@ -188,20 +184,26 @@ class CLIReporter(repo: Repository) extends Reporter {
         case _ => '.'
       }.mkString
       def leftRight(markers: Seq[String]) = markers.mkString(" " * (treeDirtHistory.length - markers.map(_.size).sum))
-      println(title("Commit Tree-Dirt History"))
-      println("\t" + leftRight(Seq("Earliest", "Latest")))
-      println("\t" + leftRight(Seq("|", "|")))
-      println("\t" + treeDirtHistory)
-      println("\n\tD = dirty commits (file tree fixed)")
-      println("\tm = modified commits (commit message or parents changed)")
-      println("\t. = clean commits (no changes to file tree)\n")
+
+      val treeDirtDiagram = Seq(
+        leftRight(Seq("Earliest", "Latest")),
+        leftRight(Seq("|", "|")),
+        treeDirtHistory,
+        "",
+        "D = dirty commits (file tree fixed)",
+        "m = modified commits (commit message or parents changed)",
+        ". = clean commits (no changes to file tree)"
+      )
+
+      logger.info(title("Commit Tree-Dirt History"))
+      logger.info(treeDirtDiagram.map("\n\t"+_).mkString)
 
       val firstModifiedCommit = ("First modified commit", commits.find(objectIdCleaner.isDirty).get)
       val lastDirtyCommit = ("Last dirty commit", commits.reverse.find(c => objectIdCleaner.isDirty(c.getTree)).get)
       val items = for ((desc, commit) <- Seq(firstModifiedCommit, lastDirtyCommit);
                        (before, after) <- objectIdCleaner.substitution(commit)
       ) yield (desc, before.shortName, after.shortName)
-      Tables.formatTable(("", "Before", "After"), items).map("\t" + _).foreach(println)
+      logger.info(Tables.tableText(("", "Before", "After"), items))
     }
 
     reportTreeDirtHistory()
@@ -211,15 +213,22 @@ class CLIReporter(repo: Repository) extends Reporter {
 
     val changedIds = objectIdCleaner.cleanedObjectMap()
 
-    println(s"\n\nIn total, ${changedIds.size} object ids were changed - a record of these will be written to:\n\n\t${mapFile.path}")
+    logger.info(s"\nIn total, ${changedIds.size} object ids were changed.")
 
     mapFile.writeStrings(SortedMap[AnyObjectId, ObjectId](changedIds.toSeq: _*).view.map { case (o,n) => s"${o.name} ${n.name}"}, "\n")
 
     cacheStatsFile.writeStrings(objectIdCleaner.stats().seq.map(_.toString()), "\n")
 
-    println("\nBFG run is complete!")
+    logger.info(s"""
+      |A report on this BFG job, including logs, protected dirt, changed
+      |object-ids, etc, has been written to :
+      |
+      |\t${reportsDir.path}
+       """.stripMargin)
+
+    logger.info("\nBFG run is complete!")
 
   }
 
-  def title(text: String) = s"\n$text\n" + ("-" * text.size) + "\n"
+  def title(text: String) = s"\n$text\n" + ("-" * text.size)
 }

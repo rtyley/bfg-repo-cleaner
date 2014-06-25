@@ -32,6 +32,7 @@ import org.eclipse.jgit.lib.ObjectReader._
 import Constants.OBJ_BLOB
 import scala.Some
 import com.madgag.git.SizedObject
+import com.madgag.git.bfg.log.JobLogContext
 
 trait CleaningMapper[V] extends Cleaner[V] {
   def isDirty(v: V) = apply(v) != v
@@ -68,12 +69,12 @@ object GitUtil {
     def apply(v: V) = f(v)
   }
 
-  def biggestBlobs(implicit objectDB: ObjectDirectory, progressMonitor: ProgressMonitor = NullProgressMonitor.INSTANCE): Stream[SizedObject] = {
+  def biggestBlobs(implicit objectDB: ObjectDirectory, jl: JobLogContext): Stream[SizedObject] = {
     Timing.measureTask("Scanning packfile for large blobs", ProgressMonitor.UNKNOWN) {
       val reader = objectDB.newReader
       objectDB.packedObjects.map {
             objectId =>
-              progressMonitor update 1
+              jl.progressMonitor update 1
               SizedObject(objectId, reader.getObjectSize(objectId, OBJ_ANY))
           }.toSeq.sorted.reverse.toStream.filter(oid => reader.open(oid.objectId).getType == OBJ_BLOB)
     }

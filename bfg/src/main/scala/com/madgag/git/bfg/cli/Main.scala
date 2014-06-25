@@ -37,24 +37,27 @@ object Main extends App {
 
         if (config.gitdir.isEmpty) {
           CLIConfig.parser.showUsage
-          Console.err.println("Aborting : " + config.repoLocation + " is not a valid Git repository.\n")
+          Console.err.println(s"Aborting : ${config.repoLocation} is not a valid Git repository.\n")
         } else {
           implicit val repo = config.repo
 
-          println("\nUsing repo : " + repo.getDirectory.getAbsolutePath + "\n")
+          implicit val jl = config.jl
+          val logger = jl.logContext.getLogger("main")
+
+          logger.info(s"\nUsing repo : ${repo.getDirectory.getAbsolutePath}\n")
 
           // do this before implicitly initiating big-blob search
           if (hasBeenProcessedByBFGBefore(repo)) {
-            println("\nThis repo has been processed by The BFG before! Will prune repo before proceeding - to avoid unnecessary cleaning work on unused objects...")
+            logger.warn("\nThis repo has been processed by The BFG before! Will prune repo before proceeding - to avoid unnecessary cleaning work on unused objects...")
             repo.git.gc.call()
-            println("Completed prune of old objects - will now proceed with the main job!\n")
+            logger.info("Completed prune of old objects - will now proceed with the main job!\n")
           }
 
           if (config.definesNoWork) {
-            Console.err.println("Please specify tasks for The BFG :")
+            logger.error("Please specify tasks for The BFG :")
             CLIConfig.parser.showUsage
           } else {
-            println("Found " + config.objectProtection.fixedObjectIds.size + " objects to protect")
+            logger.info(s"Found ${config.objectProtection.fixedObjectIds.size} objects to protect")
 
             RepoRewriter.rewrite(repo, config.objectIdCleanerConfig)
           }

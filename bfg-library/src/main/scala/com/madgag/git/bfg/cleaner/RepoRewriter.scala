@@ -28,7 +28,8 @@ import scala.concurrent.Future
 import concurrent.ExecutionContext.Implicits.global
 import scala.collection.convert.wrapAll._
 import com.madgag.git._
-import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.lib.{Repository, ObjectId}
+import com.madgag.git.bfg.log.JobLogContext
 
 /*
 Encountering a blob ->
@@ -63,13 +64,13 @@ When updating a Tree, the User has no right to muck with sub-trees. They can onl
 
 object RepoRewriter {
 
-  def rewrite(repo: org.eclipse.jgit.lib.Repository, objectIdCleanerConfig: ObjectIdCleaner.Config): Map[ObjectId, ObjectId] = {
+  def rewrite(repo: Repository, objectIdCleanerConfig: ObjectIdCleaner.Config)(implicit jl: JobLogContext): Map[ObjectId, ObjectId] = {
     assert(!repo.getAllRefs.isEmpty, "Can't find any refs in repo at " + repo.getDirectory.getAbsolutePath)
 
+    val logger = jl.logContext.getLogger("rr")
     implicit val refDatabase = repo.getRefDatabase
 
-    val reporter: Reporter = new CLIReporter(repo)
-    implicit val progressMonitor = reporter.progressMonitor
+    val reporter: Reporter = new CLIReporter(repo, jl)
 
     val allRefs = repo.getAllRefs.values
 
@@ -93,7 +94,7 @@ object RepoRewriter {
 
     reporter.reportObjectProtection(objectIdCleanerConfig)(repo.getObjectDatabase, revWalk)
 
-    val objectIdCleaner = new ObjectIdCleaner(objectIdCleanerConfig, repo.getObjectDatabase, revWalk)
+    val objectIdCleaner = new ObjectIdCleaner(objectIdCleanerConfig, repo.getObjectDatabase, revWalk, jl)
 
     val commits = revWalk.toList
 
@@ -110,7 +111,7 @@ object RepoRewriter {
         commits.foreach {
           commit =>
             objectIdCleaner(commit)
-            progressMonitor update 1
+            jl.progressMonitor update 1
         }
       }
     }
@@ -121,7 +122,7 @@ object RepoRewriter {
       ) yield new ReceiveCommand(oldId, newId, ref.getName)
 
       if (refUpdateCommands.isEmpty) {
-        println("\nBFG aborting: No refs to update - no dirty commits found??\n")
+        logger.error("\nBFG aborting: No refs to update - no dirty commits found??\n")
       } else {
         reporter.reportRefUpdateStart(refUpdateCommands)
 
@@ -133,7 +134,7 @@ object RepoRewriter {
           }
 
           refDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands)
-            .execute(quickMergeCalcRevWalk, progressMonitor)
+            .execute(quickMergeCalcRevWalk, jl.progressMonitor)
         }
 
         reporter.reportResults(commits, objectIdCleaner)
