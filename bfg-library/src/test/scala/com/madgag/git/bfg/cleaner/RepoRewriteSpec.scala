@@ -20,27 +20,28 @@
 
 package com.madgag.git.bfg.cleaner
 
-import java.net.URLEncoder
-
-import protection.ProtectedObjectCensus
-import scala.collection.convert.wrapAsScala._
-import java.util.Properties
-import org.eclipse.jgit.util.RawParseUtils
 import java.io.StringReader
-import org.eclipse.jgit.lib.ObjectId
-import PartialFunction.condOpt
-import org.apache.commons.io.FilenameUtils
-import com.madgag.git.bfg.model.TreeBlobEntry
-import scala.Some
-import com.madgag.textmatching.RegexReplacer._
-import com.madgag.git.bfg.GitUtil._
+import java.net.URLEncoder
+import java.util.Properties
 import java.util.regex.Pattern._
-import ObjectIdSubstitutor._
-import org.eclipse.jgit.revwalk.RevWalk
-import org.specs2.mutable._
+
 import com.madgag.git._
+import com.madgag.git.bfg.GitUtil._
+import com.madgag.git.bfg.cleaner.ObjectIdSubstitutor._
+import com.madgag.git.bfg.cleaner.protection.ProtectedObjectCensus
+import com.madgag.git.bfg.log.BFGLogConfiguration
+import com.madgag.git.bfg.model.TreeBlobEntry
 import com.madgag.git.test._
 import com.madgag.textmatching.Literal
+import com.madgag.textmatching.RegexReplacer._
+import org.apache.commons.io.FilenameUtils
+import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.revwalk.RevWalk
+import org.eclipse.jgit.util.RawParseUtils
+import org.specs2.mutable._
+
+import scala.PartialFunction.condOpt
+import scala.collection.convert.wrapAsScala._
 
 class RepoRewriteSpec extends Specification {
 
@@ -48,6 +49,7 @@ class RepoRewriteSpec extends Specification {
     "not explode" in {
       implicit val repo = unpackRepo("/sample-repos/example.git.zip")
       implicit val reader = repo.newObjectReader
+      implicit val jl = BFGLogConfiguration.generateJobLogContextFor(repo)
 
       hasBeenProcessedByBFGBefore(repo) must beFalse
 
@@ -73,6 +75,7 @@ class RepoRewriteSpec extends Specification {
     "clean commit messages even on clean branches, because commit messages may reference commits from dirty ones" in {
       implicit val repo = unpackRepo("/sample-repos/taleOfTwoBranches.git.zip")
       implicit val revWalk = new RevWalk(repo)
+      implicit val jl = BFGLogConfiguration.generateJobLogContextFor(repo)
 
       def commitMessageForRev(rev: String) = repo.resolve(rev).asRevCommit.getFullMessage
 
@@ -86,6 +89,7 @@ class RepoRewriteSpec extends Specification {
     "remove passwords" in {
       implicit val repo = unpackRepo("/sample-repos/example.git.zip")
       implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
+      implicit val jl = BFGLogConfiguration.generateJobLogContextFor(repo)
 
       def propertiesIn(contents: String) = {
         val p = new Properties()
@@ -129,6 +133,7 @@ class RepoRewriteSpec extends Specification {
   "Text modifier" should {
     def textReplacementOf(parentPath: String, fileNamePrefix: String, fileNamePostfix: String, before: String, after: String) = {
       implicit val repo = unpackRepo("/sample-repos/encodings.git.zip")
+      implicit val jl = BFGLogConfiguration.generateJobLogContextFor(repo)
 
       val blobTextModifier = new BlobTextModifier {
         def lineCleanerFor(entry: TreeBlobEntry) = Some(quote(before).r --> (_ => after))

@@ -22,14 +22,15 @@ package com.madgag.git.bfg.cli
 
 import java.io.File
 
+import com.madgag.git.{SizedObject, _}
 import com.madgag.git.bfg.BuildInfo
 import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.cleaner._
 import com.madgag.git.bfg.cleaner.kit.BlobInserter
 import com.madgag.git.bfg.cleaner.protection.ProtectedObjectCensus
+import com.madgag.git.bfg.log.BFGLogConfiguration
 import com.madgag.git.bfg.model.FileName.ImplicitConversions._
 import com.madgag.git.bfg.model.{FileName, Tree, TreeBlobEntry, TreeBlobs, TreeSubtrees}
-import com.madgag.git.{SizedObject, _}
 import com.madgag.inclusion.{IncExcExpression, _}
 import com.madgag.text.ByteSize
 import com.madgag.textmatching.{Glob, TextMatcher, TextMatcherType}
@@ -138,6 +139,10 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   implicit lazy val repo = FileRepositoryBuilder.create(gitdir.get).asInstanceOf[FileRepository]
 
+  implicit lazy val jl = BFGLogConfiguration.generateJobLogContextFor(repo).copy(progressMonitor = new TextProgressMonitor())
+
+  lazy val logger = jl.logContext.getLogger("main")
+
   lazy val objectProtection = ProtectedObjectCensus(protectBlobsFromRevisions)
 
   lazy val objectChecker = if (strictObjectChecking) Some(new ObjectChecker()) else None
@@ -197,13 +202,13 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
       ).flatten
 
       if (sizeBasedBlobTargetSources.isEmpty) None else {
-        val sizedBadIds = sizeBasedBlobTargetSources.flatMap(_(biggestBlobs(repo.getObjectDatabase, progressMonitor))).toSet
+        val sizedBadIds = sizeBasedBlobTargetSources.flatMap(_(biggestBlobs(repo.getObjectDatabase, jl))).toSet
         if (sizedBadIds.isEmpty) {
-          println("Warning : no large blobs matching criteria found in packfiles - does the repo need to be packed?")
+          logger.warn("Warning : no large blobs matching criteria found in packfiles - does the repo need to be packed?")
           None
         } else {
-          println("Found " + sizedBadIds.size + " blob ids for large blobs - biggest=" + sizedBadIds.max.size + " smallest=" + sizedBadIds.min.size)
-          println("Total size (unpacked)=" + sizedBadIds.map(_.size).sum)
+          logger.info(s"Found ${sizedBadIds.size} blob ids for large blobs - biggest=${sizedBadIds.max.size} smallest=${sizedBadIds.min.size}")
+          logger.info(s"Total size (unpacked)=${sizedBadIds.map(_.size).sum}")
           Some(new BlobReplacer(sizedBadIds.map(_.objectId), new BlobInserter(repo.getObjectDatabase.threadLocalResources.inserter())))
         }
       }

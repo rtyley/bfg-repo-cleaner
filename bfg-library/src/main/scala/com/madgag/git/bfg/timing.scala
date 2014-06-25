@@ -23,23 +23,17 @@ package com.madgag.git.bfg
 import java.lang.System._
 import org.eclipse.jgit.lib.ProgressMonitor
 import java.util.concurrent.TimeUnit.NANOSECONDS
+import com.madgag.git.bfg.log.JobLogContext
 
 object Timing {
-  //  def measure[T](block: => T) = {
-  //    val start = nanoTime
-  //    val result = block
-  //    val duration = nanoTime - start
-  //    println("duration="+duration)
-  //    result
-  //  }
 
-  def measureTask[T](taskName: String, workSize: Int)(block: => T)(implicit progressMonitor: ProgressMonitor) = {
-    progressMonitor.beginTask(taskName, workSize)
+  def measureTask[T](taskName: String, workSize: Int)(block: => T)(implicit jl: JobLogContext) = {
+    jl.progressMonitor.beginTask(taskName, workSize)
     val start = nanoTime
     val result = block
     val duration = nanoTime - start
-    progressMonitor.endTask()
-    println(taskName + " completed in %,d ms.".format(NANOSECONDS.toMillis(duration)))
+    jl.progressMonitor.endTask()
+    jl.logContext.getLogger("timing").info(s"$taskName completed in %,d ms.".format(NANOSECONDS.toMillis(duration)))
     result
   }
 }

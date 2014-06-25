@@ -24,6 +24,7 @@ import com.madgag.collection.concurrent.ConcurrentMultiMap
 import com.madgag.git._
 import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.cleaner.protection.{ProtectedObjectCensus, ProtectedObjectDirtReport}
+import com.madgag.git.bfg.log.JobLogContext
 import com.madgag.git.bfg.model.{Tree, TreeSubtrees, _}
 import com.madgag.git.bfg.{CleaningMapper, Memo, MemoFunc, MemoUtil}
 import org.eclipse.jgit.lib.Constants._
@@ -55,7 +56,7 @@ object ObjectIdCleaner {
 /*
  * Knows how to clean an object, and what objects are protected...
  */
-class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, implicit val revWalk: RevWalk) extends CleaningMapper[ObjectId] {
+class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, implicit val revWalk: RevWalk, jl: JobLogContext) extends CleaningMapper[ObjectId] {
 
   import config._
 

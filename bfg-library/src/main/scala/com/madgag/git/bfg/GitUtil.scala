@@ -22,6 +22,7 @@ package com.madgag.git.bfg
 
 import com.madgag.git.{SizedObject, _}
 import com.madgag.git.bfg.cleaner._
+import com.madgag.git.bfg.log.JobLogContext
 import org.eclipse.jgit.internal.storage.file.ObjectDirectory
 import org.eclipse.jgit.lib.Constants.OBJ_BLOB
 import org.eclipse.jgit.lib.ObjectReader._
@@ -69,12 +70,12 @@ object GitUtil {
     def apply(v: V) = f(v)
   }
 
-  def biggestBlobs(implicit objectDB: ObjectDirectory, progressMonitor: ProgressMonitor = NullProgressMonitor.INSTANCE): Stream[SizedObject] = {
+  def biggestBlobs(implicit objectDB: ObjectDirectory, jl: JobLogContext): Stream[SizedObject] = {
     Timing.measureTask("Scanning packfile for large blobs", ProgressMonitor.UNKNOWN) {
       val reader = objectDB.newReader
       objectDB.packedObjects.map {
             objectId =>
-              progressMonitor update 1
+              jl.progressMonitor update 1
               SizedObject(objectId, reader.getObjectSize(objectId, OBJ_ANY))
           }.toSeq.sorted.reverse.toStream.filter { oid =>
         oid.size > ProbablyNoNonFileObjectsOverSizeThreshold || reader.open(oid.objectId).getType == OBJ_BLOB

@@ -20,6 +20,7 @@
 
 package com.madgag.git.bfg.cleaner.protection
 
+import com.madgag.git.bfg.log.JobLogContext
 import org.eclipse.jgit.revwalk.{RevTree, RevBlob, RevWalk, RevObject}
 import org.eclipse.jgit.lib.{ObjectDatabase, ObjectId}
 import org.eclipse.jgit.treewalk.TreeWalk
@@ -32,11 +33,12 @@ import com.madgag.git.bfg.cleaner.ObjectIdCleaner
 import com.madgag.git.bfg.GitUtil._
 
 object ProtectedObjectDirtReport {
-  def reportsFor(objectIdCleanerConfig: ObjectIdCleaner.Config, objectDB: ObjectDatabase)(implicit revWalk: RevWalk) = {
+  def reportsFor(objectIdCleanerConfig: ObjectIdCleaner.Config, objectDB: ObjectDatabase)(implicit revWalk: RevWalk, jl: JobLogContext) = {
     val uncaringCleaner: ObjectIdCleaner = new ObjectIdCleaner(
       objectIdCleanerConfig.copy(protectedObjectCensus = ProtectedObjectCensus.None),
       objectDB,
-      revWalk
+      revWalk,
+      jl
     )
 
     for (protectedRevObj <- objectIdCleanerConfig.protectedObjectCensus.protectorRevsByObject.keys) yield {

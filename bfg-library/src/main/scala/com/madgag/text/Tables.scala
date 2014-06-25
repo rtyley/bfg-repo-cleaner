@@ -34,4 +34,7 @@ object Tables {
         padLine(l).mkString(" | ")
     }, "...", maxDataRows+2).toSeq
   }
+
+  def tableText(header: Product, data: Seq[Product]): String =
+    ("" +: formatTable(header, data).map("\t" + _) :+ "").mkString("\n")
 }
