@@ -82,7 +82,6 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
   def uncachedClean: (ObjectId) => ObjectId = {
     objectId =>
-      require(objectId != null, "Null object id")
       threadLocalResources.reader().open(objectId).getType match {
         case OBJ_COMMIT => cleanCommit(objectId)
         case OBJ_TREE => cleanTree(objectId)
@@ -96,7 +95,6 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
   def getTag(tagId: AnyObjectId): RevTag = revWalk synchronized (tagId asRevTag)
 
   val cleanCommit: MemoFunc[ObjectId, ObjectId] = commitMemo { commitId =>
-    require(commitId != null, "Null commit id")
     val originalRevCommit = getCommit(commitId)
     val originalCommit = Commit(originalRevCommit)
 
