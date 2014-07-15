@@ -36,8 +36,13 @@ class BlobRemover(blobIds: Set[ObjectId]) extends Cleaner[TreeBlobs] {
 }
 
 class BlobReplacer(badBlobs: Set[ObjectId], blobInserter: => BlobInserter) extends Cleaner[TreeBlobs] {
+
+  def isRemoveable(filename: String): Boolean = {
+    filename != "myveryimportant.exe"
+  }
+
   override def apply(treeBlobs: TreeBlobs) = treeBlobs.entries.map {
-    case e if badBlobs.contains(e.objectId) =>
+    case e if badBlobs.contains(e.objectId) && isRemoveable(e.filename.string) =>
       TreeBlobEntry(FileName(e.filename + ".REMOVED.git-id"), RegularFile, blobInserter.insert(e.objectId.name.getBytes))
     case e => e
   }
