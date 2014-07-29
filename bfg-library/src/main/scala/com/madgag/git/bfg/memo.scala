@@ -44,7 +44,7 @@ object MemoUtil {
    *
    * A caching wrapper for a function (V => V), backed by a no-eviction LoadingCache from Google Collections.
    */
-  def concurrentCleanerMemo[V](fixedEntries: Set[V] = Set.empty): Memo[V, V] = {
+  def concurrentCleanerMemo[V](fixedEntries: Set[V] = Set.empty[V]): Memo[V, V] = {
     memo[V, V] {
       (f: Cleaner[V]) =>
         lazy val permanentCache = loaderCacheFor(f)(fix)

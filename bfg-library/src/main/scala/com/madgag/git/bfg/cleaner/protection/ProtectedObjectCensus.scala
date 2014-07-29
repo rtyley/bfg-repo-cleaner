@@ -91,6 +91,8 @@ case class ProtectedObjectCensus(protectorRevsByObject: Map[RevObject, Set[Strin
 
   lazy val blobIds: Set[ObjectId] = directBlobProtection.keySet ++ indirectBlobProtection.keySet
 
+  lazy val treeIds = treeProtection.keySet
+
   // blobs only for completeness here
-  lazy val fixedObjectIds: Set[ObjectId] = treeProtection.keySet ++ blobIds
+  lazy val fixedObjectIds: Set[ObjectId] = treeIds ++ blobIds
 }
