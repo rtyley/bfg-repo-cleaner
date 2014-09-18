@@ -43,7 +43,7 @@ import com.madgag.git.bfg.model.TreeSubtrees
 import com.madgag.git.SizedObject
 import com.madgag.git.bfg.model.TreeBlobEntry
 import com.madgag.inclusion.IncExcExpression
-
+import java.util.Date
 
 object CLIConfig {
   val parser = new OptionParser[CLIConfig]("bfg") {
@@ -107,6 +107,9 @@ object CLIConfig {
     opt[String]("massive-non-file-objects-sized-up-to").valueName("<size>").text("increase memory usage to handle over-size Commits, Tags, and Trees that are up to X in size (eg '10M')").action {
       (v, c) => c.copy(massiveNonFileObjects = Some(ByteSize.parse(v)))
     }
+    opt[Unit]("curfew").text("shift timestamps so that no commit happens within the curfew").action {
+      (v, c) => c.copy(timestampCurfew = Some(_ => true))
+    }
     opt[String]("fix-filename-duplicates-preferring").valueName("<filemode>").text("Fix corrupt trees which contain multiple entries with the same filename, favouring the 'tree' or 'blob'").action {
       (v, c) =>
         val preferredFileMode = v.toLowerCase match {
@@ -136,7 +139,8 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      strictObjectChecking: Boolean = false,
                      sensitiveData: Option[Boolean] = None,
                      massiveNonFileObjects: Option[Int] = None,
-                     repoLocation: File = new File(System.getProperty("user.dir"))) {
+                     repoLocation: File = new File(System.getProperty("user.dir")),
+                     timestampCurfew: Option[Date => Boolean] = None) {
 
   lazy val gitdir = resolveGitDirFor(repoLocation)
 
@@ -184,8 +188,9 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   lazy val commitNodeCleaners = {
     lazy val formerCommitFooter = if (privateDataRemoval) None else Some(FormerCommitFooter)
+    lazy val timestampCurfewShifter = timestampCurfew.map(new CommitTimestampCurfewShifter(_)).map(Seq(_)).getOrElse(Nil)
 
-    Seq(new CommitMessageObjectIdsUpdater(objectIdSubstitutor)) ++ formerCommitFooter
+    Seq(new CommitMessageObjectIdsUpdater(objectIdSubstitutor)) ++ timestampCurfewShifter ++ formerCommitFooter
   }
 
   lazy val treeBlobCleaners: Seq[Cleaner[TreeBlobs]] = {
@@ -216,7 +221,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier).flatten
   }
 
-  lazy val definesNoWork = treeBlobCleaners.isEmpty && folderDeletion.isEmpty && treeEntryListCleaners.isEmpty
+  lazy val definesNoWork = treeBlobCleaners.isEmpty && folderDeletion.isEmpty && treeEntryListCleaners.isEmpty && timestampCurfew.isEmpty
 
   def objectIdCleanerConfig: ObjectIdCleaner.Config =
     ObjectIdCleaner.Config(
