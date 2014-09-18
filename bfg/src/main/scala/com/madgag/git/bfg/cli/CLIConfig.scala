@@ -108,7 +108,7 @@ object CLIConfig {
       (v, c) => c.copy(massiveNonFileObjects = Some(ByteSize.parse(v)))
     }
     opt[Unit]("curfew").text("shift timestamps so that no commit happens within the curfew").action {
-      (v, c) => c.copy(timestampCurfew = Some(_ => true))
+      (v, c) => c.copy(timestampCurfew = Some(t => !(t.getDay >= 1 && t.getDay <= 5 && t.getHours >= 8 && t.getHours < 18)))
     }
     opt[String]("fix-filename-duplicates-preferring").valueName("<filemode>").text("Fix corrupt trees which contain multiple entries with the same filename, favouring the 'tree' or 'blob'").action {
       (v, c) =>
