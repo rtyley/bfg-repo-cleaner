@@ -11,7 +11,17 @@ pre-built [downloads](http://rtyley.github.io/bfg-repo-cleaner/#download):
 * `sbt`<- start the sbt console
 * `assembly` <- download dependencies, run the tests, build the jar
 
-You may want to use IntelliJ and it's Scala plugin to help with the Scala syntax...!
+To find the jar once it's built, just look at the last few lines of output from the
+`assembly` task - it'll say something like this:
+
+```
+[info] Packaging /Users/roberto/development/bfg-repo-cleaner/bfg/target/bfg-1.11.9-SNAPSHOT-master-21d2115.jar ...
+[info] Done packaging.
+[success] Total time: 19 s, completed 26-Sep-2014 16:05:11
+```
+
+If you're going to make changes to the Scala code, you may want to use IntelliJ and it's Scala
+plugin to help with the Scala syntax...!
 
 I personally found Coursera's [online Scale course](https://www.coursera.org/course/progfun) very helpful in
 learning Scala, YMMV.
