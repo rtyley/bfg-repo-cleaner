@@ -63,7 +63,11 @@ object ProtectedObjectCensus {
 
     implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
 
-    val objectProtection = revisions.groupBy(repo.resolve(_).asRevObject)
+    val objectProtection = revisions.groupBy { revision =>
+      Option(repo.resolve(revision)).getOrElse { throw new IllegalArgumentException(
+          s"Couldn't find '$revision' in ${repo.topDirectory.getAbsolutePath} - are you sure that exists?"
+      )}.asRevObject
+    }
 
     // blobs come from direct blob references and tag references
     // trees come from direct tree references, commit & tag references
