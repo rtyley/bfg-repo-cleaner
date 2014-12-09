@@ -98,6 +98,11 @@ $ git reflog expire --expire=now --all && git gc --prune=now --aggressive
 <p>Replace all passwords listed in a file <em>(prefix lines 'regex:' or 'glob:' if required)</em> with <code>***REMOVED***</code> wherever they occur in your repository :</p>
 <pre><code>$ bfg <strong>--replace-text passwords.txt</strong>  my-repo.git</code></pre>
 
+<p>Remove all folders or files named '.git' - a <a href="https://github.com/git/git/blob/d29e9c89d/fsck.c#L228-L229">reserved filename</a> in Git. These often
+  <a href="http://stackoverflow.com/q/16821649/438886">become a problem</a> when migrating to
+  Git from other source-control systems like Mercurial :</p>
+<pre><code>$ bfg <strong>--delete-folders .git --delete-files .git  --no-blob-protection</strong>  my-repo.git</code></pre>
+
 
 <h1 id="protected-commits">Your <em>current</em> files are sacred...</h1>
 
