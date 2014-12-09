@@ -1,8 +1,5 @@
-import AssemblyKeys._
 import Dependencies._
 import sbt.taskKey
-
-assemblySettings
 
 buildInfoSettings
 
