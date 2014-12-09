@@ -218,7 +218,7 @@ class CLIReporter(repo: Repository) extends Reporter {
 
     cacheStatsFile.writeStrings(objectIdCleaner.stats().seq.map(_.toString()), "\n")
 
-    println("\nBFG run is complete!")
+    println("\nBFG run is complete! When ready, run: git reflog expire --expire=now --all && git gc --prune=now --aggressive")
 
   }
 
