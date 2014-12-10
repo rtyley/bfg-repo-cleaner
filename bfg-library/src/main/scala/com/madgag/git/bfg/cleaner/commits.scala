@@ -47,6 +47,10 @@ trait CommitNodeCleaner {
   def fixer(kit: CommitNodeCleaner.Kit): Cleaner[CommitNode]
 }
 
+object SetCommitterToAuthor extends CommitNodeCleaner {
+  override def fixer(kit: CommitNodeCleaner.Kit) = c => c.copy(committer = c.author)
+}
+
 object FormerCommitFooter extends CommitNodeCleaner {
   val Key = "Former-commit-id"
 

@@ -185,7 +185,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
   lazy val commitNodeCleaners = {
     lazy val formerCommitFooter = if (privateDataRemoval) None else Some(FormerCommitFooter)
 
-    Seq(new CommitMessageObjectIdsUpdater(objectIdSubstitutor)) ++ formerCommitFooter
+    Seq(SetCommitterToAuthor, new CommitMessageObjectIdsUpdater(objectIdSubstitutor)) ++ formerCommitFooter
   }
 
   lazy val treeBlobCleaners: Seq[Cleaner[TreeBlobs]] = {
@@ -216,7 +216,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier).flatten
   }
 
-  lazy val definesNoWork = treeBlobCleaners.isEmpty && folderDeletion.isEmpty && treeEntryListCleaners.isEmpty
+  lazy val definesNoWork = false
 
   def objectIdCleanerConfig: ObjectIdCleaner.Config =
     ObjectIdCleaner.Config(
