@@ -21,7 +21,7 @@
         var s = document.createElement('script'), t = document.getElementsByTagName('script')[0];
         s.type = 'text/javascript';
         s.async = true;
-        s.src = 'http://api.flattr.com/js/0.6/load.js?mode=auto';
+        s.src = 'https://api.flattr.com/js/0.6/load.js?mode=auto';
         t.parentNode.insertBefore(s, t);
     })();
 /* ]]> */</script>
@@ -134,7 +134,7 @@ ids <strong>will</strong> change, to reflect the changed history - only the SHA-
 <p>The BFG is <a href="https://docs.google.com/spreadsheet/ccc?key=0AsR1d5Zpes8HdER3VGU1a3dOcmVHMmtzT2dsS2xNenc">10 - 720x</a> faster
 than <code>git-filter-branch</code>, turning an <em>overnight</em> job into one that takes <em>less than ten minutes</em>.</p>
 
-<iframe width="640" height="360" src="http://www.youtube.com/embed/Ir4IHzPhJuI?rel=0" frameborder="0" allowfullscreen></iframe>
+<iframe width="640" height="360" src="https://www.youtube.com/embed/Ir4IHzPhJuI?rel=0" frameborder="0" allowfullscreen></iframe>
 &nbsp;
 <p>BFG's performance advantage is due to these factors:</p>
 
@@ -221,11 +221,11 @@ Roberto's creations (<a href="https://play.google.com/store/apps/details?id=com.
       </div>
     </div>
 
-  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
 <script>
 
 $.ajax({ dataType: "jsonp", timeout: 5000,
-  url: 'http://search.maven.org/solrsearch/select/?q=g:"com.madgag"+AND+a:"bfg"&wt=json&json.wrf=?&indent=true'
+  url: 'https://search.maven.org/solrsearch/select/?q=g:"com.madgag"+AND+a:"bfg"&wt=json&json.wrf=?&indent=true'
 }).done(function ( data ) {
     var v = data.response.docs[0].latestVersion;
     var u = "http://repo1.maven.org/maven2/com/madgag/bfg/"+v+"/bfg-"+v+".jar"
