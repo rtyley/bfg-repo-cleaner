@@ -1,6 +1,6 @@
 language: scala
 scala:
-   - 2.11.1
+   - 2.11.4
 
 jdk:
   - oraclejdk8
