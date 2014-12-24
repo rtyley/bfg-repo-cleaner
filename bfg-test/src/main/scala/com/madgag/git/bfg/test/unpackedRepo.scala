@@ -1,16 +1,15 @@
 package com.madgag.git.bfg.test
 
-import scala.collection.convert.wrapAsScala._
-import org.eclipse.jgit.lib.{Constants, ObjectReader, ObjectId, Repository}
-import org.eclipse.jgit.revwalk.{RevObject, RevTree, RevCommit}
-import org.specs2.matcher.{Matcher, MustThrownMatchers}
 import com.madgag.git._
 import com.madgag.git.test._
-import org.specs2.specification.Scope
 import org.eclipse.jgit.internal.storage.file.ObjectDirectory
+import org.eclipse.jgit.lib.{Constants, ObjectId, ObjectReader, Repository}
+import org.eclipse.jgit.revwalk.{RevCommit, RevTree}
 import org.eclipse.jgit.treewalk.TreeWalk
-// import com.madgag.git.bfg.cli.Main
-// import com.madgag.git.bfg.GitUtil._
+import org.specs2.matcher.{Matcher, MustThrownMatchers}
+import org.specs2.specification.Scope
+
+import scala.collection.convert.wrapAsScala._
 
 class unpackedRepo(filePath: String) extends Scope with MustThrownMatchers {
 
