@@ -6,3 +6,10 @@ jdk:
   - oraclejdk8
   - openjdk7
   - openjdk6
+
+sudo: false
+cache:
+  directories:
+  - $HOME/.sbt
+  - $HOME/.ivy2
+script: sbt ++$TRAVIS_SCALA_VERSION test ; result=$? ; find $HOME/.sbt -name "*.lock" -type f -delete ; find $HOME/.ivy2/cache -name "*[\[\]\(\)]*.properties" -type f -delete ; (exit $result)
