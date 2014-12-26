@@ -20,17 +20,15 @@
 
 package com.madgag.git.bfg.cleaner
 
-import org.eclipse.jgit.revwalk.{RevWalk, RevTag, RevCommit}
-import org.eclipse.jgit.lib.Constants._
-import com.madgag.git.bfg.cleaner.protection.{ProtectedObjectDirtReport, ProtectedObjectCensus}
-import com.madgag.git.bfg.{MemoFunc, Memo, CleaningMapper, MemoUtil}
-import com.madgag.git.bfg.model._
+import com.madgag.collection.concurrent.ConcurrentMultiMap
 import com.madgag.git._
-import bfg.model.Tree
-import bfg.model.TreeSubtrees
-import org.eclipse.jgit.lib._
 import com.madgag.git.bfg.GitUtil._
-import com.madgag.git.bfg.model.Tree.Entry
+import com.madgag.git.bfg.cleaner.protection.{ProtectedObjectCensus, ProtectedObjectDirtReport}
+import com.madgag.git.bfg.model.{Tree, TreeSubtrees, _}
+import com.madgag.git.bfg.{CleaningMapper, Memo, MemoFunc, MemoUtil}
+import org.eclipse.jgit.lib.Constants._
+import org.eclipse.jgit.lib._
+import org.eclipse.jgit.revwalk.{RevCommit, RevTag, RevWalk}
 
 object ObjectIdCleaner {
 
@@ -62,6 +60,9 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
   import config._
 
   val threadLocalResources = objectDB.threadLocalResources
+
+  val changesByFilename = new ConcurrentMultiMap[FileName, (ObjectId, ObjectId)]
+  val deletionsByFilename = new ConcurrentMultiMap[FileName, ObjectId]
 
   // want to enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
   val memo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds)
@@ -125,7 +126,8 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
       case (name, treeId) => (name, cleanTree(treeId))
     }).withoutEmptyTrees
 
-    if (entries != cleanedTreeEntries || fixedTreeBlobs != tree.blobs || cleanedSubtrees != tree.subtrees) {
+    val treeBlobsChanged = fixedTreeBlobs != tree.blobs
+    if (entries != cleanedTreeEntries || treeBlobsChanged || cleanedSubtrees != tree.subtrees) {
 
       val updatedTree = tree copyWith(cleanedSubtrees, fixedTreeBlobs)
 
@@ -133,11 +135,23 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
       objectChecker.foreach(_.checkTree(treeFormatter.toByteArray))
       val updatedTreeId = treeFormatter.insertTo(threadLocalResources.inserter())
 
+      if (treeBlobsChanged) {
+        val changedFiles: Set[TreeBlobEntry] = tree.blobs.entries.toSet -- fixedTreeBlobs.entries.toSet
+        for (TreeBlobEntry(filename, _ , oldId) <- changedFiles) {
+          fixedTreeBlobs.entryMap.get(filename).map(_._2) match {
+            case Some(newId) => changesByFilename.addBinding(filename, (oldId, newId))
+            case None => deletionsByFilename.addBinding(filename, oldId)
+          }
+        }
+      }
+
       updatedTreeId
     } else {
       originalObjectId
     }
   }
+
+  case class TreeBlobChange(oldId: ObjectId, newIdOpt: Option[ObjectId], filename: FileName)
 
   val cleanTag: MemoFunc[ObjectId, ObjectId] = tagMemo { id =>
     val originalTag = getTag(id)
