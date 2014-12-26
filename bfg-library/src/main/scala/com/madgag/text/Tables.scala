@@ -21,7 +21,7 @@
 package com.madgag.text
 
 object Tables {
-  def formatTable(header: Product, data: Seq[Product]): Seq[String] = {
+  def formatTable(header: Product, data: Seq[Product], maxDataRows: Int = 16): Seq[String] = {
     val numColumns = data.head.productArity
     val sizes: Seq[Int] = (0 until numColumns).map(i => (data :+ header).map(_.productElement(i).toString.length).max)
     def padLine(l: Product): IndexedSeq[String] = {
@@ -29,9 +29,9 @@ object Tables {
     }
 
     val headerLine = padLine(header).mkString("   ")
-    headerLine +: "-" * headerLine.size +: (data.map {
+    Text.abbreviate(headerLine +: "-" * headerLine.size +: data.map {
       l =>
         padLine(l).mkString(" | ")
-    })
+    }, "...", maxDataRows+2).toSeq
   }
 }
