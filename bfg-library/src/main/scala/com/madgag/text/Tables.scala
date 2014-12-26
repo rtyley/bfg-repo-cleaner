@@ -23,7 +23,7 @@ package com.madgag.text
 object Tables {
   def formatTable(header: Product, data: Seq[Product]): Seq[String] = {
     val numColumns = data.head.productArity
-    val sizes: Seq[Int] = (0 until numColumns).map(i => data.map(_.productElement(i).toString.length).max)
+    val sizes: Seq[Int] = (0 until numColumns).map(i => (data :+ header).map(_.productElement(i).toString.length).max)
     def padLine(l: Product): IndexedSeq[String] = {
       (0 until numColumns).map(c => l.productElement(c).toString.padTo(sizes(c), ' '))
     }
