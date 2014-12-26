@@ -1,22 +1,24 @@
 package com.madgag.git.bfg.cleaner
 
-import com.madgag.git._
-import com.madgag.git.bfg.cleaner.protection.{ProtectedObjectCensus, ProtectedObjectDirtReport}
-import com.madgag.text.Text._
-import com.madgag.text.{ByteSize, Tables}
 import java.text.SimpleDateFormat
 import java.util.Date
+
+import com.madgag.collection.concurrent.ConcurrentMultiMap
+import com.madgag.git._
+import com.madgag.git.bfg.cleaner.protection.{ProtectedObjectCensus, ProtectedObjectDirtReport}
+import com.madgag.git.bfg.model.FileName
+import com.madgag.text.Text._
+import com.madgag.text.{ByteSize, Tables, Text}
 import org.eclipse.jgit.diff.DiffEntry.ChangeType._
 import org.eclipse.jgit.diff._
 import org.eclipse.jgit.lib.FileMode._
 import org.eclipse.jgit.lib._
-import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
+import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import org.eclipse.jgit.transport.ReceiveCommand
-import scala.Some
+
 import scala.collection.convert.wrapAll._
 import scala.collection.immutable.SortedMap
 import scalax.file.Path
-import com.madgag.git.bfg.GitUtil._
 
 trait Reporter {
 
@@ -212,7 +214,35 @@ class CLIReporter(repo: Repository) extends Reporter {
 
     val changedIds = objectIdCleaner.cleanedObjectMap()
 
-    println(s"\n\nIn total, ${changedIds.size} object ids were changed - a record of these will be written to:\n\n\t${mapFile.path}")
+    def reportFiles[FI](
+        fileData: ConcurrentMultiMap[FileName, FI],
+        actionType: String,
+        tableTitles: Product
+      )(f: ((FileName,Set[FI])) => Product)(fi: FI => Seq[String]) {
+      implicit val fileNameOrdering = Ordering[String].on[FileName](_.string)
+
+      val dataByFilename = SortedMap[FileName, Set[FI]](fileData.toMap.toSeq: _*)
+      if (dataByFilename.nonEmpty) {
+        println(title(s"$actionType files"))
+        Tables.formatTable(tableTitles, dataByFilename.map(f).toSeq).map("\t" + _).foreach(println)
+
+        (reportsDir / s"${actionType.toLowerCase}-files.txt").writeStrings(dataByFilename.flatMap {
+          case (filename, changes) => changes.map(fi.andThen(fid => (fid :+ filename).mkString(" ")))
+        }, "\n")
+      }
+    }
+
+    reportFiles(objectIdCleaner.changesByFilename, "Changed", ("Filename", "Before & After")) {
+      case (filename, changes) => (filename, Text.abbreviate(changes.map {case (oldId, newId) => oldId.shortName+" ⇒ "+newId.shortName}, "...").mkString(", "))
+    } { case (oldId, newId) => Seq(oldId.name, newId.name) }
+
+    implicit val reader = objectIdCleaner.threadLocalResources.reader()
+
+    reportFiles(objectIdCleaner.deletionsByFilename, "Deleted", ("Filename", "Git id")) {
+      case (filename, oldIds) => (filename, Text.abbreviate(oldIds.map(oldId => oldId.shortName + oldId.sizeOpt.map(size => s" (${ByteSize.format(size)})").mkString), "...").mkString(", "))
+    } { oldId => Seq(oldId.name, oldId.sizeOpt.mkString) }
+
+    println(s"\n\nIn total, ${changedIds.size} object ids were changed. Full details are logged here:\n\n\t${reportsDir.path}")
 
     mapFile.writeStrings(SortedMap[AnyObjectId, ObjectId](changedIds.toSeq: _*).view.map { case (o,n) => s"${o.name} ${n.name}"}, "\n")
 
