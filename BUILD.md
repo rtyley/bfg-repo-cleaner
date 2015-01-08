@@ -9,7 +9,7 @@ pre-built [downloads](http://rtyley.github.io/bfg-repo-cleaner/#download):
 * `git clone git@github.com:rtyley/bfg-repo-cleaner.git`
 * `cd bfg-repo-cleaner`
 * `sbt`<- start the sbt console
-* `assembly` <- download dependencies, run the tests, build the jar
+* `bfg/assembly` <- download dependencies, run the tests, build the jar
 
 To find the jar once it's built, just look at the last few lines of output from the
 `assembly` task - it'll say something like this:
