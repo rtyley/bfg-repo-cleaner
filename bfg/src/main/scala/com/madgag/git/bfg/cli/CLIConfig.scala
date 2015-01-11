@@ -20,29 +20,25 @@
 
 package com.madgag.git.bfg.cli
 
-import com.madgag.git._
+import java.io.File
+
 import com.madgag.git.bfg.BuildInfo
 import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.cleaner._
 import com.madgag.git.bfg.cleaner.kit.BlobInserter
+import com.madgag.git.bfg.cleaner.protection.ProtectedObjectCensus
 import com.madgag.git.bfg.model.FileName.ImplicitConversions._
-import com.madgag.git.bfg.model.{TreeSubtrees, TreeBlobs, FileName, TreeBlobEntry}
-import com.madgag.inclusion._
+import com.madgag.git.bfg.model.{FileName, Tree, TreeBlobEntry, TreeBlobs, TreeSubtrees}
+import com.madgag.git.{SizedObject, _}
+import com.madgag.inclusion.{IncExcExpression, _}
 import com.madgag.text.ByteSize
-import com.madgag.textmatching.{TextMatcherType, Glob, TextMatcher}
-import java.io.File
+import com.madgag.textmatching.{Glob, TextMatcher, TextMatcherType}
 import org.eclipse.jgit.internal.storage.file.FileRepository
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder
-import protection.ProtectedObjectCensus
-import scalax.file.ImplicitConversions._
-import scopt.{Read, OptionParser}
 import org.eclipse.jgit.lib._
-import com.madgag.git.bfg.model.Tree
-import scopt.OptionParser
-import com.madgag.git.bfg.model.TreeSubtrees
-import com.madgag.git.SizedObject
-import com.madgag.git.bfg.model.TreeBlobEntry
-import com.madgag.inclusion.IncExcExpression
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder
+import scopt.{OptionParser, Read}
+
+import scalax.file.ImplicitConversions._
 
 
 object CLIConfig {
