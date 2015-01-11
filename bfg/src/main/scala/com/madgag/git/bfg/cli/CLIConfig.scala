@@ -28,7 +28,7 @@ import com.madgag.git.bfg.cleaner._
 import com.madgag.git.bfg.cleaner.kit.BlobInserter
 import com.madgag.git.bfg.cleaner.protection.ProtectedObjectCensus
 import com.madgag.git.bfg.model.FileName.ImplicitConversions._
-import com.madgag.git.bfg.model.{FileName, Tree, TreeBlobEntry, TreeBlobs, TreeSubtrees}
+import com.madgag.git.bfg.model.{Tree, _}
 import com.madgag.git.{SizedObject, _}
 import com.madgag.inclusion.{IncExcExpression, _}
 import com.madgag.text.ByteSize
@@ -209,7 +209,9 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
       }
     }
 
-    Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier).flatten
+    Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier).flatten :+ new Cleaner[TreeBlobs] {
+      def apply(treeBlobs: TreeBlobs) = treeBlobs.entries.map(_.copy(mode = RegularFile))
+    }
   }
 
   lazy val definesNoWork = treeBlobCleaners.isEmpty && folderDeletion.isEmpty && treeEntryListCleaners.isEmpty
