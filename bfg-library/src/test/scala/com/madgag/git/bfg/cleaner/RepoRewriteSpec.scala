@@ -20,6 +20,8 @@
 
 package com.madgag.git.bfg.cleaner
 
+import java.net.URLEncoder
+
 import protection.ProtectedObjectCensus
 import scala.collection.convert.wrapAsScala._
 import java.util.Properties
@@ -135,8 +137,13 @@ class RepoRewriteSpec extends Specification {
       }
       RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus.None, treeBlobsCleaners = Seq(blobTextModifier)))
 
-      val cleanedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-ORIGINAL.$fileNamePostfix")
-      val expectedFile = repo.resolve(s"master:$parentPath/$fileNamePrefix-MODIFIED-$before-$after.$fileNamePostfix")
+      val beforeAndAfter = Seq(before, after).map(URLEncoder.encode(_, "UTF-8")).mkString("-")
+
+      val beforeFile = s"$parentPath/$fileNamePrefix-ORIGINAL.$fileNamePostfix"
+      val afterFile = s"$parentPath/$fileNamePrefix-MODIFIED-$beforeAndAfter.$fileNamePostfix"
+
+      val cleanedFile = repo.resolve(s"master:$beforeFile")
+      val expectedFile = repo.resolve(s"master:$afterFile")
 
       expectedFile should not beNull
 
@@ -150,5 +157,7 @@ class RepoRewriteSpec extends Specification {
     "handle ASCII in SHIFT JIS" in textReplacementOf("SHIFT-JIS", "japanese", "txt", "EUC", "BOOM")
 
     "handle ASCII in ISO-8859-1" in textReplacementOf("ISO-8859-1", "laparabla", "txt", "palpitando", "buscando")
+
+    "handle converting Windows newlines to Unix" in textReplacementOf("newlines", "windows", "txt", "\r\n", "\n")
   }
 }
