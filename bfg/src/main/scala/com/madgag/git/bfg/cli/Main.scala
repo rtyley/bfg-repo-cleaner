@@ -57,6 +57,7 @@ object Main extends App {
             println("Found " + config.objectProtection.fixedObjectIds.size + " objects to protect")
 
             RepoRewriter.rewrite(repo, config.objectIdCleanerConfig)
+            repo.close()
           }
         }
     }
