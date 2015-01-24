@@ -20,18 +20,17 @@
 
 package com.madgag.git.bfg
 
-import org.eclipse.jgit.storage.file.WindowCacheConfig
+import com.madgag.git.{SizedObject, _}
 import com.madgag.git.bfg.cleaner._
-import scala.language.implicitConversions
+import org.eclipse.jgit.internal.storage.file.ObjectDirectory
+import org.eclipse.jgit.lib.Constants.OBJ_BLOB
+import org.eclipse.jgit.lib.ObjectReader._
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.RevWalk
-import collection.convert.wrapAsScala._
-import com.madgag.git._
-import org.eclipse.jgit.internal.storage.file.ObjectDirectory
-import org.eclipse.jgit.lib.ObjectReader._
-import Constants.OBJ_BLOB
-import scala.Some
-import com.madgag.git.SizedObject
+import org.eclipse.jgit.storage.file.WindowCacheConfig
+
+import scala.collection.convert.wrapAsScala._
+import scala.language.implicitConversions
 
 trait CleaningMapper[V] extends Cleaner[V] {
   def isDirty(v: V) = apply(v) != v
@@ -48,10 +47,12 @@ trait CleaningMapper[V] extends Cleaner[V] {
 }
 
 object GitUtil {
-
+  
+  val ProbablyNoNonFileObjectsOverSizeThreshold = 1024 * 1024
+  
   def tweakStaticJGitConfig(massiveNonFileObjects: Option[Int]) {
     val wcConfig: WindowCacheConfig = new WindowCacheConfig()
-    wcConfig.setStreamFileThreshold(massiveNonFileObjects.getOrElse(1024 * 1024))
+    wcConfig.setStreamFileThreshold(massiveNonFileObjects.getOrElse(ProbablyNoNonFileObjectsOverSizeThreshold))
     wcConfig.install()
   }
 
@@ -75,7 +76,9 @@ object GitUtil {
             objectId =>
               progressMonitor update 1
               SizedObject(objectId, reader.getObjectSize(objectId, OBJ_ANY))
-          }.toSeq.sorted.reverse.toStream.filter(oid => reader.open(oid.objectId).getType == OBJ_BLOB)
+          }.toSeq.sorted.reverse.toStream.filter { oid =>
+        oid.size > ProbablyNoNonFileObjectsOverSizeThreshold || reader.open(oid.objectId).getType == OBJ_BLOB
+      }
     }
   }
 }
