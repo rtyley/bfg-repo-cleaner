@@ -129,8 +129,13 @@ protects your work, and gives you peace of mind knowing that the BFG is <em>only
 <p>Note:</p>
 <ul>
 
-<li>The BFG is about <em>completely</em> removing bad stuff from the history of your repo. If something questionable - like a 10MB file, when you're telling The BFG to strip out everying over 5MB - is in a protected commit, it <em>won't</em> be removed, and because it's still there, there's no point deleting it from earlier commits either. If you want the BFG to delete something <strong>you need to make sure your current commits are 
-<em>clean</em></strong>.
+<li>Cleaning Git repos is about <em>completely</em> eradicating bad stuff from history.
+If something 'bad' (like a 10MB file, when you're specifying 
+<code>--strip-blobs-bigger-than 5M</code>) is in a protected commit, it <em>won't</em> be 
+deleted - it'll persist in your repository,
+<a href="https://github.com/rtyley/bfg-repo-cleaner/issues/53#issuecomment-50088997">even
+if the BFG deletes if from earlier commits</a>. If you want the BFG to delete
+something <strong>you need to make sure your current commits are <em>clean</em></strong>.
 
 <li>Note that although the files in those protected commits won't be changed, when those commits follow on from earlier dirty commits, their commit 
 ids <strong>will</strong> change, to reflect the changed history - only the SHA-1 id of the filesystem-tree will remain the same.
