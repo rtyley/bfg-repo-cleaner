@@ -86,6 +86,14 @@ class MainSpec extends Specification {
       }
     }
 
+    "not crash when deleting a folder that contains a submodule" in new unpackedRepo("/sample-repos/usedToHaveASubmodule.git.zip") {
+      ensureInvariant(haveRef("master", haveFile("alpha"))) {
+        ensureRemovalOf(commitHistory(haveFolder("shared").atLeastOnce)) {
+          run("--delete-folders shared")
+        }
+      }
+    }
+    
     "not crash on encountering protected submodule" in new unpackedRepo("/sample-repos/unwantedSubmodule.git.zip") {
       ensureRemovalOf(commitHistory(haveFile("foo.txt").atLeastOnce)) {
         run("--delete-folders bar --delete-files foo.txt")
