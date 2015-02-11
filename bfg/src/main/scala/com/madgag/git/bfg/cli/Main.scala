@@ -58,6 +58,8 @@ object Main extends App {
 
             RepoRewriter.rewrite(repo, config.objectIdCleanerConfig)
             repo.close()
+
+            println("\n\nHas the BFG saved you time?  Support the BFG on BountySource:  https://j.mp/fund-bfg\n\n")
           }
         }
     }
