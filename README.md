@@ -1,8 +1,7 @@
 BFG Repo-Cleaner [![Build Status](https://travis-ci.org/rtyley/bfg-repo-cleaner.png)](https://travis-ci.org/rtyley/bfg-repo-cleaner)
 ================
 
-_Removes large or troublesome blobs like git-filter-branch does, but faster - and written in Scala_
-
+_Removes large or troublesome blobs like git-filter-branch does, but faster - and written in Scala_ - [Fund the BFG](https://j.mp/fund-bfg)
 
 ```
 $ bfg --strip-blobs-bigger-than 1M --replace-text banned.txt repo.git
