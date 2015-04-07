@@ -3,12 +3,12 @@ import scala.sys.process.{ProcessLogger, Process}
 import ExecutionContext.Implicits.global
 
 object JavaVersion {
-  val VersionRegex = """java version "(.*?)"""".r
+  val VersionRegex = """(?:java|openjdk) version "(.*?)"""".r
 
   def version(javaCmd: String): Future[String] = {
     val resultPromise = Promise[String]()
 
-    future {
+    Future {
       val exitCode = Process(s"$javaCmd -version")!ProcessLogger(
         s => for (v <-versionFrom(s)) resultPromise.success(v)
       )
