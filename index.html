@@ -55,7 +55,7 @@ if (("rtyley.github.io" == window.location.host) && (window.location.protocol !=
     <div id="content-wrapper">
       <div class="inner clearfix">
         <section id="main-content">
-<pre><code>$ bfg --strip-blobs-bigger-than 1M --replace-text banned.txt repo.git
+<pre><code>$ bfg --strip-blobs-bigger-than 100M --replace-text banned.txt repo.git
 </code></pre>
 
 <h1>an alternative to git-filter-branch</h1>
@@ -99,8 +99,8 @@ $ git reflog expire --expire=now --all && git gc --prune=now --aggressive
 <p>Delete all files named 'id_rsa' or 'id_dsa' :</p>
 <pre><code>$ bfg <strong>--delete-files id_{dsa,rsa}</strong>  my-repo.git</code></pre>
 
-<p>Remove all blobs bigger than 1 megabyte :</p>
-<pre><code>$ bfg <strong>--strip-blobs-bigger-than 1M</strong>  my-repo.git</code></pre>
+<p>Remove all blobs bigger than 50 megabytes :</p>
+<pre><code>$ bfg <strong>--strip-blobs-bigger-than 50M</strong>  my-repo.git</code></pre>
 
 <p>Replace all passwords listed in a file <em>(prefix lines 'regex:' or 'glob:' if required)</em> with <code>***REMOVED***</code> wherever they occur in your repository :</p>
 <pre><code>$ bfg <strong>--replace-text passwords.txt</strong>  my-repo.git</code></pre>
