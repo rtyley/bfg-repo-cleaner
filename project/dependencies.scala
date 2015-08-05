@@ -2,7 +2,7 @@ import sbt._
 
 object Dependencies {
 
-  val scalaGitVersion = "2.9"
+  val scalaGitVersion = "2.14"
 
   val scalaGit = "com.madgag.scala-git" %% "scala-git" % scalaGitVersion
 

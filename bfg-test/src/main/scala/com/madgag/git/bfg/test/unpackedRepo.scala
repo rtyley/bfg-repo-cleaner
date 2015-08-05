@@ -1,9 +1,13 @@
 package com.madgag.git.bfg.test
 
+import java.lang.System.currentTimeMillis
+import java.util.Date
+
 import com.madgag.git._
 import com.madgag.git.test._
 import org.eclipse.jgit.internal.storage.file.ObjectDirectory
-import org.eclipse.jgit.lib.{Constants, ObjectId, ObjectReader, Repository}
+import org.eclipse.jgit.lib.Constants.OBJ_BLOB
+import org.eclipse.jgit.lib.{ObjectId, ObjectReader, Repository}
 import org.eclipse.jgit.revwalk.{RevCommit, RevTree}
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.specs2.matcher.{Matcher, MustThrownMatchers}
@@ -20,14 +24,14 @@ class unpackedRepo(filePath: String) extends Scope with MustThrownMatchers {
 
   def blobOfSize(sizeInBytes: Int): Matcher[ObjectId] = (objectId: ObjectId) => {
     val objectLoader = objectId.open
-    objectLoader.getType == Constants.OBJ_BLOB && objectLoader.getSize == sizeInBytes
+    objectLoader.getType == OBJ_BLOB && objectLoader.getSize == sizeInBytes
   }
 
   def packedBlobsOfSize(sizeInBytes: Long): Set[ObjectId] = {
     implicit val reader = repo.newObjectReader()
-    objectDirectory.packedObjects.filter { objectId =>
+    repo.getObjectDatabase.asInstanceOf[ObjectDirectory].packedObjects.filter { objectId =>
       val objectLoader = objectId.open
-      objectLoader.getType == Constants.OBJ_BLOB && objectLoader.getSize == sizeInBytes
+      objectLoader.getType == OBJ_BLOB && objectLoader.getSize == sizeInBytes
     }.toSet
   }
 
@@ -67,14 +71,16 @@ class unpackedRepo(filePath: String) extends Scope with MustThrownMatchers {
   }
 
   def ensureRemovalOfBadEggs[S,T](expr : => Traversable[S], exprResultMatcher: Matcher[Traversable[S]])(block: => T) = {
-    repo.git.gc.call()
+    gc()
     expr must exprResultMatcher
 
     block
 
-    repo.git.gc.call()
+    gc()
     expr must beEmpty
   }
+
+  def gc() = repo.git.gc.setExpire(new Date(currentTimeMillis + 1)).call()
 
   def ensureRemovalOf[T](dirtMatchers: Matcher[Repository]*)(block: => T) = {
     // repo.git.gc.call() ??
