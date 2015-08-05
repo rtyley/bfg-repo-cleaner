@@ -79,10 +79,10 @@ object CLIConfig {
       "string other than the default of '***REMOVED***'.").action {
       (v, c) => c.copy(textReplacementExpressions = v.lines().filterNot(_.trim.isEmpty).toSeq)
     }
-    fileMatcher("filter-content-including").abbr("fi").text("do file-content filtering on files that match the specified expression (eg '*.{txt|properties}')").action {
+    fileMatcher("filter-content-including").abbr("fi").text("do file-content filtering on files that match the specified expression (eg '*.{txt,properties}')").action {
       (v, c) => c.copy(filenameFilters = c.filenameFilters :+ Include(v))
     }
-    fileMatcher("filter-content-excluding").abbr("fe").text("don't do file-content filtering on files that match the specified expression (eg '*.{xml|pdf}')").action {
+    fileMatcher("filter-content-excluding").abbr("fe").text("don't do file-content filtering on files that match the specified expression (eg '*.{xml,pdf}')").action {
       (v, c) => c.copy(filenameFilters = c.filenameFilters :+ Exclude(v))
     }
     opt[String]("filter-content-size-threshold").abbr("fs").valueName("<size>").text("only do file-content filtering on files smaller than <size> (default is %1$d bytes)".format(CLIConfig().filterSizeThreshold)).action {
