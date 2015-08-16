@@ -20,15 +20,16 @@
 
 package com.madgag.git.bfg.cleaner
 
+import com.madgag.git._
+import com.madgag.git.bfg.Timing
+import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.revwalk.RevSort._
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import org.eclipse.jgit.transport.ReceiveCommand
-import org.eclipse.jgit.revwalk.RevSort._
-import com.madgag.git.bfg.Timing
-import scala.concurrent.Future
-import concurrent.ExecutionContext.Implicits.global
+
 import scala.collection.convert.wrapAll._
-import com.madgag.git._
-import org.eclipse.jgit.lib.ObjectId
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 /*
 Encountering a blob ->

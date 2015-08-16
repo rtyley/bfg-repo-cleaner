@@ -21,11 +21,12 @@
 package com.madgag.git.bfg.cleaner
 
 import java.io.ByteArrayOutputStream
-import scalax.io.Resource
-import scala.Some
-import com.madgag.git.bfg.model.TreeBlobEntry
+
 import com.madgag.git.ThreadLocalObjectDatabaseResources
+import com.madgag.git.bfg.model.TreeBlobEntry
 import org.eclipse.jgit.lib.Constants.OBJ_BLOB
+
+import scalax.io.Resource
 
 
 object BlobTextModifier {

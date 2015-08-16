@@ -20,10 +20,11 @@
 
 package com.madgag.git.bfg.cli
 
-import org.specs2.mutable._
-import scalax.file.Path
 import com.madgag.git._
-import bfg.cli.test.unpackedRepo
+import com.madgag.git.bfg.cli.test.unpackedRepo
+import org.specs2.mutable._
+
+import scalax.file.Path
 
 class MainSpec extends Specification {
 

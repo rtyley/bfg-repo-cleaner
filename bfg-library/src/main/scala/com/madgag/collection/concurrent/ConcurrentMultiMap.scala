@@ -20,8 +20,6 @@
 
 package com.madgag.collection.concurrent
 
-import scala.collection.TraversableOnce
-
 
 class ConcurrentMultiMap[A, B] {
 

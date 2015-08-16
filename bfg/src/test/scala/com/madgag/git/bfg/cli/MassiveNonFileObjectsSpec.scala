@@ -20,9 +20,9 @@
 
 package com.madgag.git.bfg.cli
 
-import org.specs2.mutable._
-import com.madgag.git.bfg.cli.test.unpackedRepo
 import com.madgag.git._
+import com.madgag.git.bfg.cli.test.unpackedRepo
+import org.specs2.mutable._
 
 class MassiveNonFileObjectsSpec extends Specification {
 

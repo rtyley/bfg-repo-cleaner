@@ -20,9 +20,10 @@
 
 package com.madgag.git.bfg.cleaner.kit
 
-import org.eclipse.jgit.lib.{ObjectInserter, ObjectId}
 import java.io.InputStream
+
 import org.eclipse.jgit.lib.Constants._
+import org.eclipse.jgit.lib.{ObjectId, ObjectInserter}
 
 class BlobInserter(objectInserter: ObjectInserter) {
   def insert(data: Array[Byte]): ObjectId = objectInserter.insert(OBJ_BLOB, data)

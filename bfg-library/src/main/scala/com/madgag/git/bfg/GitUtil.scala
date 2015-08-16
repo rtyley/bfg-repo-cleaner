@@ -20,8 +20,8 @@
 
 package com.madgag.git.bfg
 
-import com.madgag.git.{SizedObject, _}
 import com.madgag.git.bfg.cleaner._
+import com.madgag.git.{SizedObject, _}
 import org.eclipse.jgit.internal.storage.file.ObjectDirectory
 import org.eclipse.jgit.lib.Constants.OBJ_BLOB
 import org.eclipse.jgit.lib.ObjectReader._

@@ -20,9 +20,10 @@
 
 package com.madgag.git.bfg
 
-import com.google.common.cache.{CacheStats, CacheLoader, LoadingCache, CacheBuilder}
+import com.google.common.cache.{CacheBuilder, CacheLoader, CacheStats, LoadingCache}
 import com.madgag.git.bfg.cleaner._
-import collection.convert.decorateAsScala._
+
+import scala.collection.convert.decorateAsScala._
 
 trait Memo[K, V] {
   def apply(z: K => V): MemoFunc[K, V]

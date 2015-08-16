@@ -20,10 +20,10 @@
 
 package com.madgag.git.bfg.cleaner
 
+import com.madgag.git.ThreadLocalObjectDatabaseResources
+import com.madgag.git.bfg.model._
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.RevCommit
-import com.madgag.git.bfg.model._
-import com.madgag.git.ThreadLocalObjectDatabaseResources
 
 object CommitNodeCleaner {
 

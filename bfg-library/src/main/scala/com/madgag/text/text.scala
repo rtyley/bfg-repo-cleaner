@@ -20,7 +20,7 @@
 
 package com.madgag.text
 
-import collection.GenTraversableOnce
+import scala.collection.GenTraversableOnce
 
 object Text {
 

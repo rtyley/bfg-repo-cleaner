@@ -20,11 +20,11 @@
 
 package com.madgag.git.bfg.cleaner
 
+import com.madgag.git._
+import com.madgag.git.bfg.cleaner.ObjectIdSubstitutor.hexRegex
+import com.madgag.git.test._
 import org.eclipse.jgit.lib.ObjectId
 import org.specs2.mutable._
-import ObjectIdSubstitutor.hexRegex
-import com.madgag.git._
-import com.madgag.git.test._
 
 class ObjectIdSubstitutorSpec extends Specification {
 

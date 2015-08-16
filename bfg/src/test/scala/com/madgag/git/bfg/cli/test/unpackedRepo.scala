@@ -21,7 +21,7 @@
 package com.madgag.git.bfg.cli.test
 
 import com.madgag.git.bfg
-import bfg.cli.Main
+import com.madgag.git.bfg.cli.Main
 
 class unpackedRepo(filePath: String) extends bfg.test.unpackedRepo(filePath) {
   def run(options: String) {

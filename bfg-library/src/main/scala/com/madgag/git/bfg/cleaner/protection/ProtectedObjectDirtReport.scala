@@ -20,16 +20,17 @@
 
 package com.madgag.git.bfg.cleaner.protection
 
-import org.eclipse.jgit.revwalk.{RevTree, RevBlob, RevWalk, RevObject}
-import org.eclipse.jgit.lib.{ObjectDatabase, ObjectId}
-import org.eclipse.jgit.treewalk.TreeWalk
-import org.eclipse.jgit.treewalk.filter.TreeFilter
 import com.madgag.git._
-import scala.collection.convert.wrapAsScala._
+import com.madgag.git.bfg.GitUtil._
+import com.madgag.git.bfg.cleaner.ObjectIdCleaner
 import org.eclipse.jgit.diff.DiffEntry
 import org.eclipse.jgit.diff.DiffEntry.ChangeType._
-import com.madgag.git.bfg.cleaner.ObjectIdCleaner
-import com.madgag.git.bfg.GitUtil._
+import org.eclipse.jgit.lib.{ObjectDatabase, ObjectId}
+import org.eclipse.jgit.revwalk.{RevObject, RevWalk}
+import org.eclipse.jgit.treewalk.TreeWalk
+import org.eclipse.jgit.treewalk.filter.TreeFilter
+
+import scala.collection.convert.wrapAsScala._
 
 object ProtectedObjectDirtReport {
   def reportsFor(objectIdCleanerConfig: ObjectIdCleaner.Config, objectDB: ObjectDatabase)(implicit revWalk: RevWalk) = {

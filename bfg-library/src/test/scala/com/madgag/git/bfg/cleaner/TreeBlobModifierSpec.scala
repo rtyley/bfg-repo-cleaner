@@ -20,11 +20,12 @@
 
 package com.madgag.git.bfg.cleaner
 
-import protection.ProtectedObjectCensus
+import com.madgag.git.bfg.cleaner.ObjectIdSubstitutor._
+import com.madgag.git.bfg.cleaner.protection.ProtectedObjectCensus
 import com.madgag.git.bfg.model.TreeBlobEntry
-import ObjectIdSubstitutor._
-import org.specs2.mutable._
 import com.madgag.git.test._
+import org.specs2.mutable._
+
 import scala.collection.mutable
 
 class TreeBlobModifierSpec extends Specification {

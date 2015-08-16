@@ -20,27 +20,27 @@
 
 package com.madgag.git.bfg.cleaner
 
-import java.net.URLEncoder
-
-import protection.ProtectedObjectCensus
-import scala.collection.convert.wrapAsScala._
-import java.util.Properties
-import org.eclipse.jgit.util.RawParseUtils
 import java.io.StringReader
-import org.eclipse.jgit.lib.ObjectId
-import PartialFunction.condOpt
-import org.apache.commons.io.FilenameUtils
-import com.madgag.git.bfg.model.TreeBlobEntry
-import scala.Some
-import com.madgag.textmatching.RegexReplacer._
-import com.madgag.git.bfg.GitUtil._
+import java.net.URLEncoder
+import java.util.Properties
 import java.util.regex.Pattern._
-import ObjectIdSubstitutor._
-import org.eclipse.jgit.revwalk.RevWalk
-import org.specs2.mutable._
+
 import com.madgag.git._
+import com.madgag.git.bfg.GitUtil._
+import com.madgag.git.bfg.cleaner.ObjectIdSubstitutor._
+import com.madgag.git.bfg.cleaner.protection.ProtectedObjectCensus
+import com.madgag.git.bfg.model.TreeBlobEntry
 import com.madgag.git.test._
 import com.madgag.textmatching.Literal
+import com.madgag.textmatching.RegexReplacer._
+import org.apache.commons.io.FilenameUtils
+import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.revwalk.RevWalk
+import org.eclipse.jgit.util.RawParseUtils
+import org.specs2.mutable._
+
+import scala.PartialFunction.condOpt
+import scala.collection.convert.wrapAsScala._
 
 class RepoRewriteSpec extends Specification {
 

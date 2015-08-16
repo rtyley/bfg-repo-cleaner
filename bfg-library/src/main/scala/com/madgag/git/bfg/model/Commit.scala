@@ -1,11 +1,12 @@
 package com.madgag.git.bfg.model
 
-import com.madgag.git.bfg.cleaner._
 import java.nio.charset.Charset
+
+import com.madgag.git._
+import com.madgag.git.bfg.cleaner._
+import org.eclipse.jgit.lib.Constants.OBJ_COMMIT
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.RevCommit
-import com.madgag.git._
-import org.eclipse.jgit.lib.Constants.OBJ_COMMIT
 
 /*
  * Copyright (c) 2012, 2013 Roberto Tyley

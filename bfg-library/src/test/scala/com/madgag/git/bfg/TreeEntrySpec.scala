@@ -20,10 +20,10 @@
 
 package com.madgag.git.bfg
 
-import model.{Tree, FileName}
-import org.eclipse.jgit.lib.ObjectId.zeroId
+import com.madgag.git.bfg.model.{FileName, Tree}
 import org.eclipse.jgit.lib.FileMode
-import FileMode._
+import org.eclipse.jgit.lib.FileMode._
+import org.eclipse.jgit.lib.ObjectId.zeroId
 import org.specs2.mutable._
 
 class TreeEntrySpec extends Specification {

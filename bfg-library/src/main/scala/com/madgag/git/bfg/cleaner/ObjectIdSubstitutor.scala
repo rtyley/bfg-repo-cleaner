@@ -20,10 +20,10 @@
 
 package com.madgag.git.bfg.cleaner
 
-import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId, ObjectReader}
+import com.madgag.git._
 import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.cleaner.ObjectIdSubstitutor._
-import com.madgag.git._
+import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId, ObjectReader}
 
 class CommitMessageObjectIdsUpdater(objectIdSubstitutor: ObjectIdSubstitutor) extends CommitNodeCleaner {
 

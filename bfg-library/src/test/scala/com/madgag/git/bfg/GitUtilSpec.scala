@@ -20,10 +20,9 @@
 
 package com.madgag.git.bfg
 
-import org.specs2.mutable._
-import collection.mutable
 import com.madgag.git._
 import com.madgag.git.test._
+import org.specs2.mutable._
 
 class GitUtilSpec extends Specification {
   implicit val repo = unpackRepo("/sample-repos/example.git.zip")

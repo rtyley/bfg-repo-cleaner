@@ -20,7 +20,7 @@
 
 package com.madgag.git.bfg
 
-import model.{Footer, CommitNode}
+import com.madgag.git.bfg.model.{CommitNode, Footer}
 import org.eclipse.jgit.lib.PersonIdent
 import org.specs2.mutable._
 

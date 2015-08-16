@@ -20,9 +20,9 @@
 
 package com.madgag.git.bfg.cleaner.protection
 
-import org.eclipse.jgit.revwalk._
-import org.eclipse.jgit.lib.{Repository, ObjectId}
 import com.madgag.git._
+import org.eclipse.jgit.lib.{ObjectId, Repository}
+import org.eclipse.jgit.revwalk._
 
 /**
  * PROTECTING TREES :

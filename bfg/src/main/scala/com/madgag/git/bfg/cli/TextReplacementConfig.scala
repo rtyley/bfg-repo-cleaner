@@ -20,8 +20,8 @@
 
 package com.madgag.git.bfg.cli
 
-import com.madgag.textmatching.{Literal, TextMatcher}
 import com.madgag.textmatching.RegexReplacer._
+import com.madgag.textmatching.{Literal, TextMatcher}
 
 object TextReplacementConfig {
   val lineRegex = "(.+?)(?:==>(.*))?".r

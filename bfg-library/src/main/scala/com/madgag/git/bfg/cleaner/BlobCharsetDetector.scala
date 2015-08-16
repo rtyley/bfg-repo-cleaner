@@ -20,15 +20,16 @@
 
 package com.madgag.git.bfg.cleaner
 
-import org.eclipse.jgit.lib.ObjectStream
-import org.eclipse.jgit.diff.RawText
-import java.nio.charset.Charset
-import scalax.io.managed.InputStreamResource
 import java.nio.ByteBuffer
-import util.Try
+import java.nio.charset.Charset
 import java.nio.charset.CodingErrorAction._
-import scala.Some
+
 import com.madgag.git.bfg.model.TreeBlobEntry
+import org.eclipse.jgit.diff.RawText
+import org.eclipse.jgit.lib.ObjectStream
+
+import scala.util.Try
+import scalax.io.managed.InputStreamResource
 
 
 trait BlobCharsetDetector {

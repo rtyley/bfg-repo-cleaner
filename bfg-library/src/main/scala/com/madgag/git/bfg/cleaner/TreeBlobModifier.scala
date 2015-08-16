@@ -20,10 +20,9 @@
 
 package com.madgag.git.bfg.cleaner
 
-import org.eclipse.jgit.lib.ObjectId
-import com.madgag.git.bfg.model._
 import com.madgag.git.bfg.MemoUtil
-import com.madgag.git.bfg.model.TreeBlobEntry
+import com.madgag.git.bfg.model.{TreeBlobEntry, _}
+import org.eclipse.jgit.lib.ObjectId
 
 trait TreeBlobModifier extends Cleaner[TreeBlobs] {
 

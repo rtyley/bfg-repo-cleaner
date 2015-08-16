@@ -21,8 +21,9 @@
 package com.madgag.git.bfg
 
 import java.lang.System._
-import org.eclipse.jgit.lib.ProgressMonitor
 import java.util.concurrent.TimeUnit.NANOSECONDS
+
+import org.eclipse.jgit.lib.ProgressMonitor
 
 object Timing {
   //  def measure[T](block: => T) = {

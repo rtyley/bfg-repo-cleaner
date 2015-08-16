@@ -20,8 +20,8 @@
 
 package com.madgag.git.bfg.model
 
-import org.specs2.mutable._
 import com.madgag.git.bfg.test.unpackedRepo
+import org.specs2.mutable._
 
 class CommitSpec extends Specification {
   "Commit model" should {
