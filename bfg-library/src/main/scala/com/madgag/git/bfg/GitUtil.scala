@@ -30,14 +30,28 @@ import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.storage.file.WindowCacheConfig
 
 import scala.collection.convert.wrapAsScala._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.language.implicitConversions
 
 trait CleaningMapper[V] extends Cleaner[V] {
-  def isDirty(v: V) = apply(v) != v
+  def isDirty(oldId: V): Future[Boolean] = for (newId <- apply(oldId)) yield newId != oldId
+
+  def substitution(oldId: V): Future[Option[(V, V)]] = for (newId <- apply(oldId)) yield {
+    if (newId == oldId) None else Some(oldId -> newId)
+  }
+
+  def replacement(oldId: V): Future[Option[V]] = for (newId <- apply(oldId)) yield {
+    if (newId == oldId) None else Some(newId)
+  }
+}
+
+trait BlockingCleaningMapper[V] extends BlockingCleaner[V] {
+  def isDirty(oldId: V): Boolean = oldId != apply(oldId)
 
   def substitution(oldId: V): Option[(V, V)] = {
     val newId = apply(oldId)
-    if (newId == oldId) None else Some((oldId, newId))
+    if (newId == oldId) None else Some(oldId -> newId)
   }
 
   def replacement(oldId: V): Option[V] = {
@@ -68,6 +82,13 @@ object GitUtil {
   implicit def cleaner2CleaningMapper[V](f: Cleaner[V]): CleaningMapper[V] = new CleaningMapper[V] {
     def apply(v: V) = f(v)
   }
+
+  implicit def cleaner2BlockingCleaningMapper[V](f: BlockingCleaner[V]): BlockingCleaningMapper[V] = new BlockingCleaningMapper[V] {
+    def apply(v: V) = f(v)
+  }
+
+  def packedObjects(implicit objectDB: ObjectDirectory): Iterable[ObjectId] =
+    for { pack <- objectDB.getPacks ; entry <- pack } yield entry.toObjectId
 
   def biggestBlobs(implicit objectDB: ObjectDirectory, progressMonitor: ProgressMonitor = NullProgressMonitor.INSTANCE): Stream[SizedObject] = {
     Timing.measureTask("Scanning packfile for large blobs", ProgressMonitor.UNKNOWN) {

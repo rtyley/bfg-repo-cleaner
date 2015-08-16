@@ -20,6 +20,10 @@
 
 package com.madgag.git.bfg
 
+import scala.concurrent.Future
+
 package object cleaner {
-  type Cleaner[V] = V => V
+  type BlockingCleaner[V] = V => V
+
+  type Cleaner[V] = V => Future[V]
 }

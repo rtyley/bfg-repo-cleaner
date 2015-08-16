@@ -33,7 +33,6 @@ trait Memo[K, V] {
 
 trait MemoFunc[K,V] extends (K => V) {
   def asMap(): Map[K,V]
-
   def stats(): CacheStats
 
   val fix: K => Unit
@@ -52,13 +51,23 @@ object MemoUtil {
 
   def concurrentCleanerMemo[K, V](postCalc: V => (K => Unit) => Unit, ident: K => V)(fixedKs: Set[K]): Memo[K, V] = memo[K, V] {
     (f: K => V) =>
-      lazy val permanentCache = loaderCacheFor(f) { v =>
-        postCalc(v)(fix) // also fix 'k' for mem-efficiency? KeptPromise lighter than DefaultPromise?
+      lazy val permanentCache = loaderCacheFor(f) { (k,v) =>
+        postCalc(v) {
+          bareV: K =>
+          fix(bareV)
+          minimise(k, bareV)
+          // also fix 'k' for mem-efficiency? KeptPromise lighter than DefaultPromise?
+        }
       }
 
       def fix(k: K) {
         // enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
         permanentCache.put(k, ident(k))
+      }
+
+      def minimise(k: K, bareV: K) {
+        // enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
+        permanentCache.put(k, ident(bareV))
       }
 
       fixedKs.foreach(fix)
@@ -78,11 +87,11 @@ object MemoUtil {
     val fix = fixer
   }
 
-  def loaderCacheFor[K, V](calc: K => V)(postCalc: V => Unit): LoadingCache[K, V] =
+  def loaderCacheFor[K, V](calc: K => V)(postCalc: (K,V) => Unit): LoadingCache[K, V] =
     CacheBuilder.newBuilder.asInstanceOf[CacheBuilder[K, V]].recordStats().build(new CacheLoader[K, V] {
       def load(key: K): V = {
         val v = calc(key)
-        postCalc(v)
+        postCalc(key, v)
         v
       }
     })

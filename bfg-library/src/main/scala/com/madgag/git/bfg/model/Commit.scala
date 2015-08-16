@@ -8,6 +8,9 @@ import org.eclipse.jgit.lib.Constants.OBJ_COMMIT
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.RevCommit
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
 /*
  * Copyright (c) 2012, 2013 Roberto Tyley
  *
@@ -55,7 +58,13 @@ case class Commit(node: CommitNode, arcs: CommitArcs) {
 }
 
 case class CommitArcs(parents: Seq[ObjectId], tree: ObjectId) {
-  def cleanWith(cleaner: ObjectIdCleaner) = CommitArcs(parents map cleaner.cleanCommit, cleaner.cleanTree(tree))
+  def cleanWith(cleaner: ObjectIdCleaner) = {
+    val updatedTree = cleaner.cleanTree(tree) // does it make a difference doing this first?
+    val parentsF = Future.traverse(parents)(cleaner.cleanCommit)
+    for { updatedParents <- parentsF } yield CommitArcs(updatedParents, updatedTree)
+  }
+
+
 }
 
 object CommitNode {

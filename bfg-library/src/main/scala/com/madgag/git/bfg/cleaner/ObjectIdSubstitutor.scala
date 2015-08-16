@@ -25,9 +25,14 @@ import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.cleaner.ObjectIdSubstitutor._
 import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId, ObjectReader}
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
 class CommitMessageObjectIdsUpdater(objectIdSubstitutor: ObjectIdSubstitutor) extends CommitNodeCleaner {
 
-  override def fixer(kit: CommitNodeCleaner.Kit) = commitNode => commitNode.copy(message = objectIdSubstitutor.replaceOldIds(commitNode.message, kit.threadLocalResources.reader(), kit.mapper))
+  override def fixer(kit: CommitNodeCleaner.Kit) = commitNode => (objectIdSubstitutor.replaceOldIds(commitNode.message, kit.threadLocalResources.reader(), kit.mapper)).map {
+    updatedMessage => commitNode.copy(message = updatedMessage)
+  }
 
 }
 
@@ -50,13 +55,14 @@ trait ObjectIdSubstitutor {
   def format(oldIdText: String, newIdText: String): String
 
   // slow!
-  def replaceOldIds(message: String, reader: ObjectReader, mapper: Cleaner[ObjectId]): String = {
+  def replaceOldIds(message: String, reader: ObjectReader, mapper: Cleaner[ObjectId]): Future[String] = {
     val substitutionOpts = for {
       m: String <- hexRegex.findAllIn(message).toSet
       objectId <- reader.resolveExistingUniqueId(AbbreviatedObjectId.fromString(m)).toOption
-    } yield mapper.replacement(objectId).map(newId => m -> format(m, reader.abbreviate(newId, m.length).name))
+    } yield mapper.replacement(objectId).map(_.map(newId => m -> format(m, reader.abbreviate(newId, m.length).name)))
 
-    val substitutions = substitutionOpts.flatten.toMap
-    if (substitutions.isEmpty) message else hexRegex.replaceSomeIn(message, m => substitutions.get(m.matched))
+    Future.sequence(substitutionOpts).map(_.flatten.toMap).map { substitutions =>
+      if (substitutions.isEmpty) message else hexRegex.replaceSomeIn(message, m => substitutions.get(m.matched))
+    }
   }
 }

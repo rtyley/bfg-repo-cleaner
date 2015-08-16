@@ -26,15 +26,15 @@ import com.madgag.git.bfg.model.{TreeBlobEntry, _}
 import com.madgag.textmatching.TextMatcher
 import org.eclipse.jgit.lib.ObjectId
 
-class FileDeleter(fileNameMatcher: TextMatcher) extends Cleaner[TreeBlobs] {
+class FileDeleter(fileNameMatcher: TextMatcher) extends BlockingCleaner[TreeBlobs] {
   override def apply(tbs: TreeBlobs) = tbs.entries.filterNot(e => fileNameMatcher(e.filename))
 }
 
-class BlobRemover(blobIds: Set[ObjectId]) extends Cleaner[TreeBlobs] {
+class BlobRemover(blobIds: Set[ObjectId]) extends BlockingCleaner[TreeBlobs] {
   override def apply(treeBlobs: TreeBlobs) = treeBlobs.entries.filter(e => !blobIds.contains(e.objectId))
 }
 
-class BlobReplacer(badBlobs: Set[ObjectId], blobInserter: => BlobInserter) extends Cleaner[TreeBlobs] {
+class BlobReplacer(badBlobs: Set[ObjectId], blobInserter: => BlobInserter) extends BlockingCleaner[TreeBlobs] {
   override def apply(treeBlobs: TreeBlobs) = treeBlobs.entries.map {
     case e if badBlobs.contains(e.objectId) =>
       TreeBlobEntry(FileName(e.filename + ".REMOVED.git-id"), RegularFile, blobInserter.insert(e.objectId.name.getBytes))

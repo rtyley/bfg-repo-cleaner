@@ -145,22 +145,22 @@ class CLIReporter(repo: Repository) extends Reporter {
             }
         }
 
-    val dirtyReports = reports.filter(_.objectProtectsDirt)
-    if (dirtyReports.nonEmpty) {
-
-      println(s"""
-      |WARNING: The dirty content above may be removed from other commits, but as
-      |the *protected* commits still use it, it will STILL exist in your repository.
-      |
-      |Details of protected dirty content have been recorded here :
-      |
-      |${protectedDirtDir.path + protectedDirtDir.separator}
-      |
-      |If you *really* want this content gone, make a manual commit that removes it,
-      |and then run the BFG on a fresh copy of your repo.
-       """.stripMargin)
-      // TODO would like to abort here if we are cleaning 'private' data.
-    }
+//    val dirtyReports = reports.filter(_.objectProtectsDirt)
+//    if (dirtyReports.nonEmpty) {
+//
+//      println(s"""
+//      |WARNING: The dirty content above may be removed from other commits, but as
+//      |the *protected* commits still use it, it will STILL exist in your repository.
+//      |
+//      |Details of protected dirty content have been recorded here :
+//      |
+//      |${protectedDirtDir.path + protectedDirtDir.separator}
+//      |
+//      |If you *really* want this content gone, make a manual commit that removes it,
+//      |and then run the BFG on a fresh copy of your repo.
+//       """.stripMargin)
+//      // TODO would like to abort here if we are cleaning 'private' data.
+//    }
   }
 
   def changedLinesFor(edits: EditList): String = {
@@ -176,7 +176,7 @@ class CLIReporter(repo: Repository) extends Reporter {
 
   def reportResults(commits: List[RevCommit], objectIdCleaner: ObjectIdCleaner) {
     def reportTreeDirtHistory() {
-
+/*
       val dirtHistoryElements = math.max(20, math.min(60, commits.size))
       def cut[A](xs: Seq[A], n: Int) = {
         val avgSize = xs.size.toFloat / n
@@ -205,6 +205,8 @@ class CLIReporter(repo: Repository) extends Reporter {
         (before, after) <- objectIdCleaner.substitution(commit)
       } yield (desc, before.shortName, after.shortName)
       Tables.formatTable(("", "Before", "After"), items.toSeq).map("\t" + _).foreach(println)
+*/
+
     }
 
     reportTreeDirtHistory()
