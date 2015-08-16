@@ -45,11 +45,12 @@ object MemoUtil {
     def apply(z: K => V) = f(z)
   }
 
-  def concurrentAsyncCleanerMemo[V](fixed: Set[V] = Set.empty) = concurrentCleanerMemo[V, Future[V]](fixed)(_.foreach)(successful)
 
-  def concurrentBlockingCleanerMemo[V](fixed: Set[V] = Set.empty) = concurrentCleanerMemo[V, V](fixed)(v => _(v))(identity)
+  def concurrentAsyncCleanerMemo[V] = concurrentCleanerMemo[V, Future[V]](_.foreach, successful)_
 
-  def concurrentCleanerMemo[K, V](fixed: Set[K])(postCalc: V => (K => Unit) => Unit)(ident: K => V): Memo[K, V] = memo[K, V] {
+  def concurrentBlockingCleanerMemo[V] = concurrentCleanerMemo[V, V](v => _(v), identity)_
+
+  def concurrentCleanerMemo[K, V](postCalc: V => (K => Unit) => Unit, ident: K => V)(fixedKs: Set[K]): Memo[K, V] = memo[K, V] {
     (f: K => V) =>
       lazy val permanentCache = loaderCacheFor(f) { v =>
         postCalc(v)(fix) // also fix 'k' for mem-efficiency? KeptPromise lighter than DefaultPromise?
@@ -60,7 +61,7 @@ object MemoUtil {
         permanentCache.put(k, ident(k))
       }
 
-      fixed foreach fix
+      fixedKs.foreach(fix)
 
       memoFunc(permanentCache, fix)
   }
