@@ -1,6 +1,6 @@
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
-import scala.sys.process.{ProcessLogger, Process}
-import ExecutionContext.Implicits.global
+import scala.sys.process.{Process, ProcessLogger}
 
 object JavaVersion {
   val VersionRegex = """(?:java|openjdk) version "(.*?)"""".r
@@ -21,21 +21,4 @@ object JavaVersion {
   def versionFrom(javaVersionLine: String): Option[String] = {
     VersionRegex.findFirstMatchIn(javaVersionLine).map(_.group(1))
   }
-
-  /*
-
-  ProcessBuilderImpl
-
-      private[this] def lines(
-      withInput: Boolean,
-      nonZeroException: Boolean,
-      log: Option[ProcessLogger]
-    ): Stream[String] = {
-      val streamed = Streamed[String](nonZeroException)
-      val process  = run(BasicIO(withInput, streamed.process, log))
-
-      Spawn(streamed done process.exitValue())
-      streamed.stream()
-    }
-   */
 }

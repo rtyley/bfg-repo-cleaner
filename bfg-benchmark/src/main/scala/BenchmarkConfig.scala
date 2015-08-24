@@ -1,10 +1,11 @@
-import com.madgag.textmatching.{Glob, TextMatcher}
 import java.io.File
-import java.nio.file.FileSystems
-import scalax.file.defaultfs.DefaultPath
-import scalax.file.{FileSystem, Path}
-import scalax.file.ImplicitConversions._
+
+import com.madgag.textmatching.{Glob, TextMatcher}
 import scopt.OptionParser
+
+import scalax.file.ImplicitConversions._
+import scalax.file.Path
+import scalax.file.defaultfs.DefaultPath
 
 object BenchmarkConfig {
   val parser = new OptionParser[BenchmarkConfig]("benchmark") {
