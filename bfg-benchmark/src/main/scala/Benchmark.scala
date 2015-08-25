@@ -78,9 +78,15 @@ object Benchmark extends App {
         commandDir.children().foreach(p => p.copyTo(cleanRepoDir / p.name))
         val process = processMaker(cleanRepoDir)
 
-        invocable -> measureTask(s"$commandName - $invocable") {
-          process ! ProcessLogger(_ => Unit)
-        }
+            val duration = measureTask(s"$commandName - $invocable") {
+              process ! ProcessLogger(_ => Unit)
+            }
+
+            if (config.dieIfTaskTakesLongerThan.exists(_ < duration.toMillis)) {
+              throw new Exception("This took too long: "+duration)
+            }
+
+            invocable -> duration
       })
     }
   }

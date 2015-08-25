@@ -18,6 +18,9 @@ object BenchmarkConfig {
     opt[String]("versions").text("BFG versions to time - bfg-[version].jar - eg 1.4.0,1.5.0,1.6.0").action {
       (v, c) => c.copy(bfgVersions = v.split(",").toSeq)
     }
+    opt[Int]("die-if-longer-than").action {
+      (v, c) => c.copy(dieIfTaskTakesLongerThan = Some(v))
+    }
     opt[String]("repos").text("Sample repos to test, eg github-gems,jgit,git").action {
       (v, c) => c.copy(repoNames = v.split(",").toSeq)
     }
@@ -36,6 +39,7 @@ case class BenchmarkConfig(resourcesDirOption: Path = Path.fromString(System.get
                            bfgVersions: Seq[String] = Seq.empty,
                            commands: TextMatcher = Glob("*"),
                            onlyBfg: Boolean = false,
+                           dieIfTaskTakesLongerThan: Option[Int] = None,
                            repoNames: Seq[String] = Seq.empty) {
 
   lazy val resourcesDir = Path.fromString(resourcesDirOption.path).toAbsolute
