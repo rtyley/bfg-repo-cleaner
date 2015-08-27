@@ -4,7 +4,13 @@ object Dependencies {
 
   val scalaGitVersion = "2.14"
 
-  val scalaGit = "com.madgag.scala-git" %% "scala-git" % scalaGitVersion
+  val jgitVersionOverride = Option(System.getProperty("jgit.version"))
+
+  val jgitVersion = jgitVersionOverride.getOrElse("4.0.1.201506240215-r")
+
+  val jgit = "org.eclipse.jgit" % "org.eclipse.jgit" % jgitVersion
+
+  val scalaGit = "com.madgag.scala-git" %% "scala-git" % scalaGitVersion exclude("org.eclipse.jgit", "org.eclipse.jgit")
 
   val scalaGitTest = "com.madgag.scala-git" %% "scala-git-test" % scalaGitVersion
 

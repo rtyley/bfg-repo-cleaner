@@ -14,6 +14,8 @@ licenses in ThisBuild := Seq("GPLv3" -> url("http://www.gnu.org/licenses/gpl-3.0
 
 homepage in ThisBuild := Some(url("https://github.com/rtyley/bfg-repo-cleaner"))
 
+resolvers in ThisBuild ++= jgitVersionOverride.map(_ => Resolver.mavenLocal).toSeq
+
 libraryDependencies in ThisBuild += specs2 % "test"
 
 lazy val root = Project(id = "bfg-parent", base = file(".")) settings (signedReleaseSettings:_*) settings (
