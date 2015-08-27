@@ -18,7 +18,7 @@ object BenchmarkConfig {
     opt[String]("versions").text("BFG versions to time - bfg-[version].jar - eg 1.4.0,1.5.0,1.6.0").action {
       (v, c) => c.copy(bfgVersions = v.split(",").toSeq)
     }
-    opt[Int]("die-if-longer-than").action {
+    opt[Int]("die-if-longer-than").text("Useful for git-bisect").action {
       (v, c) => c.copy(dieIfTaskTakesLongerThan = Some(v))
     }
     opt[String]("repos").text("Sample repos to test, eg github-gems,jgit,git").action {
