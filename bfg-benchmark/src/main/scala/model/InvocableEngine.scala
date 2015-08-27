@@ -20,9 +20,16 @@ trait InvocableEngine[InvocationArgs <: EngineInvocation] {
 
 case class InvocableBFG(java: Java, bfgJar: BFGJar) extends InvocableEngine[BFGInvocation] {
 
-  def processFor(invocation: BFGInvocation)(repoPath: DefaultPath) =
-    Process(s"${java.javaCmd} -jar ${bfgJar.path.path} ${invocation.args}", repoPath)
+  def processFor(invocation: BFGInvocation)(repoPath: DefaultPath) = {
+    val flightRecorder = Seq(
+      "-XX:+UnlockCommercialFeatures",
+      "-XX:+FlightRecorder",
+      s"-XX:FlightRecorderOptions=defaultrecording=true,dumponexit=true,dumponexitpath=${repoPath.path}.jfr"
+    ).mkString(" ")
 
+    val visualvmFromStartup = "-agentpath:/home/roberto/Downloads/visualvm_138/profiler/lib/deployed/jdk16/linux-amd64/libprofilerinterface.so=/home/roberto/Downloads/visualvm_138/profiler/lib,5146"
+    Process(s"${java.javaCmd} -jar ${bfgJar.path.path} ${invocation.args}", repoPath)
+  }
 }
 
 object InvocableGitFilterBranch extends InvocableEngine[GFBInvocation] {
