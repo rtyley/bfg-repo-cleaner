@@ -2,7 +2,7 @@ import sbt._
 
 object Dependencies {
 
-  val scalaGitVersion = "2.14"
+  val scalaGitVersion = "3.3"
 
   val jgitVersionOverride = Option(System.getProperty("jgit.version"))
 

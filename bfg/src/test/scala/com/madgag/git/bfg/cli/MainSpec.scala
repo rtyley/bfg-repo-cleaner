@@ -24,6 +24,7 @@ import com.madgag.git._
 import com.madgag.git.bfg.cli.test.unpackedRepo
 import org.specs2.mutable._
 
+import scalax.file.ImplicitConversions._
 import scalax.file.Path
 
 class MainSpec extends Specification {
@@ -51,6 +52,15 @@ class MainSpec extends Specification {
       ensureRemovalOfBadEggs(packedBlobsOfSize(1024), contain(allOf(abbrId("06d7"), abbrId("cb2c")))) {
         run("--strip-blobs-bigger-than 512B")
       }
+    }
+
+    "convert big blobs to the Git LFS format" in new unpackedRepo("/sample-repos/repoWithBigBlobs.git.zip") {
+      ensureRemovalOfBadEggs(packedBlobsOfSize(11238), contain(exactly(abbrId("596c")))) {
+        run("--convert-to-git-lfs *.png --no-blob-protection")
+      }
+      val lfsFile = repo.getDirectory / "lfs" / "objects" / "e0" / "eb" / "e0ebd49837a1cced34b9e7d3ff2fa68a8100df8f158f165ce139e366a941ba6e"
+
+      lfsFile.size must beSome(11238)
     }
 
     "remove bad folder named '.git'" in new unpackedRepo("/sample-repos/badRepoContainingDotGitFolder.git.zip") {
