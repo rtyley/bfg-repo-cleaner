@@ -1,0 +1,1 @@
+--convert-to-git-lfs *.{zip,jar,exe,dll} --no-blob-protection

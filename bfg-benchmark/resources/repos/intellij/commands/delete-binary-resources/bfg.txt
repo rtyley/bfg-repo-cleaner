@@ -1,0 +1,1 @@
+--delete-files *.{zip,jar} --no-blob-protection
