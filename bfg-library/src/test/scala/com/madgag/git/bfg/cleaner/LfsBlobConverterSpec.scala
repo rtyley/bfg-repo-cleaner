@@ -34,7 +34,7 @@ import scalax.file.ImplicitConversions._
 class LfsBlobConverterSpec extends Specification {
 
   "LfsBlobConverter" should {
-    "successfully shift the the blob to the LFS store" in {
+    "successfully shift the blob to the LFS store" in {
       implicit val repo = unpackRepo("/sample-repos/example.git.zip")
       implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
 
@@ -101,7 +101,9 @@ class LfsBlobConverterSpec extends Specification {
 
     lfsStoredFile.exists must beTrue
 
-    lfsStoredFile.bytes.toArray.blobId mustEqual originalFileId
+    lfsStoredFile.size must beSome(pointer.blobSize)
+
+    lfsStoredFile.bytes.toArray.blobId must eventually(be_==(originalFileId))
   }
 
   def verifyPointersForChangedFiles(diff: MapDiff[FileName, (BlobFileMode, ObjectId)])(implicit repo: FileRepository) = {
