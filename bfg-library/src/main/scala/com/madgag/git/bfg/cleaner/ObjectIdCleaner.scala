@@ -121,33 +121,31 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
     val tree = Tree(cleanedTreeEntries)
 
-    val fixedTreeBlobs = treeBlobsCleaner(tree.blobs)
+    val originalBlobs = tree.blobs
+    val fixedTreeBlobs = treeBlobsCleaner(originalBlobs)
     val cleanedSubtrees = TreeSubtrees(treeSubtreesCleaner(tree.subtrees).entryMap.map {
       case (name, treeId) => (name, cleanTree(treeId))
     }).withoutEmptyTrees
 
-    val treeBlobsChanged = fixedTreeBlobs != tree.blobs
-    if (entries != cleanedTreeEntries || treeBlobsChanged || cleanedSubtrees != tree.subtrees) {
+    val treeBlobsChanged = fixedTreeBlobs != originalBlobs
+    if (entries == cleanedTreeEntries && !treeBlobsChanged && cleanedSubtrees == tree.subtrees) originalObjectId else {
+      if (treeBlobsChanged) recordChange(originalBlobs, fixedTreeBlobs)
 
       val updatedTree = tree copyWith(cleanedSubtrees, fixedTreeBlobs)
 
       val treeFormatter = updatedTree.formatter
       objectChecker.foreach(_.checkTree(treeFormatter.toByteArray))
-      val updatedTreeId = treeFormatter.insertTo(threadLocalResources.inserter())
+      treeFormatter.insertTo(threadLocalResources.inserter())
+    }
+  }
 
-      if (treeBlobsChanged) {
-        val changedFiles: Set[TreeBlobEntry] = tree.blobs.entries.toSet -- fixedTreeBlobs.entries.toSet
-        for (TreeBlobEntry(filename, _ , oldId) <- changedFiles) {
-          fixedTreeBlobs.entryMap.get(filename).map(_._2) match {
-            case Some(newId) => changesByFilename.addBinding(filename, (oldId, newId))
-            case None => deletionsByFilename.addBinding(filename, oldId)
-          }
-        }
+  def recordChange(originalBlobs: TreeBlobs, fixedTreeBlobs: TreeBlobs) {
+    val changedFiles: Set[TreeBlobEntry] = originalBlobs.entries.toSet -- fixedTreeBlobs.entries.toSet
+    for (TreeBlobEntry(filename, _, oldId) <- changedFiles) {
+      fixedTreeBlobs.objectId(filename) match {
+        case Some(newId) => changesByFilename.addBinding(filename, (oldId, newId))
+        case None => deletionsByFilename.addBinding(filename, oldId)
       }
-
-      updatedTreeId
-    } else {
-      originalObjectId
     }
   }
 
