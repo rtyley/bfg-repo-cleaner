@@ -32,7 +32,7 @@ class TreeEntrySpec extends Specification {
 
   "Tree entry ordering" should {
     "match ordering used by Git" in {
-      a(TREE, "agit-test-utils") should be < (a(TREE, "agit"))
+      a(TREE, "agit-test-utils") should be < a(TREE, "agit")
     }
   }
 }
