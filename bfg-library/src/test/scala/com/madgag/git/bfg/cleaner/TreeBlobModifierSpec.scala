@@ -20,25 +20,24 @@
 
 package com.madgag.git.bfg.cleaner
 
+import com.google.common.util.concurrent.AtomicLongMap
 import com.madgag.git.bfg.cleaner.ObjectIdSubstitutor._
 import com.madgag.git.bfg.cleaner.protection.ProtectedObjectCensus
 import com.madgag.git.bfg.model.TreeBlobEntry
 import com.madgag.git.test._
 import org.specs2.mutable._
 
-import scala.collection.mutable
+import scala.collection.convert.wrapAsScala._
 
 class TreeBlobModifierSpec extends Specification {
 
   "TreeBlobModifier" should {
     "only clean a given tree entry once" in {
       class CountingTreeBlobModifier extends TreeBlobModifier {
-        val counts = mutable.Map[TreeBlobEntry, Int]().withDefaultValue(0)
+        val counts = AtomicLongMap.create[TreeBlobEntry]
 
         def fix(entry: TreeBlobEntry) = {
-          counts.synchronized {
-            counts(entry) = counts(entry) + 1
-          }
+          counts.incrementAndGet(entry)
           (entry.mode, entry.objectId)
         }
       }
@@ -49,7 +48,10 @@ class TreeBlobModifierSpec extends Specification {
 
       RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), OldIdsPublic, treeBlobsCleaners = Seq(countingTreeBlobModifier)))
 
-      countingTreeBlobModifier.counts.values must beEqualTo(1).foreach
+      val endCounts = countingTreeBlobModifier.counts.asMap().toMap
+
+      endCounts.size must be >= 4
+      endCounts.values must beEqualTo(1).foreach
     }
   }
 
