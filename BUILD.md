@@ -23,5 +23,5 @@ To find the jar once it's built, just look at the last few lines of output from 
 If you're going to make changes to the Scala code, you may want to use IntelliJ and it's Scala
 plugin to help with the Scala syntax...!
 
-I personally found Coursera's [online Scale course](https://www.coursera.org/course/progfun) very helpful in
+I personally found Coursera's [online Scala course](https://www.coursera.org/course/progfun) very helpful in
 learning Scala, YMMV.
