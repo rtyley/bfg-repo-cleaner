@@ -20,7 +20,7 @@ object Dependencies {
 
   val textmatching = "com.madgag" %% "scala-textmatching" % "2.0"
 
-  val scopt = "com.github.scopt" %% "scopt" % "3.2.0"
+  val scopt = "com.github.scopt" %% "scopt" % "3.3.0"
 
   val guava = Seq("com.google.guava" % "guava" % "18.0", "com.google.code.findbugs" % "jsr305" % "2.0.3")
 
