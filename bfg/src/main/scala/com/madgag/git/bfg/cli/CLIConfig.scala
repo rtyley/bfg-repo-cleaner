@@ -106,7 +106,7 @@ object CLIConfig {
     opt[String]("massive-non-file-objects-sized-up-to").valueName("<size>").text("increase memory usage to handle over-size Commits, Tags, and Trees that are up to X in size (eg '10M')").action {
       (v, c) => c.copy(massiveNonFileObjects = Some(ByteSize.parse(v)))
     }
-    opt[String]("fix-filename-duplicates-preferring").valueName("<filemode>").text("Fix corrupt trees which contain multiple entries with the same filename, favouring the 'tree' or 'blob'").action {
+    opt[String]("fix-filename-duplicates-preferring").valueName("<filemode>").text("Fix corrupt trees which contain multiple entries with the same filename, favouring the 'tree' or 'blob'").hidden().action {
       (v, c) =>
         val preferredFileMode = v.toLowerCase match {
           case "tree" | "folder" => FileMode.TREE
