@@ -110,6 +110,10 @@ $ git reflog expire --expire=now --all && git gc --prune=now --aggressive
   Git from other source-control systems like Mercurial :</p>
 <pre><code>$ bfg <strong>--delete-folders .git --delete-files .git  --no-blob-protection</strong>  my-repo.git</code></pre>
 
+<p>
+For further command-line options, you can run the BFG without any arguments,
+which will output <a href="https://repository.sonatype.org/service/local/artifact/maven/redirect?r=central-proxy&g=com.madgag&a=bfg&v=LATEST&e=txt">text like this</a>.
+</p>
 
 <h1 id="protected-commits">Your <em>current</em> files are sacred...</h1>
 
