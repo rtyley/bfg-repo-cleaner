@@ -7,9 +7,6 @@ import com.typesafe.sbt.pgp.PgpKeys._
 import sbtrelease.ReleaseStateTransformations._
 
 object common {
-
-  val VersionEndingInSnapshot = """(.*)-SNAPSHOT""".r
-
   lazy val signedReleaseSettings = releaseSettings ++ Seq(
     releaseProcess ~= {
       s: Seq[ReleaseStep] =>
@@ -27,6 +24,5 @@ object common {
     }
   )
 
-  def bfgProject(name: String) = Project(name, file(name), settings = {defaultSettings ++ signedReleaseSettings})
-
+  def bfgProject(name: String) = Project(name, file(name)) settings signedReleaseSettings
 }
