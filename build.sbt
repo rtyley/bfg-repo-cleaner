@@ -1,6 +1,5 @@
 import Dependencies._
 import common._
-import sbt._
 import Defaults._
 import com.typesafe.sbt.pgp.PgpKeys._
 
@@ -18,8 +17,9 @@ resolvers in ThisBuild ++= jgitVersionOverride.map(_ => Resolver.mavenLocal).toS
 
 libraryDependencies in ThisBuild += specs2 % "test"
 
-lazy val root = Project(id = "bfg-parent", base = file(".")) settings (signedReleaseSettings:_*) settings (
-    publishSigned := {} ) aggregate(bfg, bfgTest, bfgLibrary)
+lazy val root = Project(id = "bfg-parent", base = file(".")) aggregate (bfg, bfgTest, bfgLibrary)
+signedReleaseSettings
+publishSigned := {}
 
 lazy val bfgTest = bfgProject("bfg-test")
 
@@ -31,13 +31,8 @@ lazy val bfgBenchmark = bfgProject("bfg-benchmark")
 
 publishMavenStyle in ThisBuild := true
 
-publishTo in ThisBuild <<= version { (v: String) =>
-  val nexus = "https://oss.sonatype.org/"
-  if (v.trim.endsWith("SNAPSHOT"))
-    Some("snapshots" at s"${nexus}content/repositories/snapshots")
-  else
-    Some("releases"  at s"${nexus}service/local/staging/deploy/maven2")
-}
+publishTo in ThisBuild :=
+  Some(if (isSnapshot.value) Opts.resolver.sonatypeSnapshots else Opts.resolver.sonatypeStaging)
 
 pomIncludeRepository in ThisBuild := { _ => false }
 
@@ -52,4 +47,5 @@ pomExtra in ThisBuild := (
         <name>Roberto Tyley</name>
         <url>https://github.com/rtyley</url>
       </developer>
-    </developers>)
+    </developers>
+)

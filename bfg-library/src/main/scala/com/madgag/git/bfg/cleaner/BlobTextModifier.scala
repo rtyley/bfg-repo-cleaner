@@ -50,25 +50,22 @@ trait BlobTextModifier extends TreeBlobModifier {
     def filterTextIn(e: TreeBlobEntry, lineCleaner: String => String): TreeBlobEntry = {
       def isDirty(line: String) = lineCleaner(line) != line
 
-      Some(threadLocalObjectDBResources.reader().open(e.objectId)).filter(_.getSize < sizeThreshold).flatMap {
-        loader =>
-          Some(Resource.fromInputStream(loader.openStream())).flatMap {
-            streamResource =>
-              charsetDetector.charsetFor(e, streamResource).flatMap {
-                charset =>
-                  Some(streamResource.reader(charset)).map(_.lines(includeTerminator = true)).filter(_.exists(isDirty)).map {
-                    lines =>
-                      val b = new ByteArrayOutputStream(loader.getSize.toInt)
+      val opt = for {
+        loader         <- Some(threadLocalObjectDBResources.reader().open(e.objectId))
+        if loader.getSize < sizeThreshold
+        streamResource <- Some(Resource.fromInputStream(loader.openStream()))
+        charset        <- charsetDetector.charsetFor(e, streamResource)
+        reader         <- Some(streamResource.reader(charset))
+        lines = reader.lines(includeTerminator = true)
+        if lines.exists(isDirty)
+      } yield {
+        val b = new ByteArrayOutputStream(loader.getSize.toInt)
+        lines.view.map(lineCleaner).foreach(line => b.write(line.getBytes(charset)))
+        val oid = threadLocalObjectDBResources.inserter().insert(OBJ_BLOB, b.toByteArray)
+        e.copy(objectId = oid)
+      }
 
-                      lines.view.map(lineCleaner).foreach(line => b.write(line.getBytes(charset)))
-
-                      val oid = threadLocalObjectDBResources.inserter().insert(OBJ_BLOB, b.toByteArray)
-
-                      e.copy(objectId = oid)
-                  }
-              }
-          }
-      }.getOrElse(e)
+      opt.getOrElse(e)
     }
 
     lineCleanerFor(entry) match {
