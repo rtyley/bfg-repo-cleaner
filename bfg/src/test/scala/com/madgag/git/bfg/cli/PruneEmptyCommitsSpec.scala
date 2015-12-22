@@ -38,7 +38,7 @@ class PruneEmptyCommitsSpec extends Specification {
 
   "CLI" should {
 
-    "not remove empty commits by default" in new unpacked2repo("/sample-repos/aRepoProneToEmptyCommitsOnCleaning.git.zip") {
+    "not remove empty commits by default" in new unpackedRepo("/sample-repos/aRepoProneToEmptyCommitsOnCleaning.git.zip") {
       ensureInvariant(commitHist("HEAD").size) {
         ensureRemovalOf(commitHistory(haveFile("foo").atLeastOnce)) {
           run("--delete-files foo --no-blob-protection")
@@ -46,7 +46,7 @@ class PruneEmptyCommitsSpec extends Specification {
       }
     }
 
-    "remove empty commits if prune flag set" in new unpacked2repo("/sample-repos/aRepoProneToEmptyCommitsOnCleaning.git.zip") {
+    "remove empty commits if prune flag set" in new unpackedRepo("/sample-repos/aRepoProneToEmptyCommitsOnCleaning.git.zip") {
       val (commitsThatOnlyTouchFoo, commitsThatTouchNonFooFiles) = commitHist().partition(c => onlyTouchesPath(c, _.endsWith("foo")))
 
       ensureRemovalOf(commitHistory(haveFile("foo").atLeastOnce)) {
