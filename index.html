@@ -82,7 +82,7 @@ if (("rtyley.github.io" == window.location.host) && (window.location.protocol !=
 repo, which means your normal files won't be visible, but it is a <em>full</em> copy of the Git database of your repository, and at this point
 you should <strong>make a backup of it</strong> to ensure you don't lose anything.</p>
 <p>Now you can run the BFG to clean your repository up:</p>
-<pre><code>$ java -jar <a class="latest-download-link" href="#download">bfg.jar</a> --strip-blobs-bigger-than 100M some-big-repo.git
+<pre><code>$ java -jar bfg.jar --strip-blobs-bigger-than 100M some-big-repo.git
 </code></pre>
 <p>The BFG will update your commits and all branches and tags so they are clean, but it doesn't physically delete the unwanted stuff. Examine the repo to make sure your history has been updated, and then use the standard <a href="http://git-scm.com/docs/git-gc"><code>git gc</code></a> command to strip out the unwanted dirty data, which Git will now recognise as surplus to requirements:</p>
 <pre><code>$ cd some-big-repo.git
