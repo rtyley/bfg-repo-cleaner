@@ -192,7 +192,7 @@ Roberto's creations (<a href="https://play.google.com/store/apps/details?id=com.
 <ul>
 <li>The <a href="http://java.com/en/download/manual.jsp">Java Runtime Environment</a> (Java 7 or above - BFG <a href="http://repo1.maven.org/maven2/com/madgag/bfg/1.12.3/bfg-1.12.3.jar">v1.12.3</a> was the last version to support Java 6)</li>
 </ul>
-<p>That's it - the Scala library and all other dependencies are folded into the <a class="latest-download-link" href="#download">downloadable jar</a>.</p>
+<p>That's it - the Scala library and all other dependencies are folded into the <a href="https://search.maven.org/remote_content?g=com.madgag&a=bfg&v=LATEST">downloadable jar</a>.</p>
 
 <h1 id="links">Links...</h1>
 <ul>
@@ -218,7 +218,7 @@ Roberto's creations (<a href="https://play.google.com/store/apps/details?id=com.
         </section>
 
         <aside id="sidebar">
-          <a id="download" class="button latest-download-link" href="https://search.maven.org/remote_content?g=com.madgag&a=bfg&v=LATEST">
+          <a id="download" class="button" href="https://search.maven.org/remote_content?g=com.madgag&a=bfg&v=LATEST">
             <small>Download</small>
             <span class="latest-version">.jar file</span>
           </a>
@@ -246,20 +246,6 @@ $.ajax({ dataType: "jsonp", timeout: 5000,
     var v = data.response.docs[0].latestVersion;
     var u = "http://repo1.maven.org/maven2/com/madgag/bfg/"+v+"/bfg-"+v+".jar"
     $('.latest-version').text('v' + v);
-
-    $('.latest-download-link').prop("href", u).click(function() {
-        if (ga.hasOwnProperty('loaded') && ga.loaded === true) {
-            ga('send', 'event', {
-                'eventCategory' : 'download-link',
-                'eventAction' : 'click',
-                'eventLabel' : 'download',
-                'hitCallback' : function () {
-                    document.location = u;
-                }
-            });
-            return false;
-        }
-    });
 });
 
 </script>
