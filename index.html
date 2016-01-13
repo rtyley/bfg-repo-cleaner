@@ -82,7 +82,7 @@ if (("rtyley.github.io" == window.location.host) && (window.location.protocol !=
 repo, which means your normal files won't be visible, but it is a <em>full</em> copy of the Git database of your repository, and at this point
 you should <strong>make a backup of it</strong> to ensure you don't lose anything.</p>
 <p>Now you can run the BFG to clean your repository up:</p>
-<pre><code>$ java -jar <a class="latest-download-link" href="#download">bfg.jar</a> --strip-blobs-bigger-than 100M some-big-repo.git
+<pre><code>$ java -jar <a class="latest-download-link" data-event-category="Java command" href="#download">bfg.jar</a> --strip-blobs-bigger-than 100M some-big-repo.git
 </code></pre>
 <p>The BFG will update your commits and all branches and tags so they are clean, but it doesn't physically delete the unwanted stuff. Examine the repo to make sure your history has been updated, and then use the standard <a href="http://git-scm.com/docs/git-gc"><code>git gc</code></a> command to strip out the unwanted dirty data, which Git will now recognise as surplus to requirements:</p>
 <pre><code>$ cd some-big-repo.git
@@ -192,7 +192,7 @@ Roberto's creations (<a href="https://play.google.com/store/apps/details?id=com.
 <ul>
 <li>The <a href="http://java.com/en/download/manual.jsp">Java Runtime Environment</a> (Java 7 or above - BFG <a href="http://repo1.maven.org/maven2/com/madgag/bfg/1.12.3/bfg-1.12.3.jar">v1.12.3</a> was the last version to support Java 6)</li>
 </ul>
-<p>That's it - the Scala library and all other dependencies are folded into the <a class="latest-download-link" href="#download">downloadable jar</a>.</p>
+<p>That's it - the Scala library and all other dependencies are folded into the <a class="latest-download-link" data-event-category="Requirements Link" href="#download">downloadable jar</a>.</p>
 
 <h1 id="links">Links...</h1>
 <ul>
@@ -218,7 +218,7 @@ Roberto's creations (<a href="https://play.google.com/store/apps/details?id=com.
         </section>
 
         <aside id="sidebar">
-          <a id="download" class="button latest-download-link" href="https://search.maven.org/remote_content?g=com.madgag&a=bfg&v=LATEST">
+          <a id="download" class="button latest-download-link" data-event-category="Main download button" href="https://search.maven.org/remote_content?g=com.madgag&a=bfg&v=LATEST">
             <small>Download</small>
             <span class="latest-version">.jar file</span>
           </a>
@@ -246,11 +246,10 @@ $.ajax({ dataType: "jsonp", timeout: 5000,
     var v = data.response.docs[0].latestVersion;
     var u = "http://repo1.maven.org/maven2/com/madgag/bfg/"+v+"/bfg-"+v+".jar"
     $('.latest-version').text('v' + v);
-
-    $('.latest-download-link').prop("href", u).click(function() {
+    $('.latest-download-link').prop("href", u).click(function(event) {
         if (ga.hasOwnProperty('loaded') && ga.loaded === true) {
             ga('send', 'event', {
-                'eventCategory' : 'download-link',
+                'eventCategory' : $(event.currentTarget).data("eventCategory"),
                 'eventAction' : 'click',
                 'eventLabel' : 'download',
                 'hitCallback' : function () {
