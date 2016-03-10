@@ -58,6 +58,23 @@ object GitUtil {
   }
 
   def hasBeenProcessedByBFGBefore(repo: Repository): Boolean = {
+    /* Check if we are already GCed, skip BFG-has-run repo check if there are zero
+     * loose objects.
+     * 
+     * Access to RepoStatistics here is via GarbageCollectCommand, which flattens the
+     * stats into a Properties.  This avoids accessing the internal GC API.
+     * 
+     * TODO consider introducing some configurable threshold > 0
+     */
+    val numberOfLooseObjects = Option(repo.git.gc.getStatistics.get("numberOfLooseObjects")).getOrElse("1").asInstanceOf[Long]
+    
+    if (numberOfLooseObjects == 0) {
+      println("No loose objects, no gc required")
+      return false
+    } else {
+      println(s"Repository contains $numberOfLooseObjects loose objects.")
+    }
+    
     // This method just checks the tips of all refs - a good-enough indicator for our purposes...
     implicit val revWalk = new RevWalk(repo)
     implicit val objectReader = revWalk.getObjectReader
