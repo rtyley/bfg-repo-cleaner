@@ -5,4 +5,7 @@ target
 *.iml
 *.jar
 repo.git.zip
+**/.project
+**/.classpath
+**/.settings
 

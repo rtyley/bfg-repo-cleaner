@@ -23,5 +23,23 @@ To find the jar once it's built, just look at the last few lines of output from 
 If you're going to make changes to the Scala code, you may want to use IntelliJ and it's Scala
 plugin to help with the Scala syntax...!
 
+If you use [Eclipse IDE](http://www.eclipse.org/), you can set-up your development environment by following these instructions:
+
+* Install `sbt` and build as-above
+* Install [Scala IDE for Eclipse](http://scala-ide.org/) into your Eclipse installation if not already installed
+* Add the `sbteclipse-plugin` to your set of local sbt plugins:
+
+```
+mkdir -p ~/.sbt/0.13/plugins && tee ~/.sbt/0.13/plugins/plugins.sbt <<EOF
+addSbtPlugin("com.typesafe.sbteclipse" % "sbteclipse-plugin" % "4.0.0")
+EOF
+```
+
+* `sbt`<- start the sbt console
+* `eclipse` <- first-time only setup of the Eclipse plugin
+* `eclipse` <- again, generate Eclipse project files (note that these are `.gitignore`d)
+* In Eclipse, `File -> Import -> Existing Projects into Workspace`, browse to your `bfg` working-copy, and ensure that you select `Search for nested projects`
+* You should now have the 4 `sbt` projects imported into your Eclipse workspace.
+
 I personally found Coursera's [online Scala course](https://www.coursera.org/course/progfun) very helpful in
 learning Scala, YMMV.
