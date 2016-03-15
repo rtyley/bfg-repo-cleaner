@@ -10,6 +10,9 @@ object Dependencies {
 
   val jgit = "org.eclipse.jgit" % "org.eclipse.jgit" % jgitVersion
 
+  // the 1.7.2 here matches slf4j-api in jgit's dependencies
+  val slf4jSimple = "org.slf4j" % "slf4j-simple" % "1.7.2"
+
   val scalaGit = "com.madgag.scala-git" %% "scala-git" % scalaGitVersion exclude("org.eclipse.jgit", "org.eclipse.jgit")
 
   val scalaGitTest = "com.madgag.scala-git" %% "scala-git-test" % scalaGitVersion
