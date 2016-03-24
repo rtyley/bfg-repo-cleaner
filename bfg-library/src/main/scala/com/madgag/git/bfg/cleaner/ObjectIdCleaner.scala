@@ -34,6 +34,7 @@ object ObjectIdCleaner {
 
   case class Config(protectedObjectCensus: ProtectedObjectCensus,
                     objectIdSubstitutor: ObjectIdSubstitutor = ObjectIdSubstitutor.OldIdsPublic,
+                    pruneEmptyCommits: Boolean = false,
                     commitNodeCleaners: Seq[CommitNodeCleaner] = Seq.empty,
                     treeEntryListCleaners: Seq[Cleaner[Seq[Tree.Entry]]] = Seq.empty,
                     treeBlobsCleaners: Seq[Cleaner[TreeBlobs]] = Seq.empty,
@@ -100,17 +101,21 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     val originalCommit = Commit(originalRevCommit)
 
     val cleanedArcs = originalCommit.arcs cleanWith this
-    val kit = new CommitNodeCleaner.Kit(threadLocalResources, originalRevCommit, originalCommit, cleanedArcs, apply)
-    val updatedCommitNode = commitNodeCleaner.fixer(kit)(originalCommit.node)
-    val updatedCommit = Commit(updatedCommitNode, cleanedArcs)
 
-    if (updatedCommit != originalCommit) {
-      val commitBytes = updatedCommit.toBytes
-      objectChecker.foreach(_.checkCommit(commitBytes))
-      threadLocalResources.inserter().insert(OBJ_COMMIT, commitBytes)
-    } else {
-      originalRevCommit
+    if (config.pruneEmptyCommits && cleanedArcs.isEmptyCommit) cleanedArcs.parents.headOption.getOrElse(ObjectId.zeroId()) else {
+      val kit = new CommitNodeCleaner.Kit(threadLocalResources, originalRevCommit, originalCommit, cleanedArcs, apply)
+      val updatedCommitNode = commitNodeCleaner.fixer(kit)(originalCommit.node)
+      val updatedCommit = Commit(updatedCommitNode, cleanedArcs)
+
+      if (updatedCommit != originalCommit) {
+        val commitBytes = updatedCommit.toBytes
+        objectChecker.foreach(_.checkCommit(commitBytes))
+        threadLocalResources.inserter().insert(OBJ_COMMIT, commitBytes)
+      } else {
+        originalRevCommit
+      }
     }
+
   }
 
   val cleanBlob: Cleaner[ObjectId] = identity // Currently a NO-OP, we only clean at treeblob level
