@@ -50,6 +50,18 @@ class MainSpec extends FlatSpec with Matchers with OptionValues with Inspectors 
     }
   }
 
+  "remove empty trees with multiple delete-files" should "work" in new unpackedRepo("/sample-repos/folder-example.git.zip") {
+    ensureRemovalFrom(commitHist()).ofCommitsThat(haveFolder("secret-files")) {
+      run("-D credentials.txt -D passwords.txt")
+    }
+  }
+
+  "remove empty trees with multiple delete-folders" should "work" in new unpackedRepo("/sample-repos/folder-example.git.zip") {
+    ensureRemovalFrom(commitHist()).ofCommitsThat(haveFolder("secret-files")) {
+      run("--delete-folders secret-files --delete-folders big-files")
+    }
+  }
+
   "removing big blobs" should "definitely still remove blobs even if they have identical size" in new unpackedRepo("/sample-repos/moreThanOneBigBlobWithTheSameSize.git.zip") {
     ensureRemovalOfBadEggs(packedBlobsOfSize(1024), (contain allElementsOf Set(abbrId("06d7"), abbrId("cb2c"))).matcher[Traversable[ObjectId]]) {
       run("--strip-blobs-bigger-than 512B")
