@@ -41,13 +41,3 @@ class BlobReplacer(badBlobs: Set[ObjectId], blobInserter: => BlobInserter) exten
     case e => e
   }
 }
-
-
-
-
-
-
-
-
-
-
