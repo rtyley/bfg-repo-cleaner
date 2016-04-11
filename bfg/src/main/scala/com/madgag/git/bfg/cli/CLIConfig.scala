@@ -100,8 +100,17 @@ object CLIConfig {
     opt[Unit]("strict-object-checking").text("perform additional checks on integrity of consumed & created objects").hidden().action {
       (_, c) => c.copy(strictObjectChecking = true)
     }
-    opt[Unit]("private").text("treat this repo-rewrite as removing private data (for example: omit old commit ids from commit messages)").action {
-      (_, c) => c.copy(sensitiveData = Some(true))
+    opt[Unit]("private").text("privacy/cryptographic-safety options, equivalent of --no-formerly-log-text --no-formerly-commit-footer --no-replace-blobs").action {
+      (_, c) => c.copy(mentionFormerCommitInRewrite = false, addFormerCommitFooter = false, replaceDeletedBlobs = false)
+    }
+    opt[Unit]("no-formerly-log-text").text("privacy/cryptographic-safety option, don't mention former commit-hashes in re-written commit-log messages, e.g. [formerly <old-commit-hash>]").action {
+      (_, c) => c.copy(mentionFormerCommitInRewrite = false)
+    }
+    opt[Unit]("no-formerly-commit-footer").text("privacy/cryptographic-safety option, don't add former commit-hashes to the commmit-log footer e.g. Former-commit-id: <replaced commit hash>").action {
+      (_, c) => c.copy(addFormerCommitFooter = false)
+    }
+    opt[Unit]("no-replace-blobs").text("privacy/cryptographic-safety option, substitute deleted blobs with a reference file e.g. <filename>.REMOVED.git-id file").action {
+      (_, c) => c.copy(replaceDeletedBlobs = false)
     }
     opt[String]("massive-non-file-objects-sized-up-to").valueName("<size>").text("increase memory usage to handle over-size Commits, Tags, and Trees that are up to X in size (eg '10M')").action {
       (v, c) => c.copy(massiveNonFileObjects = Some(ByteSize.parse(v)))
@@ -134,7 +143,9 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      stripBlobsWithIds: Option[Set[ObjectId]] = None,
                      lfsConversion: Option[String] = None,
                      strictObjectChecking: Boolean = false,
-                     sensitiveData: Option[Boolean] = None,
+                     mentionFormerCommitInRewrite: Boolean = true,
+                     addFormerCommitFooter: Boolean = true,
+                     replaceDeletedBlobs: Boolean = true,
                      massiveNonFileObjects: Option[Long] = None,
                      repoLocation: File = new File(System.getProperty("user.dir"))) {
 
@@ -146,8 +157,10 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   lazy val objectChecker = if (strictObjectChecking) Some(new ObjectChecker()) else None
 
-  lazy val fileDeletion: Option[Cleaner[TreeBlobs]] = deleteFiles.map {
-    textMatcher => new FileDeleter(textMatcher)
+  lazy val deletedBlobInserter = if (replaceDeletedBlobs) Some(new BlobInserter(repo.getObjectDatabase.threadLocalResources.inserter())) else None
+  
+  lazy val fileDeletion: Option[Cleaner[TreeBlobs]] = deleteFiles.collect {
+    case textMatcher => new FileDeleter(textMatcher, deletedBlobInserter)
   }
 
   lazy val folderDeletion: Option[Cleaner[TreeSubtrees]] = deleteFolders.map {
@@ -181,14 +194,12 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     new LfsBlobConverter(lfsGlobExpr, repo)
   }
 
-  lazy val privateDataRemoval = sensitiveData.getOrElse(Seq(fileDeletion, folderDeletion, blobTextModifier).flatten.nonEmpty)
-
-  lazy val objectIdSubstitutor = if (privateDataRemoval) ObjectIdSubstitutor.OldIdsPrivate else ObjectIdSubstitutor.OldIdsPublic
+  lazy val objectIdSubstitutor = if (mentionFormerCommitInRewrite) ObjectIdSubstitutor.OldIdsPublic else ObjectIdSubstitutor.OldIdsPrivate
 
   lazy val treeEntryListCleaners = fixFileNameDuplication.toSeq
 
   lazy val commitNodeCleaners = {
-    lazy val formerCommitFooter = if (privateDataRemoval) None else Some(FormerCommitFooter)
+    lazy val formerCommitFooter = if (addFormerCommitFooter) Some(FormerCommitFooter) else None
 
     Seq(new CommitMessageObjectIdsUpdater(objectIdSubstitutor)) ++ formerCommitFooter
   }
@@ -235,10 +246,15 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     )
 
   def describe = {
-    if (privateDataRemoval) {
-      "is removing private data, so the '" + FormerCommitFooter.Key + "' footer will not be added to commit messages."
-    } else {
-      "is only removing non-private data (eg, blobs that are just big, not private) : '" + FormerCommitFooter.Key + "' footer will be added to commit messages."
-    }
+
+    def willOrWillNot(test: Boolean) = if (!test) "* will NOT " else "* will "
+      
+    lazy val desc = List(
+        willOrWillNot(mentionFormerCommitInRewrite) + "mention former commit-hashes in re-written commit-log messages",
+        willOrWillNot(addFormerCommitFooter) + "add former commit-hashes to the commmit-log footer",
+        willOrWillNot(replaceDeletedBlobs) + "substitute deleted blobs with a reference file"
+    )
+    
+    desc.mkString("\n")
   }
 }
