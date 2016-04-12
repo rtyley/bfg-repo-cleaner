@@ -247,7 +247,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   def describe = {
 
-    def willOrWillNot(test: Boolean) = if (!test) "* will NOT " else "* will "
+    def willOrWillNot(test: Boolean) = if (test) "* will " else "* will NOT "
       
     lazy val desc = List(
         willOrWillNot(mentionFormerCommitInRewrite) + "mention former commit-hashes in re-written commit-log messages",
