@@ -55,6 +55,9 @@ object Main extends App {
             Console.err.println("Please specify tasks for The BFG :")
             CLIConfig.parser.showUsage
           } else {
+            println("From the supplied parameters, The BFG:")
+            println(config.describe+"\n\n")
+            
             println("Found " + config.objectProtection.fixedObjectIds.size + " objects to protect")
 
             RepoRewriter.rewrite(repo, config.objectIdCleanerConfig)
