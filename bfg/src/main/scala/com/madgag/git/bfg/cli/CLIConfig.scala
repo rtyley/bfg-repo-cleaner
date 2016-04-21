@@ -109,7 +109,7 @@ object CLIConfig {
     opt[Unit]("no-formerly-commit-footer").text("privacy/cryptographic-safety option, don't add former commit-hashes to the commmit-log footer e.g. Former-commit-id: <replaced commit hash>").action {
       (_, c) => c.copy(addFormerCommitFooter = false)
     }
-    opt[Unit]("no-replace-blobs").text("privacy/cryptographic-safety option, substitute deleted blobs with a reference file e.g. <filename>.REMOVED.git-id file").action {
+    opt[Unit]("no-replace-blobs").text("privacy/cryptographic-safety option, don't substitute deleted blobs with a reference file e.g. <filename>.REMOVED.git-id file").action {
       (_, c) => c.copy(replaceDeletedBlobs = false)
     }
     opt[String]("massive-non-file-objects-sized-up-to").valueName("<size>").text("increase memory usage to handle over-size Commits, Tags, and Trees that are up to X in size (eg '10M')").action {
