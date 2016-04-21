@@ -26,7 +26,7 @@ import com.madgag.git.bfg.model.{TreeBlobEntry, _}
 import com.madgag.textmatching.TextMatcher
 import org.eclipse.jgit.lib.ObjectId
 
-class FileDeleter(fileNameMatcher: TextMatcher, blobInserter: Option[BlobInserter] = None) extends Cleaner[TreeBlobs] {
+class FileDeleter(fileNameMatcher: TextMatcher, blobInserter: => Option[BlobInserter] = None) extends Cleaner[TreeBlobs] {
   override def apply(tbs: TreeBlobs) = tbs.entries.flatMap {
     case e if !fileNameMatcher(e.filename) => Some(e)
     case e if !blobInserter.isEmpty => Some(TreeBlobEntry(FileName(e.filename + ".REMOVED.git-id"), RegularFile, blobInserter.get.insert(e.objectId.name.getBytes)))
