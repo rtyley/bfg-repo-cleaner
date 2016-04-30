@@ -28,6 +28,7 @@ import com.madgag.git.bfg.cli.stoptrump.dontGiveUp
 object Main extends App {
 
   if (args.isEmpty) {
+    Console.err.println("Error: Please specify tasks for The BFG:")
     CLIConfig.parser.showUsage
   } else {
 
@@ -37,8 +38,8 @@ object Main extends App {
         tweakStaticJGitConfig(config.massiveNonFileObjects)
 
         if (config.gitdir.isEmpty) {
+          Console.err.println("Error: " + config.repoLocation + " is not a valid Git repository.")
           CLIConfig.parser.showUsage
-          Console.err.println("Aborting : " + config.repoLocation + " is not a valid Git repository.\n")
         } else {
           implicit val repo = config.repo
 
@@ -52,7 +53,7 @@ object Main extends App {
           }
 
           if (config.definesNoWork) {
-            Console.err.println("Please specify tasks for The BFG :")
+            Console.err.println("Error: Please specify tasks for The BFG:")
             CLIConfig.parser.showUsage
           } else {
             println("Found " + config.objectProtection.fixedObjectIds.size + " objects to protect")
