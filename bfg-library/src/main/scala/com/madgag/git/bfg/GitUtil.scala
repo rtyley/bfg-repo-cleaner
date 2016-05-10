@@ -50,6 +50,29 @@ object GitUtil {
   
   val ProbablyNoNonFileObjectsOverSizeThreshold = 1024 * 1024
   
+  def replaceOrigHead(repo: Repository) {
+    /*
+     * Workaround for https://bugs.eclipse.org/bugs/show_bug.cgi?id=479697
+     * JGit retains ORIG_HEAD during gc, and jgit gc fails if ORIG_HEAD points to a
+     * commit already missing, such as removed by git gc, which ignores ORIG_HEAD.
+     * 
+     * If ORIG_HEAD exists, overwrite it with HEAD.
+     */
+    val origHeadRef = repo.exactRef(Constants.ORIG_HEAD);
+    if (origHeadRef != null) {
+      val headRef = repo.exactRef(Constants.HEAD);
+      if (headRef != null) {
+        if (! origHeadRef.getObjectId.equals(headRef.getObjectId)) {
+          // replace it
+          repo.writeOrigHead(headRef.getObjectId());
+          println(s"Replaced ORIG_HEAD with HEAD (${headRef.getObjectId().name()}), see https://bugs.eclipse.org/bugs/show_bug.cgi?id=479697");
+        }
+      } else {
+        println("Unable to reset ORIG_HEAD, HEAD is not set.");
+      }
+    }
+  }
+  
   def tweakStaticJGitConfig(massiveNonFileObjects: Option[Int]) {
     val wcConfig: WindowCacheConfig = new WindowCacheConfig()
     wcConfig.setStreamFileThreshold(massiveNonFileObjects.getOrElse(ProbablyNoNonFileObjectsOverSizeThreshold))
