@@ -22,6 +22,7 @@ package com.madgag.git.bfg.cli
 
 import org.specs2.mutable._
 import com.madgag.git._
+import com.madgag.git.bfg.cli.test.unpackedRepo
 import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
 import org.eclipse.jgit.lib.ObjectReader
 import com.madgag.git.bfg.model.Commit

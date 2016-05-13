@@ -25,7 +25,7 @@ import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.cleaner.ObjectIdCleaner
 import org.eclipse.jgit.diff.DiffEntry
 import org.eclipse.jgit.diff.DiffEntry.ChangeType._
-import org.eclipse.jgit.lib.{ObjectDatabase, ObjectId}
+import org.eclipse.jgit.lib.{ObjectDatabase, ObjectId, ObjectReader}
 import org.eclipse.jgit.revwalk.{RevObject, RevWalk}
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.TreeFilter
@@ -60,7 +60,7 @@ object ProtectedObjectDirtReport {
 case class ProtectedObjectDirtReport(revObject: RevObject, originalTreeOrBlob: RevObject, replacementOpt: Option[ObjectId]) {
   val objectProtectsDirt: Boolean = replacementOpt.isDefined
 
-  def dirt(implicit revWalk: RevWalk): Option[Seq[DiffEntry]] = for {
+  def dirt(implicit revWalk: RevWalk, reader: ObjectReader): Option[Seq[DiffEntry]] = for {
     replacementTree <- replacementOpt
     oldTree <- originalTreeOrBlob.toTree
     replacement <- replacementOpt
