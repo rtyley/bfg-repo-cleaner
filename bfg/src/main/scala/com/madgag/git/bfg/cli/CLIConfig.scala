@@ -225,7 +225,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier, lfsBlobConverter).flatten
   }
 
-  lazy val definesNoWork = treeBlobCleaners.isEmpty && folderDeletion.isEmpty && treeEntryListCleaners.isEmpty
+  lazy val definesNoWork = treeBlobCleaners.isEmpty && folderDeletion.isEmpty && treeEntryListCleaners.isEmpty && !pruneEmptyCommits
 
   def objectIdCleanerConfig: ObjectIdCleaner.Config =
     ObjectIdCleaner.Config(
