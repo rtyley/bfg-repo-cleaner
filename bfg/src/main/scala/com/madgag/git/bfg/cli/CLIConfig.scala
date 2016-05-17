@@ -146,6 +146,8 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   lazy val objectChecker = if (strictObjectChecking) Some(new ObjectChecker()) else None
 
+  implicit lazy val protectedObjectIds = objectProtection.blobIds
+
   lazy val fileDeletion: Option[Cleaner[TreeBlobs]] = deleteFiles.map {
     textMatcher => new FileDeleter(textMatcher)
   }
