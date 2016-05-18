@@ -40,6 +40,7 @@ object Main extends App {
           CLIConfig.parser.showUsage
           Console.err.println("Aborting : " + config.repoLocation + " is not a valid Git repository.\n")
         } else {
+          CLIConfig.parser.showHeader
           implicit val repo = config.repo
 
           println("\nUsing repo : " + repo.getDirectory.getAbsolutePath + "\n")
