@@ -74,7 +74,7 @@ object CLIConfig {
     fileMatcher("delete-folders").text("delete folders with the specified names (eg '.svn', '*-tmp' - matches on folder name, not path within repo)").action {
       (v, c) => c.copy(deleteFolders = Some(v))
     }
-    opt[String]("convert-to-git-lfs").text("extract files with the specified names (eg '*.{zip,mp4}') into Git LFS").action {
+    opt[String]("convert-to-git-lfs").text("extract files with the specified names (eg '*.zip' or '*.mp4') into Git LFS").action {
       (v, c) => c.copy(lfsConversion = Some(v))
     }
     opt[File]("replace-text").abbr("rt").valueName("<expressions-file>").text("filter content of files, replacing matched text. Match expressions should be listed in the file, one expression per line - " +
