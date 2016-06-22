@@ -28,7 +28,7 @@ import com.madgag.git.bfg.model.{Tree, TreeSubtrees, _}
 import com.madgag.git.bfg.{CleaningMapper, Memo, MemoFunc, MemoUtil}
 import org.eclipse.jgit.lib.Constants._
 import org.eclipse.jgit.lib._
-import org.eclipse.jgit.revwalk.{RevCommit, RevTag, RevWalk}
+import org.eclipse.jgit.revwalk.{RevCommit, RevTag, RevTree, RevWalk}
 
 object ObjectIdCleaner {
 
@@ -63,6 +63,13 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
   val changesByFilename = new ConcurrentMultiMap[FileName, (ObjectId, ObjectId)]
   val deletionsByFilename = new ConcurrentMultiMap[FileName, ObjectId]
+
+  var lfsConverter: LfsBlobConverter = null
+  for(cleaner <- treeBlobsCleaners) {
+    if (cleaner.getClass == classOf[LfsBlobConverter]) {
+      lfsConverter = cleaner.asInstanceOf[LfsBlobConverter]
+    }
+  }
 
   // want to enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
   val memo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds)
@@ -122,7 +129,13 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     val tree = Tree(cleanedTreeEntries)
 
     val originalBlobs = tree.blobs
-    val fixedTreeBlobs = treeBlobsCleaner(originalBlobs)
+    var fixedTreeBlobs = treeBlobsCleaner(originalBlobs)
+    if( lfsConverter != null ) {
+       if( originalObjectId.getClass == classOf[RevTree]) {
+         fixedTreeBlobs = lfsConverter.ensureGitAttributesSetFor(fixedTreeBlobs)
+       }
+    }
+
     val cleanedSubtrees = TreeSubtrees(treeSubtreesCleaner(tree.subtrees).entryMap.map {
       case (name, treeId) => (name, cleanTree(treeId))
     }).withoutEmptyTrees
