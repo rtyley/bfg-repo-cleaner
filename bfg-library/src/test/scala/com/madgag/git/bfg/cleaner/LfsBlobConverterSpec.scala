@@ -107,9 +107,6 @@ class LfsBlobConverterSpec extends Specification {
   }
 
   def verifyPointersForChangedFiles(diff: MapDiff[FileName, (BlobFileMode, ObjectId)])(implicit repo: FileRepository) = {
-    diff.only(Before) must beEmpty
-    diff.only(After).keys mustEqual Set(FileName(".gitattributes"))
-
     forall(diff.changed) { fileName =>
       verifyPointerInsertedFor(fileName, diff)
     }
