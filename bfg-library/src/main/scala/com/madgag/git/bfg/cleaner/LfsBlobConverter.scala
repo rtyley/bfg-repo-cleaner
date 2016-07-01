@@ -48,7 +48,9 @@ class LfsBlobConverter(
 
   val lfsSuitableFiles: (FileName => Boolean) = f => lfsGlob(f.string)
 
-  val gitAttributes = lfsGlobExpression.replace("*.", "").replace("{","").replace("}","").split(",").map("*.".concat(_).concat(" filter=lfs diff=lfs merge=lfs -text"))
+  val globRegexMatcher = """([^{]*)\{?([^}]*)\}?(.*)""".r
+  val globRegexMatcher(prefix, group, postfix) = lfsGlobExpression
+  val gitAttributes = group.split(",").map(prefix.concat(_).concat(postfix).concat(" filter=lfs diff=lfs merge=lfs -text"))
 
   implicit val UTF_8 = Charset.forName("UTF-8")
 
