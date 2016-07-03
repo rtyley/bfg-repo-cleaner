@@ -2,7 +2,6 @@ package com.madgag.git.bfg.test
 
 import java.lang.System.currentTimeMillis
 import java.util.Date
-
 import com.madgag.git._
 import com.madgag.git.test._
 import org.eclipse.jgit.internal.storage.file.ObjectDirectory
@@ -12,8 +11,11 @@ import org.eclipse.jgit.revwalk.{RevCommit, RevTree}
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.specs2.matcher.{Matcher, MustThrownMatchers}
 import org.specs2.specification.Scope
-
 import scala.collection.convert.wrapAsScala._
+import org.eclipse.jgit.util.GitDateParser
+import org.eclipse.jgit.util.SystemReader
+import org.eclipse.jgit.lib.ConfigConstants
+import org.eclipse.jgit.internal.storage.file.GC
 
 class unpackedRepo(filePath: String) extends Scope with MustThrownMatchers {
 
@@ -80,7 +82,11 @@ class unpackedRepo(filePath: String) extends Scope with MustThrownMatchers {
     expr must beEmpty
   }
 
-  def gc() = repo.git.gc.setExpire(new Date(currentTimeMillis + 1)).call()
+  def gc() = {
+    val gc = new GC(repo)
+    gc.setPackExpireAgeMillis(0)
+    gc.gc()
+  }
 
   def ensureRemovalOf[T](dirtMatchers: Matcher[Repository]*)(block: => T) = {
     // repo.git.gc.call() ??

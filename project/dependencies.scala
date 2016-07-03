@@ -6,7 +6,7 @@ object Dependencies {
 
   val jgitVersionOverride = Option(System.getProperty("jgit.version"))
 
-  val jgitVersion = jgitVersionOverride.getOrElse("4.2.0.201601211800-r")
+  val jgitVersion = jgitVersionOverride.getOrElse("4.4.0.201606070830-r")
 
   val jgit = "org.eclipse.jgit" % "org.eclipse.jgit" % jgitVersion
 
