@@ -46,6 +46,7 @@ addArtifact( Artifact("bfg", "usage", "txt"), cliUsageDump )
 
 libraryDependencies ++= Seq(
   scopt,
+  jgit,
   scalaGitTest % "test"
 )
 
