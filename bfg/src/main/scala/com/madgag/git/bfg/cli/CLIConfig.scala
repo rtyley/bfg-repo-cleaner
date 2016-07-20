@@ -68,6 +68,9 @@ object CLIConfig {
     opt[File]("strip-blobs-with-ids").abbr("bi").valueName("<blob-ids-file>").text("strip blobs with the specified Git object ids").action {
       (v, c) => c.copy(stripBlobsWithIds = Some(v.lines().map(_.trim).filterNot(_.isEmpty).map(_.asObjectId).toSet))
     }
+    opt[File]("strip-trees-with-ids").valueName("<tree-ids-file>").text("strip trees with the specified Git object ids").action {
+      (v, c) => c.copy(stripSubtreesWithIds = Some(v.lines().map(_.trim).filterNot(_.isEmpty).map(_.asObjectId).toSet))
+    }
     fileMatcher("delete-files").abbr("D").text("delete files with the specified names (eg '*.class', '*.{txt,log}' - matches on file name, not path within repo)").action {
       (v, c) => c.copy(deleteFiles = Some(v))
     }
@@ -132,6 +135,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      filterSizeThreshold: Int = BlobTextModifier.DefaultSizeThreshold,
                      textReplacementExpressions: Traversable[String] = List.empty,
                      stripBlobsWithIds: Option[Set[ObjectId]] = None,
+                     stripSubtreesWithIds: Option[Set[ObjectId]] = None,
                      lfsConversion: Option[String] = None,
                      strictObjectChecking: Boolean = false,
                      sensitiveData: Option[Boolean] = None,
@@ -220,7 +224,13 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier, lfsBlobConverter).flatten
   }
 
-  lazy val definesNoWork = treeBlobCleaners.isEmpty && folderDeletion.isEmpty && treeEntryListCleaners.isEmpty
+  lazy val treeSubtreesCleaners: Seq[Cleaner[TreeSubtrees]] = {
+    lazy val subtreesByIdRemover: Option[SubtreeRemover] = stripSubtreesWithIds.map(new SubtreeRemover(_))
+
+    Seq(subtreesByIdRemover, folderDeletion).flatten
+  }
+
+  lazy val definesNoWork = treeBlobCleaners.isEmpty && treeSubtreesCleaners.isEmpty && treeEntryListCleaners.isEmpty
 
   def objectIdCleanerConfig: ObjectIdCleaner.Config =
     ObjectIdCleaner.Config(
@@ -229,7 +239,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
       commitNodeCleaners,
       treeEntryListCleaners,
       treeBlobCleaners,
-      folderDeletion.toSeq,
+      treeSubtreesCleaners,
       objectChecker
     )
 
