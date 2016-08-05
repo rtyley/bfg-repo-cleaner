@@ -45,25 +45,46 @@ trait BlobTextModifier extends TreeBlobModifier {
 
   val sizeThreshold = BlobTextModifier.DefaultSizeThreshold
 
+  val supportMultiLineRegex = false
+
   override def fix(entry: TreeBlobEntry) = {
 
     def filterTextIn(e: TreeBlobEntry, lineCleaner: String => String): TreeBlobEntry = {
       def isDirty(line: String) = lineCleaner(line) != line
 
-      val opt = for {
-        loader         <- Some(threadLocalObjectDBResources.reader().open(e.objectId))
-        if loader.getSize < sizeThreshold
-        streamResource <- Some(Resource.fromInputStream(loader.openStream()))
-        charset        <- charsetDetector.charsetFor(e, streamResource)
-        reader         <- Some(streamResource.reader(charset))
-        lines = reader.lines(includeTerminator = true)
-        if lines.exists(isDirty)
-      } yield {
-        val b = new ByteArrayOutputStream(loader.getSize.toInt)
-        lines.view.map(lineCleaner).foreach(line => b.write(line.getBytes(charset)))
-        val oid = threadLocalObjectDBResources.inserter().insert(OBJ_BLOB, b.toByteArray)
-        e.copy(objectId = oid)
-      }
+      val opt =
+        if (supportMultiLineRegex) {
+          for {
+            loader         <- Some(threadLocalObjectDBResources.reader().open(e.objectId))
+            if loader.getSize < sizeThreshold
+            streamResource <- Some(Resource.fromInputStream(loader.openStream()))
+            charset        <- charsetDetector.charsetFor(e, streamResource)
+            reader         <- Some(streamResource.reader(charset))
+            blob = reader.string
+            if isDirty(blob)
+          } yield {
+            val b = new ByteArrayOutputStream(loader.getSize.toInt)
+            val out = lineCleaner(blob)
+            b.write(out.getBytes(charset))
+            val oid = threadLocalObjectDBResources.inserter().insert(OBJ_BLOB, b.toByteArray)
+            e.copy(objectId = oid)
+          }
+        } else {
+          for {
+            loader         <- Some(threadLocalObjectDBResources.reader().open(e.objectId))
+            if loader.getSize < sizeThreshold
+            streamResource <- Some(Resource.fromInputStream(loader.openStream()))
+            charset        <- charsetDetector.charsetFor(e, streamResource)
+            reader         <- Some(streamResource.reader(charset))
+            lines = reader.lines(includeTerminator = true)
+            if lines.exists(isDirty)
+          } yield {
+            val b = new ByteArrayOutputStream(loader.getSize.toInt)
+            lines.view.map(lineCleaner).foreach(line => b.write(line.getBytes(charset)))
+            val oid = threadLocalObjectDBResources.inserter().insert(OBJ_BLOB, b.toByteArray)
+            e.copy(objectId = oid)
+          }
+        }
 
       opt.getOrElse(e)
     }
