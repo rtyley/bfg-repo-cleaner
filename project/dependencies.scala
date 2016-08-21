@@ -2,7 +2,7 @@ import sbt._
 
 object Dependencies {
 
-  val scalaGitVersion = "3.3"
+  val scalaGitVersion = "3.4"
 
   val jgitVersionOverride = Option(System.getProperty("jgit.version"))
 
@@ -23,9 +23,9 @@ object Dependencies {
 
   val textmatching = "com.madgag" %% "scala-textmatching" % "2.0"
 
-  val scopt = "com.github.scopt" %% "scopt" % "3.4.0"
+  val scopt = "com.github.scopt" %% "scopt" % "3.5.0"
 
-  val guava = Seq("com.google.guava" % "guava" % "18.0", "com.google.code.findbugs" % "jsr305" % "2.0.3")
+  val guava = Seq("com.google.guava" % "guava" % "19.0", "com.google.code.findbugs" % "jsr305" % "2.0.3")
 
   val scalaIoFile = "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.3-1"
 

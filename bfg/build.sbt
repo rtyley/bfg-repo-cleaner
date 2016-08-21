@@ -5,14 +5,9 @@ import sbt.taskKey
 
 import scala.util.Try
 
-buildInfoSettings
-
-sourceGenerators in Compile <+= buildInfo
-
 val gitDescription = taskKey[String]("Git description of working dir")
 
-gitDescription := Try(Process("git describe --all --always --dirty --long").lines.head
-  .replace("heads/","").replace("-0-g","-")).getOrElse("unknown")
+gitDescription := Try[String](Process("git describe --all --always --dirty --long").lines.head.replace("heads/","").replace("-0-g","-")).getOrElse("unknown")
 
 // note you don't want the jar name to collide with the non-assembly jar, otherwise confusion abounds.
 assemblyJarName in assembly := s"${name.value}-${version.value}-${gitDescription.value}${jgitVersionOverride.map("-jgit-" + _).mkString}.jar"

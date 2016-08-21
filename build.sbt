@@ -25,7 +25,7 @@ lazy val bfgTest = bfgProject("bfg-test")
 
 lazy val bfgLibrary = bfgProject("bfg-library") dependsOn(bfgTest % "test")
 
-lazy val bfg = bfgProject("bfg") dependsOn(bfgLibrary, bfgTest % "test")
+lazy val bfg = bfgProject("bfg") enablePlugins(BuildInfoPlugin) dependsOn(bfgLibrary, bfgTest % "test")
 
 lazy val bfgBenchmark = bfgProject("bfg-benchmark")
 
