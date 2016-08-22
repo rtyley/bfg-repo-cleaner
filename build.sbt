@@ -18,7 +18,9 @@ resolvers in ThisBuild ++= jgitVersionOverride.map(_ => Resolver.mavenLocal).toS
 libraryDependencies in ThisBuild += specs2 % "test"
 
 lazy val root = Project(id = "bfg-parent", base = file(".")) aggregate (bfg, bfgTest, bfgLibrary)
-signedReleaseSettings
+
+releaseSignedArtifactsSettings
+
 publishSigned := {}
 
 lazy val bfgTest = bfgProject("bfg-test")
