@@ -110,6 +110,12 @@ class MainSpec extends Specification {
         run("--delete-folders bar --delete-files foo.txt")
       }
     }
+    
+    "not crash on encountering a commit with bad encoding header" in new unpackedRepo("/sample-repos/badEncoding.git.zip") {
+      ensureRemovalOf(commitHistory(haveFile("test.txt").atLeastOnce)) {
+        run("--no-blob-protection --delete-files test.txt")
+      }
+    }
   }
 
   "Corrupt trees containing duplicate filenames" should {
