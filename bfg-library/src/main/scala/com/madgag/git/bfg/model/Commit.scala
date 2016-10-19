@@ -7,6 +7,7 @@ import com.madgag.git.bfg.cleaner._
 import org.eclipse.jgit.lib.Constants.OBJ_COMMIT
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.RevCommit
+import java.nio.charset.IllegalCharsetNameException
 
 /*
  * Copyright (c) 2012, 2013 Roberto Tyley
@@ -59,7 +60,8 @@ case class CommitArcs(parents: Seq[ObjectId], tree: ObjectId) {
 }
 
 object CommitNode {
-  def apply(c: RevCommit): CommitNode = CommitNode(c.getAuthorIdent, c.getCommitterIdent, c.getFullMessage, c.getEncoding)
+  def apply(c: RevCommit): CommitNode = CommitNode(c.getAuthorIdent, c.getCommitterIdent, c.getFullMessage,
+      try c.getEncoding catch {case e: IllegalCharsetNameException => Constants.CHARSET})
 }
 
 case class CommitNode(author: PersonIdent, committer: PersonIdent, message: String, encoding: Charset = Constants.CHARSET) {
