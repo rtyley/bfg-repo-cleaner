@@ -17,7 +17,7 @@ object Dependencies {
 
   val scalaGitTest = "com.madgag.scala-git" %% "scala-git-test" % scalaGitVersion
 
-  val specs2 = "org.specs2" %% "specs2" % "2.3.12"
+  val scalatest = "org.scalatest" %% "scalatest" % "3.0.4"
 
   val madgagCompress = "com.madgag" % "util-compress" % "1.33"
 

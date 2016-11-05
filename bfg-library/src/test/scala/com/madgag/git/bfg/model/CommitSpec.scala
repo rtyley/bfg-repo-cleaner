@@ -21,14 +21,12 @@
 package com.madgag.git.bfg.model
 
 import com.madgag.git.bfg.test.unpackedRepo
-import org.specs2.mutable._
+import org.scalatest.{FlatSpec, Inspectors, Matchers}
 
-class CommitSpec extends Specification {
-  "Commit model" should {
-    "calculate the same Git commit id for any given commit" in new unpackedRepo("/sample-repos/example.git.zip") {
-      foreach(commitHist()) { revCommit =>
-        Commit(revCommit).id mustEqual(revCommit.toObjectId)
-      }
+class CommitSpec extends FlatSpec with Matchers with Inspectors {
+  "Commit model" should "calculate the same Git commit id for any given commit" in new unpackedRepo("/sample-repos/example.git.zip") {
+    forAll (commitHist()) { revCommit =>
+      Commit(revCommit).id shouldBe revCommit.toObjectId
     }
   }
 

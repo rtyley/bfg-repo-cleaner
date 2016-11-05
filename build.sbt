@@ -15,7 +15,7 @@ homepage in ThisBuild := Some(url("https://github.com/rtyley/bfg-repo-cleaner"))
 
 resolvers in ThisBuild ++= jgitVersionOverride.map(_ => Resolver.mavenLocal).toSeq
 
-libraryDependencies in ThisBuild += specs2 % "test"
+libraryDependencies in ThisBuild += scalatest % "test"
 
 lazy val root = Project(id = "bfg-parent", base = file(".")) aggregate (bfg, bfgTest, bfgLibrary)
 
