@@ -25,35 +25,31 @@ import com.madgag.git.bfg.cleaner.ObjectIdSubstitutor._
 import com.madgag.git.bfg.cleaner.protection.ProtectedObjectCensus
 import com.madgag.git.bfg.model.TreeBlobEntry
 import com.madgag.git.test._
-import org.specs2.mutable._
+import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.convert.wrapAsScala._
 
-class TreeBlobModifierSpec extends Specification {
+class TreeBlobModifierSpec extends FlatSpec with Matchers {
 
-  "TreeBlobModifier" should {
-    "only clean a given tree entry once" in {
-      class CountingTreeBlobModifier extends TreeBlobModifier {
-        val counts = AtomicLongMap.create[TreeBlobEntry]
+  "TreeBlobModifier" should "only clean a given tree entry once" in {
+    class CountingTreeBlobModifier extends TreeBlobModifier {
+      val counts = AtomicLongMap.create[TreeBlobEntry]
 
-        def fix(entry: TreeBlobEntry) = {
-          counts.incrementAndGet(entry)
-          (entry.mode, entry.objectId)
-        }
+      def fix(entry: TreeBlobEntry) = {
+        counts.incrementAndGet(entry)
+        (entry.mode, entry.objectId)
       }
-
-      implicit val repo = unpackRepo("/sample-repos/taleOfTwoBranches.git.zip")
-
-      val countingTreeBlobModifier = new CountingTreeBlobModifier()
-
-      RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), OldIdsPublic, treeBlobsCleaners = Seq(countingTreeBlobModifier)))
-
-      val endCounts = countingTreeBlobModifier.counts.asMap().toMap
-
-      endCounts.size must be >= 4
-      endCounts.values must beEqualTo(1).foreach
     }
+
+    implicit val repo = unpackRepo("/sample-repos/taleOfTwoBranches.git.zip")
+
+    val countingTreeBlobModifier = new CountingTreeBlobModifier()
+
+    RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), OldIdsPublic, treeBlobsCleaners = Seq(countingTreeBlobModifier)))
+
+    val endCounts = countingTreeBlobModifier.counts.asMap().toMap
+
+    endCounts.size should be >= 4
+    all (endCounts.values) shouldBe 1
   }
-
-
 }

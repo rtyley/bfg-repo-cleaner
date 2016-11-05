@@ -8,6 +8,8 @@ object Dependencies {
 
   val jgitVersion = jgitVersionOverride.getOrElse("4.4.1.201607150455-r")
 
+  val cats = "org.typelevel" %% "cats" % "0.7.0"
+
   val jgit = "org.eclipse.jgit" % "org.eclipse.jgit" % jgitVersion
 
   // the 1.7.2 here matches slf4j-api in jgit's dependencies
@@ -17,7 +19,7 @@ object Dependencies {
 
   val scalaGitTest = "com.madgag.scala-git" %% "scala-git-test" % scalaGitVersion
 
-  val specs2 = "org.specs2" %% "specs2" % "2.3.12"
+  val scalatest = "org.scalatest" %% "scalatest" % "3.0.0"
 
   val madgagCompress = "com.madgag" % "util-compress" % "1.33"
 

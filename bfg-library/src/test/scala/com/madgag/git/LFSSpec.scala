@@ -24,38 +24,36 @@ import com.madgag.git.LFS.Pointer
 import com.madgag.git.test._
 import org.eclipse.jgit.lib.Constants._
 import org.eclipse.jgit.lib.ObjectInserter
-import org.specs2.mutable.Specification
+import org.scalatest.{FlatSpec, Matchers, OptionValues}
 
 import scalax.file.Path
 import scalax.file.Path._
 
-class LFSSpec extends Specification {
-  "Our implementation of Git LFS Pointers" should {
-    "create pointers that have the same Git id as the ones produced by `git lfs pointer`" in {
-      val pointer = LFS.Pointer("b2893eddd9b394bfb7efadafda2ae0be02c573fdd83a70f26c781a943f3b7016", 21616)
+class LFSSpec extends FlatSpec with Matchers with OptionValues {
+  "Our implementation of Git LFS Pointers" should "create pointers that have the same Git id as the ones produced by `git lfs pointer`" in {
+    val pointer = LFS.Pointer("b2893eddd9b394bfb7efadafda2ae0be02c573fdd83a70f26c781a943f3b7016", 21616)
 
-      val pointerObjectId = new ObjectInserter.Formatter().idFor(OBJ_BLOB, pointer.bytes)
+    val pointerObjectId = new ObjectInserter.Formatter().idFor(OBJ_BLOB, pointer.bytes)
 
-      pointerObjectId mustEqual "1d90744cffd9e9f324870ed60b6d1258e56a39e1".asObjectId
-    }
+    pointerObjectId shouldBe "1d90744cffd9e9f324870ed60b6d1258e56a39e1".asObjectId
+  }
 
-    "have the correctly sharded path" in {
-      val pointer = LFS.Pointer("b2893eddd9b394bfb7efadafda2ae0be02c573fdd83a70f26c781a943f3b7016", 21616)
+  it should "have the correctly sharded path" in {
+    val pointer = LFS.Pointer("b2893eddd9b394bfb7efadafda2ae0be02c573fdd83a70f26c781a943f3b7016", 21616)
 
-      pointer.path mustEqual Path("b2", "89", "b2893eddd9b394bfb7efadafda2ae0be02c573fdd83a70f26c781a943f3b7016")
-    }
+    pointer.path shouldBe Path("b2", "89", "b2893eddd9b394bfb7efadafda2ae0be02c573fdd83a70f26c781a943f3b7016")
+  }
 
-    "calculate pointers correctly directly from the Git database, creating a temporary file" in {
-      implicit val repo = unpackRepo("/sample-repos/example.git.zip")
-      implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
+  it should "calculate pointers correctly directly from the Git database, creating a temporary file" in {
+    implicit val repo = unpackRepo("/sample-repos/example.git.zip")
+    implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
 
-      val tmpFile = createTempFile(s"bfg.test.git-lfs.conv")
+    val tmpFile = createTempFile(s"bfg.test.git-lfs.conv")
 
-      val pointer = LFS.pointerFor(abbrId("06d7").open, tmpFile)
+    val pointer = LFS.pointerFor(abbrId("06d7").open, tmpFile)
 
-      pointer mustEqual Pointer("5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef", 1024)
+    pointer shouldBe Pointer("5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef", 1024)
 
-      tmpFile.size must beSome(1024)
-    }
+    tmpFile.size.value shouldBe 1024
   }
 }
