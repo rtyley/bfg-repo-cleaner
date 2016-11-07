@@ -122,6 +122,18 @@ object CLIConfig {
 
         c.copy(fixFilenameDuplicatesPreferring = ord)
     }
+    fileMatcher(
+        opt[(String,TextMatcher)]("chmod"),
+        (t:(String,TextMatcher)) => t match {case (_,tm) => tm}
+    ).
+    unbounded.
+    keyName("<-x|+x>").
+        text("change executable mode of files matching glob; option may be specified multiple times, and will be processed in order specified. e.g.,--chmod:-x=*.* --chmod:+x=*.{sh,.pl} will make all files non-executable except *.sh and *.pl files").
+        action { (v, c) => c.copy(chmod = c.chmod :+ (v match {
+          case ("+x", fm) => (ExecutableFile, fm)
+          case ("-x", fm) => (RegularFile, fm)
+          case other => throw new IllegalArgumentException(s"'$other' should be '+x' or '-x'")
+        }))}
     arg[File]("<repo>") optional() action { (x, c) =>
       c.copy(repoLocation = x) } text("file path for Git repository to clean")
   }
@@ -141,7 +153,8 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      strictObjectChecking: Boolean = false,
                      sensitiveData: Option[Boolean] = None,
                      massiveNonFileObjects: Option[Long] = None,
-                     repoLocation: File = new File(System.getProperty("user.dir"))) {
+                     repoLocation: File = new File(System.getProperty("user.dir")),
+                     chmod: Seq[(BlobFileMode, TextMatcher)] = Seq()) {
 
   lazy val gitdir = resolveGitDirFor(repoLocation)
 
@@ -223,7 +236,9 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
       }
     }
 
-    Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier, lfsBlobConverter).flatten
+    lazy val chmodCleaner = if(chmod isEmpty) None else Some(new Chmoder(chmod))
+
+    Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier, lfsBlobConverter, chmodCleaner).flatten
   }
 
   lazy val definesNoWork = treeBlobCleaners.isEmpty && folderDeletion.isEmpty && treeEntryListCleaners.isEmpty
