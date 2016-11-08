@@ -8,7 +8,7 @@ object Dependencies {
 
   val jgitVersion = jgitVersionOverride.getOrElse("4.4.1.201607150455-r")
 
-  val cats = "org.typelevel" %% "cats" % "0.7.0"
+  val cats = "org.typelevel" %% "cats" % "0.8.0"
 
   val jgit = "org.eclipse.jgit" % "org.eclipse.jgit" % jgitVersion
 
