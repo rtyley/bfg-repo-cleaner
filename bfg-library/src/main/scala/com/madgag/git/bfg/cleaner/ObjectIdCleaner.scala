@@ -20,7 +20,6 @@
 
 package com.madgag.git.bfg.cleaner
 
-import cats.free._
 import com.madgag.collection.concurrent.ConcurrentMultiMap
 import com.madgag.git._
 import com.madgag.git.bfg.GitUtil._
@@ -97,54 +96,34 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
   def getTag(tagId: AnyObjectId): RevTag = revWalk synchronized (tagId asRevTag)
 
   import cats._
-  import cats.free.{Free, Trampoline}
-  import Trampoline._
-
+  import cats.free.Trampoline
   import cats.implicits._
-  // import cats.implicits._
-  import cats.data.Nested
 
-//  def cleanCommitByTramp(commitId: ObjectId): Trampoline[ObjectId] = {
-//    val originalRevCommit = getCommit(commitId)
-//    val originalCommit = Commit(originalRevCommit)
-//    val arcs: CommitArcs = originalCommit.arcs
-//
-//    for {
-//      cleanedCommits <- Applicative[Trampoline].traverse(arcs.parents)(cleanCommitByTramp)
-//      cleanedTree <- cleanCommitByTramp(arcs.tree)
-//    } yield {
-//      val cleanedArcs = CommitArcs(cleanedCommits, cleanedTree)
-//      val kit = new CommitNodeCleaner.Kit(threadLocalResources, originalRevCommit, originalCommit, cleanedArcs, apply)
-//      val updatedCommitNode = commitNodeCleaner.fixer(kit)(originalCommit.node)
-//      val updatedCommit = Commit(updatedCommitNode, cleanedArcs)
-//
-//      if (updatedCommit != originalCommit) {
-//        val commitBytes = updatedCommit.toBytes
-//        objectChecker.foreach(_.checkCommit(commitBytes))
-//        threadLocalResources.inserter().insert(OBJ_COMMIT, commitBytes)
-//      } else {
-//        originalRevCommit
-//      }
-//    }
-//  }
-
-  val cleanCommit: MemoFunc[ObjectId, ObjectId] = commitMemo { commitId =>
+  def cleanCommitByTramp(commitId: ObjectId): Trampoline[ObjectId] = {
     val originalRevCommit = getCommit(commitId)
     val originalCommit = Commit(originalRevCommit)
+    val arcs: CommitArcs = originalCommit.arcs
 
-    val cleanedArcs = originalCommit.arcs cleanWith this
-    val kit = new CommitNodeCleaner.Kit(threadLocalResources, originalRevCommit, originalCommit, cleanedArcs, apply)
-    val updatedCommitNode = commitNodeCleaner.fixer(kit)(originalCommit.node)
-    val updatedCommit = Commit(updatedCommitNode, cleanedArcs)
+    for {
+      cleanedCommits <- Trampoline.suspend(Applicative[Trampoline].traverse(arcs.parents.toList)(cleanCommitByTramp))
+      cleanedTree <- Trampoline.delay(cleanTree(arcs.tree)) // cleanCommitByTramp(arcs.tree)
+    } yield {
+      val cleanedArcs = CommitArcs(cleanedCommits, cleanedTree)
+      val kit = new CommitNodeCleaner.Kit(threadLocalResources, originalRevCommit, originalCommit, cleanedArcs, apply)
+      val updatedCommitNode = commitNodeCleaner.fixer(kit)(originalCommit.node)
+      val updatedCommit = Commit(updatedCommitNode, cleanedArcs)
 
-    if (updatedCommit != originalCommit) {
-      val commitBytes = updatedCommit.toBytes
-      objectChecker.foreach(_.checkCommit(commitBytes))
-      threadLocalResources.inserter().insert(OBJ_COMMIT, commitBytes)
-    } else {
-      originalRevCommit
+      if (updatedCommit != originalCommit) {
+        val commitBytes = updatedCommit.toBytes
+        objectChecker.foreach(_.checkCommit(commitBytes))
+        threadLocalResources.inserter().insert(OBJ_COMMIT, commitBytes)
+      } else {
+        originalRevCommit
+      }
     }
   }
+
+  val cleanCommit: MemoFunc[ObjectId, ObjectId] = commitMemo { dirtyCommit => cleanCommitByTramp(dirtyCommit).run }
 
   val cleanBlob: Cleaner[ObjectId] = identity // Currently a NO-OP, we only clean at treeblob level
 

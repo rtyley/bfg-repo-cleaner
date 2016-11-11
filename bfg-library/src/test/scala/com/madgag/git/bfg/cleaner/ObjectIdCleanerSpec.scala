@@ -20,31 +20,59 @@
 
 package com.madgag.git.bfg.cleaner
 
+import cats.free.Trampoline
+import cats.implicits._
 import com.madgag.git._
 import com.madgag.git.bfg.cleaner.protection.ProtectedObjectCensus
 import com.madgag.git.test._
 import com.madgag.textmatching.Literal
-import org.eclipse.jgit.revwalk.RevWalk
-import org.scalatest.{FlatSpec, Matchers}
+import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
+import org.scalatest.matchers.Matcher
+import org.scalatest.{FlatSpec, Inspectors, Matchers}
+
+import scala.collection.convert.wrapAsScala._
 
 
 class ObjectIdCleanerSpec extends FlatSpec with Matchers {
+  
+  "cleaning" should "not have a StackOverflowError cleaning a repo with deep history" in new unpackedRepo("/sample-repos/deep-history.zip") {
+    val dirtyCommitWithDeepHistory = "d88ac4f99511667fc0617ea026f3a0ce8a25fd07".asObjectId
 
-  "ObjectIdCleaner" should "not have a StackOverflowError cleaning a repo with deep history" in {
-      implicit val repo = unpackRepo("/sample-repos/deep-history.zip")
-      val revWalk = new RevWalk(repo)
+    val config = ObjectIdCleaner.Config(
+      ProtectedObjectCensus.None,
+      treeBlobsCleaners = Seq(new FileDeleter(Literal("foo")))
+    )
 
-      val config= ObjectIdCleaner.Config(
-        ProtectedObjectCensus.None,
-        treeBlobsCleaners= Seq(new FileDeleter(Literal("foo")))
-      )
+    ensureCleanerWith(config).removesDirtOfCommitsThat(haveFile("foo")).whenCleaning(dirtyCommitWithDeepHistory)
+  }
 
-      val cleaner = new ObjectIdCleaner(config, repo.getObjectDatabase, revWalk)
-
-      val dirtyCommitWithDeepHistory = "d88ac4f99511667fc0617ea026f3a0ce8a25fd07".asObjectId
-
-      val cleanedCommitId = cleaner(dirtyCommitWithDeepHistory) // we don't want a StackOverflowError here!
-
-      cleanedCommitId shouldNot equal(dirtyCommitWithDeepHistory)
-    }
 }
+
+class unpackedRepo(filePath: String) extends bfg.test.unpackedRepo(filePath) {
+
+  class EnsureCleanerWith(config: ObjectIdCleaner.Config) {
+
+    class RemoveDirtOfCommitsThat(commitM: Matcher[RevCommit]) extends Inspectors with Matchers {
+      def histOf(c: ObjectId) = repo.git.log.add(c).call.toSeq.reverse
+
+      def whenCleaning(oldCommit: ObjectId) {
+        val cleaner = new ObjectIdCleaner(config, repo.getObjectDatabase, revWalk)
+        forAtLeast(1, histOf(oldCommit)) { commit =>
+          commit should commitM
+        }
+
+        val cleanCommit = cleaner.cleanCommit(oldCommit)
+
+        forAll(histOf(cleanCommit)) { commit =>
+          commit shouldNot commitM
+        }
+      }
+    }
+
+    def removesDirtOfCommitsThat[T](commitM: Matcher[RevCommit]) = new RemoveDirtOfCommitsThat(commitM)
+  }
+
+  def ensureCleanerWith(config: ObjectIdCleaner.Config) = new EnsureCleanerWith(config)
+}
+

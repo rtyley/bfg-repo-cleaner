@@ -129,6 +129,7 @@ class unpackedRepo(filePath: String) extends FlatSpec with Matchers {
     }
   }
 
+
   def ensureRemovalFrom(commits: => Seq[RevCommit]): Boom = new Boom(commits)
 
 //  def ensureRemovalOf[T](dirtMatchers: Matcher[Repository]*)(block: => T) = {
