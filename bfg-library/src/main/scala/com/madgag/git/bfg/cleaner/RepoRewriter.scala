@@ -102,17 +102,15 @@ object RepoRewriter {
       reporter.reportCleaningStart(commits)
 
       Timing.measureTask("Cleaning commits", commits.size) {
-        Future {
-          commits.par.foreach {
-            commit => objectIdCleaner(commit.getTree)
-          }
-        }
+        // Future {
+          allRefs.par.map(_.getObjectId).map(objectIdCleaner)
+        // }
 
-        commits.foreach {
-          commit =>
-            objectIdCleaner(commit)
-            progressMonitor update 1
-        }
+//        commits.foreach {
+//          commit =>
+//            objectIdCleaner(commit)
+//            progressMonitor update 1
+//        }
       }
     }
 
