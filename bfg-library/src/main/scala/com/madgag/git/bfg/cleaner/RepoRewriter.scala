@@ -103,7 +103,7 @@ object RepoRewriter {
 
       Timing.measureTask("Cleaning commits", commits.size) {
         // Future {
-          allRefs.par.map(_.getObjectId).map(objectIdCleaner)
+          allRefs.map(_.getObjectId).take(1).map(objectIdCleaner)
         // }
 
 //        commits.foreach {

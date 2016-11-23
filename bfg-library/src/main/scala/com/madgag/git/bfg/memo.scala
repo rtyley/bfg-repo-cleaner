@@ -41,6 +41,23 @@ object MemoUtil {
     def apply(z: K => V) = f(z)
   }
 
+  def concurrentCleanerNemo[K,V]: Memo[K, V] = {
+    memo[K, V] {
+      (f: K => V) =>
+        lazy val permanentCache = loaderCacheFor(f)(_ => Unit)
+
+        new MemoFunc[K, V] {
+          def apply(k: K) = permanentCache.get(k)
+
+          def asMap() = permanentCache.asMap().asScala.view.filter {
+            case (oldId, newId) => newId != oldId
+          }.toMap
+
+          override def stats(): CacheStats = permanentCache.stats()
+        }
+    }
+  }
+
   /**
    *
    * A caching wrapper for a function (V => V), backed by a no-eviction LoadingCache from Google Collections.

@@ -20,6 +20,10 @@
 
 package com.madgag.git.bfg.cleaner
 
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.{AtomicLong, LongAdder}
+
+import cats.free.Trampoline
 import com.madgag.collection.concurrent.ConcurrentMultiMap
 import com.madgag.git._
 import com.madgag.git.bfg.GitUtil._
@@ -29,6 +33,8 @@ import com.madgag.git.bfg.{CleaningMapper, Memo, MemoFunc, MemoUtil}
 import org.eclipse.jgit.lib.Constants._
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.{RevCommit, RevTag, RevWalk}
+
+import scala.compat.java8.FunctionConverters._
 
 object ObjectIdCleaner {
 
@@ -59,6 +65,9 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
 
   import config._
 
+  val startProcessing = new ConcurrentHashMap[ObjectId,AtomicLong]
+  val processingOfCleanedParents = new ConcurrentHashMap[ObjectId,AtomicLong]
+
   val threadLocalResources = objectDB.threadLocalResources
 
   val changesByFilename = new ConcurrentMultiMap[FileName, (ObjectId, ObjectId)]
@@ -67,12 +76,17 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
   // want to enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
   val memo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.fixedObjectIds)
 
-  val commitMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo()
-  val tagMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo()
+  val commitTrampolineMemo: Memo[ObjectId, Trampoline[ObjectId]] = MemoUtil.concurrentCleanerNemo[ObjectId, Trampoline[ObjectId]]
+  val commitTrampYieldMemo: Memo[List[ObjectId], Trampoline[ObjectId]] = MemoUtil.concurrentCleanerNemo[List[ObjectId], Trampoline[ObjectId]]
+
+  val commitMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo[ObjectId]()
+  val tagMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo[ObjectId]()
 
   val treeMemo: Memo[ObjectId, ObjectId] = MemoUtil.concurrentCleanerMemo(protectedObjectCensus.treeIds.toSet[ObjectId])
 
   def apply(objectId: ObjectId): ObjectId = memoClean(objectId)
+
+
 
   val memoClean = memo {
     uncachedClean
@@ -99,31 +113,49 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
   import cats.free.Trampoline
   import cats.implicits._
 
-  def cleanCommitByTramp(commitId: ObjectId): Trampoline[ObjectId] = {
+  val cleanCommitByTrampoline: MemoFunc[ObjectId, Trampoline[ObjectId]] = commitTrampolineMemo { commitId =>
+    def track(countByCommit: ConcurrentHashMap[ObjectId,AtomicLong], eventType: String) {
+      val eventCountForCommit =
+        countByCommit.computeIfAbsent(commitId, ((k: ObjectId) => new AtomicLong).asJava).incrementAndGet()
+
+      if (eventCountForCommit > 1)
+        println(s"Multiple $eventType for ${commitId.shortName} : $eventCountForCommit")
+    }
+
+    track(startProcessing, "process start")
+
     val originalRevCommit = getCommit(commitId)
     val originalCommit = Commit(originalRevCommit)
     val arcs: CommitArcs = originalCommit.arcs
 
     for {
-      cleanedCommits <- Trampoline.suspend(Applicative[Trampoline].traverse(arcs.parents.toList)(cleanCommitByTramp))
-      cleanedTree <- Trampoline.delay(cleanTree(arcs.tree)) // cleanCommitByTramp(arcs.tree)
+      cleanedCommits <- Trampoline.suspend(Applicative[Trampoline].traverse(arcs.parents.toList)(cleanCommitByTrampoline))
     } yield {
+      track(processingOfCleanedParents, "processing of cleaned parents")
+
+      val cleanedTree = cleanTree(arcs.tree)
       val cleanedArcs = CommitArcs(cleanedCommits, cleanedTree)
       val kit = new CommitNodeCleaner.Kit(threadLocalResources, originalRevCommit, originalCommit, cleanedArcs, apply)
       val updatedCommitNode = commitNodeCleaner.fixer(kit)(originalCommit.node)
       val updatedCommit = Commit(updatedCommitNode, cleanedArcs)
 
-      if (updatedCommit != originalCommit) {
+      if (updatedCommit == originalCommit) originalRevCommit else {
         val commitBytes = updatedCommit.toBytes
         objectChecker.foreach(_.checkCommit(commitBytes))
         threadLocalResources.inserter().insert(OBJ_COMMIT, commitBytes)
-      } else {
-        originalRevCommit
       }
     }
   }
 
-  val cleanCommit: MemoFunc[ObjectId, ObjectId] = commitMemo { dirtyCommit => cleanCommitByTramp(dirtyCommit).run }
+  val cleanCommit: MemoFunc[ObjectId, ObjectId] = commitMemo { dirtyCommit =>
+    val trampoline: Trampoline[ObjectId] = cleanCommitByTrampoline(dirtyCommit)
+    println(s"Got trampoline for ${dirtyCommit.shortName}")
+
+    val cc: ObjectId = trampoline.run
+    println(s"Evaluated trampoline for ${dirtyCommit.shortName}")
+
+    cc
+  }
 
   val cleanBlob: Cleaner[ObjectId] = identity // Currently a NO-OP, we only clean at treeblob level
 

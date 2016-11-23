@@ -4,6 +4,8 @@ object Dependencies {
 
   val scalaGitVersion = "3.4"
 
+  val foofoo = "org.scala-lang.modules" %% "scala-java8-compat" % "0.8.0"
+
   val jgitVersionOverride = Option(System.getProperty("jgit.version"))
 
   val jgitVersion = jgitVersionOverride.getOrElse("4.4.1.201607150455-r")
