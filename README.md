@@ -10,7 +10,7 @@ First get a fresh copy of this repo.
 ```
 $ git clone --mirror git://example.com/some-big-repo.git
 ```
-$ bfg --strip-blobs-bigger-than 1M --replace-text banned.txt repo.git
+
 Run BFG like so:
 
 ```
