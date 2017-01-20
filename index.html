@@ -74,6 +74,13 @@ if (("rtyley.github.io" == window.location.host) && (window.location.protocol !=
 <li>Beautiful : If you need to, you can use the beautiful Scala language to customise the BFG. Which has got to be better than Bash scripting at least some of the time.</li>
 </ul>
 
+<h1 id="installation">Installation</h1>
+<ul>
+<li>Install a <a href="http://java.com/en/download/manual.jsp">Java Runtime Environment</a> for your platform, Java 8 or newer. Your operating system's package-manager might simplify this step. Verify by running <code>java -version</code>.</li>
+<li>Download the <a class="latest-download-link" data-event-category="Requirements Link" href="#download">runnable BFG jar</a>. This includes all other dependencies. Put this file in any convenient location.</li>
+<li>If you want to be able to run BFG as <code>bfg ...</code>, on Linux create an alias <code>alias bfg='java -jar /path/to/bfg-version.jar'</code>, otherwise run BFG as <code>java -jar /path/to/bfg-version.jar</code>.</li>
+</ul>
+
 <h1 id="usage">Usage</h1>
 <p>First clone a fresh copy of your repo, using the <a href="http://stackoverflow.com/q/3959924/438886"><code>--mirror</code></a> flag:</p>
 <pre><code>$ git clone --mirror git://example.com/some-big-repo.git
