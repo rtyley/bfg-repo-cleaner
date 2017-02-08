@@ -47,6 +47,7 @@ object Main extends App {
           // do this before implicitly initiating big-blob search
           if (hasBeenProcessedByBFGBefore(repo)) {
             println("\nThis repo has been processed by The BFG before! Will prune repo before proceeding - to avoid unnecessary cleaning work on unused objects...")
+            replaceOrigHead(repo);
             repo.git.gc.call()
             println("Completed prune of old objects - will now proceed with the main job!\n")
           }
