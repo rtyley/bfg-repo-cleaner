@@ -103,6 +103,9 @@ object CLIConfig {
     opt[Unit]("private").text("treat this repo-rewrite as removing private data (for example: omit old commit ids from commit messages)").action {
       (_, c) => c.copy(sensitiveData = Some(true))
     }
+    opt[Unit]("no-private").text("negates --private option (see --private)").action {
+      (_, c) => c.copy(sensitiveData = Some(false))
+    }
     opt[String]("massive-non-file-objects-sized-up-to").valueName("<size>").text("increase memory usage to handle over-size Commits, Tags, and Trees that are up to X in size (eg '10M')").action {
       (v, c) => c.copy(massiveNonFileObjects = Some(ByteSize.parse(v)))
     }
