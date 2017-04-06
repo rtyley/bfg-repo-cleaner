@@ -18,6 +18,8 @@ trait BlobExecModifier extends TreeBlobModifier {
 
   def command: String
 
+  def fileMask: String
+
   val threadLocalObjectDBResources: ThreadLocalObjectDatabaseResources
 
   def execute(entry: TreeBlobEntry) = {
@@ -28,8 +30,6 @@ trait BlobExecModifier extends TreeBlobModifier {
 
 
     val bytes = ByteStreams.toByteArray(objectStream)
-
-//    println(s"${entry.objectId.name}: 00 To execute : ${command} Length: ${bytes.length} on file ${entry.filename}")
 
     val newBytes = ArrayBuffer[Byte]()
 
@@ -56,17 +56,16 @@ trait BlobExecModifier extends TreeBlobModifier {
     val proc = pb.run(io)
     val exitCode = proc.exitValue
 
-//    println(s"${entry.objectId.name}: 20 {$fileName} Waiting for BFG_BLOB Length: ${bytes.length} New bytes: ${newBytes.length} ExitCode ${exitCode}")
-
-    //    if(JavaArrays.equals(bytes, newBytes)) {
-
-
-    if (exitCode != 0 || JavaArrays.equals(bytes, newBytes.toArray)) {
-//      println(s"${entry.objectId.name}: 31 Nothing to do {$fileName}" )
+    if (exitCode != 0) {
+      println(s"Warning: error executing command ${command}  on blob ${entry.objectId.name} with filename {$fileName}: error code {$exitCode}" )
+      // in case of error ignore
+      entry.withoutName
+    } else if (JavaArrays.equals(bytes, newBytes.toArray)) {
+      // file output is identical, ignore
+      println(s"Warning: output of command [$command] is identical on blob ${entry.objectId.name} with filename [$fileName]" )
       entry.withoutName
     } else {
-//      println(s"${entry.objectId.name}: 35 to replace {$fileName}" )
-
+      //replace blob
       val objectId = threadLocalObjectDBResources.inserter().insert(OBJ_BLOB, newBytes.toArray)
       entry.copy(objectId = objectId).withoutName
     }
@@ -75,12 +74,14 @@ trait BlobExecModifier extends TreeBlobModifier {
 
   def fix(entry: TreeBlobEntry) = {
 
-    val fileName = entry.filename.toString
-    //    val toProcess = "^net(.+)\\.[ch]$".r
-    val toProcess = "(.+)\\.[ch]$".r
 
-    fileName match {
-      case toProcess(_) => execute(entry)
+    val fileName = entry.filename.toString
+
+    val toProcess = fileMask.r
+
+
+    toProcess.findFirstIn(fileName) match {
+      case Some(_) => execute(entry)
       case _ => entry.withoutName
 
     }
