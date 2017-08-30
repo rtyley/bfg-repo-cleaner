@@ -1,13 +1,14 @@
-import java.io.{FileOutputStream, File}
+import java.io.{File, FileOutputStream}
 
 import Dependencies._
 import sbt.taskKey
 
+import scala.sys.process.Process
 import scala.util.Try
 
 val gitDescription = taskKey[String]("Git description of working dir")
 
-gitDescription := Try[String](Process("git describe --all --always --dirty --long").lines.head.replace("heads/","").replace("-0-g","-")).getOrElse("unknown")
+gitDescription := Try[String](Process("git describe --all --always --dirty --long").lineStream.head.replace("heads/","").replace("-0-g","-")).getOrElse("unknown")
 
 // note you don't want the jar name to collide with the non-assembly jar, otherwise confusion abounds.
 assemblyJarName in assembly := s"${name.value}-${version.value}-${gitDescription.value}${jgitVersionOverride.map("-jgit-" + _).mkString}.jar"
@@ -27,13 +28,13 @@ val cliUsageDump = taskKey[File]("Dump the CLI 'usage' output to a file")
 
 cliUsageDump := {
   val usageDumpFile = File.createTempFile("bfg-usage", "dump.txt")
-  val scalaRun = new ForkRun(ForkOptions(outputStrategy = Some(CustomOutput(new FileOutputStream(usageDumpFile)))))
+  val scalaRun = new ForkRun(ForkOptions().withOutputStrategy(CustomOutput(new FileOutputStream(usageDumpFile))))
 
   val mainClassName = (mainClass in (Compile, run)).value getOrElse sys.error("No main class detected.")
   val classpath = Attributed.data((fullClasspath in Runtime).value)
   val args = Seq.empty
 
-  toError(scalaRun.run(mainClassName, classpath, args, streams.value.log))
+  scalaRun.run(mainClassName, classpath, args, streams.value.log).failed foreach (sys error _.getMessage)
   usageDumpFile
 }
 
