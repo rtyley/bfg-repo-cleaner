@@ -117,6 +117,9 @@ object CLIConfig {
 
         c.copy(fixFilenameDuplicatesPreferring = ord)
     }
+    opt[Unit]("multi-line-regex").text("will support multi line regex - warning this is done by loading entire blobs into memory").action {
+      (_, c) => c.copy(enableMultiLineRegex = true)
+    }
     arg[File]("<repo>") optional() action { (x, c) =>
       c.copy(repoLocation = x) } text("file path for Git repository to clean")
   }
@@ -136,6 +139,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      strictObjectChecking: Boolean = false,
                      sensitiveData: Option[Boolean] = None,
                      massiveNonFileObjects: Option[Int] = None,
+                     enableMultiLineRegex: Boolean = false,
                      repoLocation: File = new File(System.getProperty("user.dir"))) {
 
   lazy val gitdir = resolveGitDirFor(repoLocation)
@@ -169,6 +173,8 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     replacer =>
       new BlobTextModifier {
         override val sizeThreshold = filterSizeThreshold
+
+        override val supportMultiLineRegex = enableMultiLineRegex
 
         def lineCleanerFor(entry: TreeBlobEntry) = if (filterContentPredicate(entry.filename)) Some(replacer) else None
 
