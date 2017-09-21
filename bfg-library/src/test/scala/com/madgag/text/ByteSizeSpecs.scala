@@ -30,8 +30,19 @@ class ByteSizeSpecs extends Specification {
       ByteSize.parse("2B") mustEqual 2
       ByteSize.parse("10B") mustEqual 10
     }
+    "understand 1G" in {
+      ByteSize.parse("1G") mustEqual 1024 * 1024 * 1024
+    }
+    "understand 3G" in {
+      ByteSize.parse("3G") mustEqual 3L * 1024 * 1024 * 1024 // 3221225472
+      ByteSize.parse("3G") mustNotEqual -1073741824 // should be 3221225472 if not for Int overflow
+    }
     "understand 1M" in {
       ByteSize.parse("1M") mustEqual 1024 * 1024
+    }
+    "understand 3500M" in {
+      ByteSize.parse("3500M") mustEqual 3500L * 1024 * 1024 // 3670016000
+      ByteSize.parse("3500M") mustNotEqual -624951296 // should be 3670016000 if not for Int overflow
     }
     "understand 1K" in {
       ByteSize.parse("1K") mustEqual 1024
