@@ -48,11 +48,11 @@ trait CleaningMapper[V] extends Cleaner[V] {
 
 object GitUtil {
   
-  val ProbablyNoNonFileObjectsOverSizeThreshold = 1024 * 1024
+  val ProbablyNoNonFileObjectsOverSizeThreshold: Long = 1024 * 1024
   
-  def tweakStaticJGitConfig(massiveNonFileObjects: Option[Int]) {
+  def tweakStaticJGitConfig(massiveNonFileObjects: Option[Long]) {
     val wcConfig: WindowCacheConfig = new WindowCacheConfig()
-    wcConfig.setStreamFileThreshold(massiveNonFileObjects.getOrElse(ProbablyNoNonFileObjectsOverSizeThreshold))
+    wcConfig.setStreamFileThreshold(massiveNonFileObjects.getOrElse(ProbablyNoNonFileObjectsOverSizeThreshold).toInt)
     wcConfig.install()
   }
 

@@ -27,9 +27,9 @@ object ByteSize {
   val magnitudeChars = Seq('B', 'K', 'M', 'G', 'T', 'P')
   val unit = 1024
 
-  def parse(v: String): Int = magnitudeChars.indexOf(v.takeRight(1)(0).toUpper) match {
+  def parse(v: String): Long = magnitudeChars.indexOf(v.takeRight(1)(0).toUpper) match {
     case -1 => throw new IllegalArgumentException(s"Size unit is missing (ie ${magnitudeChars.mkString(", ")})")
-    case index => v.dropRight(1).toInt << (index * 10)
+    case index => v.dropRight(1).toLong << (index * 10)
   }
 
   def format(bytes: Long): String = {

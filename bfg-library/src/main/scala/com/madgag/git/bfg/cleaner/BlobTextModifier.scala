@@ -31,7 +31,7 @@ import scalax.io.Resource
 
 object BlobTextModifier {
 
-  val DefaultSizeThreshold = 1024 * 1024
+  val DefaultSizeThreshold: Long = 1024 * 1024
 
 }
 

@@ -123,19 +123,19 @@ object CLIConfig {
 }
 
 case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
-                     stripBlobsBiggerThan: Option[Int] = None,
+                     stripBlobsBiggerThan: Option[Long] = None,
                      protectBlobsFromRevisions: Set[String] = Set("HEAD"),
                      deleteFiles: Option[TextMatcher] = None,
                      deleteFolders: Option[TextMatcher] = None,
                      fixFilenameDuplicatesPreferring: Option[Ordering[FileMode]] = None,
                      filenameFilters: Seq[Filter[String]] = Nil,
-                     filterSizeThreshold: Int = BlobTextModifier.DefaultSizeThreshold,
+                     filterSizeThreshold: Long = BlobTextModifier.DefaultSizeThreshold,
                      textReplacementExpressions: Traversable[String] = List.empty,
                      stripBlobsWithIds: Option[Set[ObjectId]] = None,
                      lfsConversion: Option[String] = None,
                      strictObjectChecking: Boolean = false,
                      sensitiveData: Option[Boolean] = None,
-                     massiveNonFileObjects: Option[Int] = None,
+                     massiveNonFileObjects: Option[Long] = None,
                      repoLocation: File = new File(System.getProperty("user.dir"))) {
 
   lazy val gitdir = resolveGitDirFor(repoLocation)
