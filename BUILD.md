@@ -30,8 +30,8 @@ If you use [Eclipse IDE](http://www.eclipse.org/), you can set-up your developme
 * Add the `sbteclipse-plugin` to your set of local sbt plugins:
 
 ```
-mkdir -p ~/.sbt/0.13/plugins && tee ~/.sbt/0.13/plugins/plugins.sbt <<EOF
-addSbtPlugin("com.typesafe.sbteclipse" % "sbteclipse-plugin" % "4.0.0")
+mkdir -p ~/.sbt/1.0/plugins && tee ~/.sbt/1.0/plugins/plugins.sbt <<EOF
+addSbtPlugin("com.typesafe.sbteclipse" % "sbteclipse-plugin" % "5.2.2")
 EOF
 ```
 
