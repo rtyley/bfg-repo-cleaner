@@ -28,6 +28,7 @@ import org.eclipse.jgit.lib.ObjectReader._
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.storage.file.WindowCacheConfig
+import com.google.common.primitives.Ints
 
 import scala.collection.convert.wrapAsScala._
 import scala.language.implicitConversions
@@ -52,7 +53,7 @@ object GitUtil {
   
   def tweakStaticJGitConfig(massiveNonFileObjects: Option[Long]) {
     val wcConfig: WindowCacheConfig = new WindowCacheConfig()
-    wcConfig.setStreamFileThreshold(massiveNonFileObjects.getOrElse(ProbablyNoNonFileObjectsOverSizeThreshold).toInt)
+    wcConfig.setStreamFileThreshold(Ints.saturatedCast(massiveNonFileObjects.getOrElse(ProbablyNoNonFileObjectsOverSizeThreshold)))
     wcConfig.install()
   }
 
