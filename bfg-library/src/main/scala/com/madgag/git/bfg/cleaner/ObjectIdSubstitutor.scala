@@ -28,7 +28,7 @@ import org.eclipse.jgit.lib.{AbbreviatedObjectId, ObjectId, ObjectReader}
 class CommitMessageObjectIdsUpdater(objectIdSubstitutor: ObjectIdSubstitutor) extends CommitNodeCleaner {
 
   override def fixer(kit: CommitNodeCleaner.Kit) = commitNode => commitNode.copy(message = objectIdSubstitutor.replaceOldIds(commitNode.message, kit.threadLocalResources.reader(), kit.mapper))
-
+  
 }
 
 object ObjectIdSubstitutor {

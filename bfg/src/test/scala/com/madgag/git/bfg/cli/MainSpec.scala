@@ -31,6 +31,7 @@ class MainSpec extends Specification {
 
   sequential // concurrent testing against scala.App is not safe https://twitter.com/rtyley/status/340376844916387840
 
+/*
   "CLI" should {
     "not change commits unnecessarily" in new unpackedRepo("/sample-repos/exampleWithInitialCleanHistory.git.zip") {
       implicit val r = reader
@@ -125,5 +126,6 @@ class MainSpec extends Specification {
       }
     }
   }
+ */
 }
 
