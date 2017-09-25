@@ -48,29 +48,41 @@ class LfsBlobConverter(
 
   val lfsSuitableFiles: (FileName => Boolean) = f => lfsGlob(f.string)
 
-  val gitAttributesLine = s"$lfsGlobExpression filter=lfs diff=lfs merge=lfs -text"
+  val globRegexMatcher = """([^{]*)\{?([^}]*)\}?(.*)""".r
+  val globRegexMatcher(prefix, group, postfix) = lfsGlobExpression
+  val gitAttributes = group.split(",").map(prefix.concat(_).concat(postfix).concat(" filter=lfs diff=lfs merge=lfs -text"))
 
   implicit val UTF_8 = Charset.forName("UTF-8")
 
   val lfsPointerMemo = MemoUtil.concurrentCleanerMemo[ObjectId]()
   
   override def apply(dirtyBlobs: TreeBlobs) = {
-    val cleanedBlobs = super.apply(dirtyBlobs)
-    if (cleanedBlobs == dirtyBlobs) cleanedBlobs else ensureGitAttributesSetFor(cleanedBlobs)
+    super.apply(dirtyBlobs)
   }
 
   def ensureGitAttributesSetFor(cleanedBlobs: TreeBlobs): TreeBlobs = {
     implicit lazy val inserter = threadLocalObjectDBResources.inserter()
 
     val newGitAttributesId = cleanedBlobs.entryMap.get(GitAttributesFileName).fold {
-      storeBlob(gitAttributesLine)
+      storeBlob(gitAttributes.mkString("\n"))
     } {
       case (_, oldGitAttributesId) =>
         val objectLoader = threadLocalObjectDBResources.reader().open(oldGitAttributesId)
         val oldAttributes = objectLoader.getCachedBytes.asInput.lines().toSeq
 
-        if (oldAttributes.contains(gitAttributesLine)) oldGitAttributesId else {
-          storeBlob((oldAttributes :+ gitAttributesLine).mkString("\n"))
+        var isAlreadyExist = true
+        var newGitAttributes = new String
+        for(extension <- gitAttributes)  {
+          if (!oldAttributes.contains(extension)) {
+            isAlreadyExist = false
+            newGitAttributes += extension.concat("\n")
+          }
+        }
+
+        if(isAlreadyExist) {
+          oldGitAttributesId
+        } else {
+          storeBlob((oldAttributes :+ newGitAttributes).mkString("\n"))
         }
     }
     cleanedBlobs.copy(entryMap = cleanedBlobs.entryMap + (GitAttributesFileName -> (RegularFile, newGitAttributesId)))
