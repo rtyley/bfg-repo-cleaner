@@ -20,33 +20,32 @@
 
 package com.madgag.git.bfg.cli
 
-import org.specs2.mutable.Specification
+import org.scalatest.{FlatSpec, Matchers}
 
-class TextReplacementConfigSpec extends Specification {
-  "text replacement config" should {
-    "default to using ***REMOVED*** for the replacement text" in {
-      TextReplacementConfig("1234").apply("password:1234") mustEqual("password:***REMOVED***")
-    }
-
-    "use empty string as replacement text if specified" in {
-      TextReplacementConfig("1234==>").apply("password:1234") mustEqual("password:")
-    }
-
-    "use literal replacement text if specified" in {
-      TextReplacementConfig("1234==>mypass").apply("password:1234") mustEqual("password:mypass")
-    }
-
-    "support sub-group references in replacement text" in {
-      TextReplacementConfig("""regex:Copyright \w+ (\d{4})==>Copyright Yutan $1""").apply("Copyright Roberto 2012") mustEqual("Copyright Yutan 2012")
-    }
-
-    "treat dollars and slashes in replacement text as literal if the matcher text was literal" in {
-      TextReplacementConfig("""Copyright 1999==>Copyright 2013 : Price $1""").apply("Totally Copyright 1999. Boom.") mustEqual("Totally Copyright 2013 : Price $1. Boom.")
-    }
-
-    "apply transforms in the order they occur" in {
-      TextReplacementConfig(Seq("awesome","some")).get.apply("Totally awesome") mustEqual("Totally ***REMOVED***")
-      TextReplacementConfig(Seq("some","awesome")).get.apply("Totally awesome") mustEqual("Totally awe***REMOVED***")
-    }
+class TextReplacementConfigSpec extends FlatSpec with Matchers {
+  "text replacement config" should "default to using ***REMOVED*** for the replacement text" in {
+    TextReplacementConfig("1234").apply("password:1234") shouldBe "password:***REMOVED***"
   }
+
+  it should "use empty string as replacement text if specified" in {
+    TextReplacementConfig("1234==>").apply("password:1234") shouldBe "password:"
+  }
+
+  it should "use literal replacement text if specified" in {
+    TextReplacementConfig("1234==>mypass").apply("password:1234") shouldBe "password:mypass"
+  }
+
+  it should "support sub-group references in replacement text" in {
+    TextReplacementConfig("""regex:Copyright \w+ (\d{4})==>Copyright Yutan $1""").apply("Copyright Roberto 2012") shouldBe "Copyright Yutan 2012"
+  }
+
+  it should "treat dollars and slashes in replacement text as literal if the matcher text was literal" in {
+    TextReplacementConfig("""Copyright 1999==>Copyright 2013 : Price $1""").apply("Totally Copyright 1999. Boom.") shouldBe "Totally Copyright 2013 : Price $1. Boom."
+  }
+
+  it should "apply transforms in the order they occur" in {
+    TextReplacementConfig(Seq("awesome", "some")).get.apply("Totally awesome") shouldBe "Totally ***REMOVED***"
+    TextReplacementConfig(Seq("some", "awesome")).get.apply("Totally awesome") shouldBe "Totally awe***REMOVED***"
+  }
+
 }

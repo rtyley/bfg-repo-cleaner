@@ -20,22 +20,19 @@
 
 package com.madgag.git.bfg.cli
 
-import com.madgag.git._
 import com.madgag.git.bfg.cli.test.unpackedRepo
-import org.specs2.mutable._
+import org.scalatest.{FlatSpec, Matchers}
 
-class MassiveNonFileObjectsSpec extends Specification {
+// JGit has JVM-wide configuration for cache window size: https://git.eclipse.org/r/#/q/Ibf2ef604bac08885b2b3bd85f0dc31995132b682,n,z
+class MassiveNonFileObjectsRequiresOwnJvmSpec extends FlatSpec with Matchers {
 
-  sequential // concurrent testing against scala.App is not safe https://twitter.com/rtyley/status/340376844916387840
+  // concurrent testing against scala.App is not safe https://twitter.com/rtyley/status/340376844916387840
 
-  "Massive commit messages" should {
-    "be handled without crash (ie LargeObjectException) if the user specifies that the repo contains massive non-file objects" in
-      new unpackedRepo("/sample-repos/huge10MBCommitMessage.git.zip") {
-        ensureRemovalOf(haveRef("master", be_===(abbrId("d887")))) {
-          run("--strip-blobs-bigger-than 1K --massive-non-file-objects-sized-up-to 20M")
-        }
+  "Massive commit messages" should "be handled without crash (ie LargeObjectException) if the user specifies that the repo contains massive non-file objects" in
+    new unpackedRepo("/sample-repos/huge10MBCommitMessage.git.zip") {
+      ensureRemovalFrom(commitHist("master")).ofCommitsThat(haveFile("16-kb-zeros")) {
+        run("--strip-blobs-bigger-than 1K --massive-non-file-objects-sized-up-to 20M")
       }
-  }
+    }
 
 }
-

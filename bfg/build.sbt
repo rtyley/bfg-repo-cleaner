@@ -46,4 +46,23 @@ libraryDependencies ++= Seq(
   scalaGitTest % "test"
 )
 
+import Tests._
+{
+  def isolateTestsWhichRequireTheirOwnJvm(tests: Seq[TestDefinition]) = {
+    val (testsRequiringIsolation, testsNotNeedingIsolation) = tests.partition(_.name.contains("RequiresOwnJvm"))
+
+    val groups: Seq[Seq[TestDefinition]] = testsRequiringIsolation.map(Seq(_)) :+ testsNotNeedingIsolation
+
+    groups map { group =>
+      Group(group.size.toString, group, SubProcess(ForkOptions()))
+    }
+  }
+
+  testGrouping in Test := isolateTestsWhichRequireTheirOwnJvm( (definedTests in Test).value )
+}
+
 fork in Test := true // JGit uses static (ie JVM-wide) config
+
+logBuffered in Test := false
+
+parallelExecution in Test := false

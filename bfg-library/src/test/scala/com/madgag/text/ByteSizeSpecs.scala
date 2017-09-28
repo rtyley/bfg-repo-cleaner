@@ -20,44 +20,38 @@
 
 package com.madgag.text
 
-import org.specs2.mutable._
+import org.scalatest.{FlatSpec, Matchers}
 
-class ByteSizeSpecs extends Specification {
-  "Size parser" should {
-    "understand 1B" in {
-      ByteSize.parse("0B") mustEqual 0
-      ByteSize.parse("1B") mustEqual 1
-      ByteSize.parse("2B") mustEqual 2
-      ByteSize.parse("10B") mustEqual 10
-    }
-    "understand 1G" in {
-      ByteSize.parse("1G") mustEqual 1024 * 1024 * 1024
-    }
-    "understand 3G" in {
-      ByteSize.parse("3G") mustEqual 3L * 1024 * 1024 * 1024 // 3221225472
-      ByteSize.parse("3G") mustNotEqual -1073741824 // should be 3221225472 if not for Int overflow
-    }
-    "understand 1M" in {
-      ByteSize.parse("1M") mustEqual 1024 * 1024
-    }
-    "understand 3500M" in {
-      ByteSize.parse("3500M") mustEqual 3500L * 1024 * 1024 // 3670016000
-      ByteSize.parse("3500M") mustNotEqual -624951296 // should be 3670016000 if not for Int overflow
-    }
-    "understand 1K" in {
-      ByteSize.parse("1K") mustEqual 1024
-    }
-    "understand 5K" in {
-      ByteSize.parse("5K") mustEqual 5 * 1024
-    }
-    "reject strings without a unit" in {
-      ByteSize.parse("1232") must throwAn[IllegalArgumentException]
-    }
+class ByteSizeSpecs extends FlatSpec with Matchers {
+  "Size parser" should "understand 1B" in {
+    ByteSize.parse("0B") shouldBe 0
+    ByteSize.parse("1B") shouldBe 1
+    ByteSize.parse("2B") shouldBe 2
+    ByteSize.parse("10B") shouldBe 10
+  }
+  it should "understand 3G" in {
+    ByteSize.parse("3G") shouldBe 3L * 1024 * 1024 * 1024
+  }
+  it should "understand 1G" in {
+    ByteSize.parse("1G") shouldBe 1024 * 1024 * 1024
+  }
+  it should "understand 1M" in {
+    ByteSize.parse("1M") shouldBe 1024 * 1024
+  }
+  it should "understand 3500M" in {
+    ByteSize.parse("3500M") shouldBe 3500L * 1024 * 1024
+  }
+  it should "understand 1K" in {
+    ByteSize.parse("1K") shouldBe 1024
+  }
+  it should "understand 5K" in {
+    ByteSize.parse("5K") shouldBe 5 * 1024
+  }
+  it should "reject strings without a unit" in {
+    an[IllegalArgumentException] should be thrownBy ByteSize.parse("1232")
   }
 
-  "Size formatter" should {
-    "correctly format" in {
-      ByteSize.format(1024) mustEqual "1.0 KB"
-    }
+  "Size formatter" should "correctly format" in {
+    ByteSize.format(1024) shouldBe "1.0 KB"
   }
 }

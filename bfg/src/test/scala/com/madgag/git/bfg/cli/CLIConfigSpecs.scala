@@ -1,41 +1,40 @@
 package com.madgag.git.bfg.cli
 
 import com.madgag.git.bfg.model.FileName
-import org.specs2.mutable._
+import org.scalatest.{FlatSpec, Matchers}
 
-class CLIConfigSpecs extends Specification {
-  "CLI config" should {
+class CLIConfigSpecs extends FlatSpec with Matchers {
 
-    def parse(args: String) = CLIConfig.parser.parse(args.split(' ') :+ "my-repo.git", CLIConfig()).get.filterContentPredicate
 
-    "understand lone include" in {
-      val predicate = parse("-fi *.txt")
-      predicate(FileName("panda")) should beFalse
-      predicate(FileName("foo.txt")) should beTrue
-      predicate(FileName("foo.java")) should beFalse
-    }
+  def parse(args: String) = CLIConfig.parser.parse(args.split(' ') :+ "my-repo.git", CLIConfig()).get.filterContentPredicate
 
-    "understand lone exclude" in {
-      val predicate = parse("-fe *.txt")
-      predicate(FileName("panda")) should beTrue
-      predicate(FileName("foo.txt")) should beFalse
-      predicate(FileName("foo.java")) should beTrue
-    }
-
-    "understand include followed by exclude" in {
-      val predicate = parse("-fi *.txt -fe Poison.*")
-      predicate(FileName("panda")) should beFalse
-      predicate(FileName("foo.txt")) should beTrue
-      predicate(FileName("foo.java")) should beFalse
-      predicate(FileName("Poison.txt")) should beFalse
-    }
-
-    "understand exclude followed by include" in {
-      val predicate = parse("-fe *.xml -fi hbm.xml")
-      predicate(FileName("panda")) should beTrue
-      predicate(FileName("foo.xml")) should beFalse
-      predicate(FileName("hbm.xml")) should beTrue
-    }
-
+  "CLI config" should "understand lone include" in {
+    val predicate = parse("-fi *.txt")
+    predicate(FileName("panda")) shouldBe false
+    predicate(FileName("foo.txt")) shouldBe true
+    predicate(FileName("foo.java")) shouldBe false
   }
+
+  it should "understand lone exclude" in {
+    val predicate = parse("-fe *.txt")
+    predicate(FileName("panda")) shouldBe true
+    predicate(FileName("foo.txt")) shouldBe false
+    predicate(FileName("foo.java")) shouldBe true
+  }
+
+  it should "understand include followed by exclude" in {
+    val predicate = parse("-fi *.txt -fe Poison.*")
+    predicate(FileName("panda")) shouldBe false
+    predicate(FileName("foo.txt")) shouldBe true
+    predicate(FileName("foo.java")) shouldBe false
+    predicate(FileName("Poison.txt")) shouldBe false
+  }
+
+  it should "understand exclude followed by include" in {
+    val predicate = parse("-fe *.xml -fi hbm.xml")
+    predicate(FileName("panda")) shouldBe true
+    predicate(FileName("foo.xml")) shouldBe false
+    predicate(FileName("hbm.xml")) shouldBe true
+  }
+
 }

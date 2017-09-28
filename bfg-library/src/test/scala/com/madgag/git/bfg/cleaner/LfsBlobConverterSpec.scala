@@ -23,51 +23,50 @@ package com.madgag.git.bfg.cleaner
 import com.madgag.diff.{After, Before, MapDiff}
 import com.madgag.git.LFS.Pointer
 import com.madgag.git._
-import com.madgag.git.bfg.model.{TreeBlobs, BlobFileMode, FileName, Tree}
+import com.madgag.git.bfg.model.{BlobFileMode, FileName, Tree, TreeBlobs}
 import com.madgag.git.test._
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.lib.ObjectId
-import org.specs2.mutable._
+import org.scalatest.concurrent.Eventually
+import org.scalatest.{FlatSpec, Inspectors, Matchers, OptionValues}
 
 import scalax.file.ImplicitConversions._
 
-class LfsBlobConverterSpec extends Specification {
+class LfsBlobConverterSpec extends FlatSpec with Matchers with OptionValues with Inspectors with Eventually {
 
-  "LfsBlobConverter" should {
-    "successfully shift the blob to the LFS store" in {
-      implicit val repo = unpackRepo("/sample-repos/example.git.zip")
-      implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
+  "LfsBlobConverter" should "successfully shift the blob to the LFS store" in {
+    implicit val repo = unpackRepo("/sample-repos/example.git.zip")
+    implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
 
-      val oldTreeBlobs = Tree(repo.resolve("early-release^{tree}")).blobs
+    val oldTreeBlobs = Tree(repo.resolve("early-release^{tree}")).blobs
 
-      val newTreeBlobs = clean(oldTreeBlobs, "*ero*")
+    val newTreeBlobs = clean(oldTreeBlobs, "*ero*")
 
-      val diff = oldTreeBlobs.diff(newTreeBlobs)
+    val diff = oldTreeBlobs.diff(newTreeBlobs)
 
-      diff.changed mustEqual Set(FileName("one-kb-zeros"))
-      diff.unchanged must contain(FileName("hero"), FileName("zero"))
+    diff.changed shouldBe Set(FileName("one-kb-zeros"))
+    diff.unchanged should contain allOf(FileName("hero"), FileName("zero"))
 
-      verifyPointersForChangedFiles(diff)
-    }
+    verifyPointersForChangedFiles(diff)
+  }
 
-    "not do damage if run twice - ie don't create a pointer for a pointer!" in {
-      implicit val repo = unpackRepo("/sample-repos/example.git.zip")
-      implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
+  it should "not do damage if run twice - ie don't create a pointer for a pointer!" in {
+    implicit val repo = unpackRepo("/sample-repos/example.git.zip")
+    implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
 
-      val oldTreeBlobs = Tree(repo.resolve("early-release^{tree}")).blobs
+    val oldTreeBlobs = Tree(repo.resolve("early-release^{tree}")).blobs
 
-      val treeBlobsAfterRun1 = clean(oldTreeBlobs, "*ero*")
+    val treeBlobsAfterRun1 = clean(oldTreeBlobs, "*ero*")
 
-      val firstDiff = oldTreeBlobs.diff(treeBlobsAfterRun1)
+    val firstDiff = oldTreeBlobs.diff(treeBlobsAfterRun1)
 
-      firstDiff.changed mustEqual Set(FileName("one-kb-zeros"))
+    firstDiff.changed shouldBe Set(FileName("one-kb-zeros"))
 
-      val treeBlobsAfterRun2 = clean(treeBlobsAfterRun1, "*ero*")
+    val treeBlobsAfterRun2 = clean(treeBlobsAfterRun1, "*ero*")
 
-      treeBlobsAfterRun1.diff(treeBlobsAfterRun2).changed must beEmpty
+    treeBlobsAfterRun1.diff(treeBlobsAfterRun2).changed shouldBe empty
 
-      verifyPointersForChangedFiles(firstDiff) // Are the LFS files still intact?
-    }
+    verifyPointersForChangedFiles(firstDiff) // Are the LFS files still intact?
   }
 
 
@@ -79,11 +78,11 @@ class LfsBlobConverterSpec extends Specification {
   def verifyPointerInsertedFor(fileName: FileName, diff: MapDiff[FileName, (BlobFileMode, ObjectId)])(implicit repo: FileRepository) = {
     implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
 
-    diff.changed must contain(fileName)
+    diff.changed should contain(fileName)
 
     val fileBeforeAndAfter = diff.changedMap(fileName)
 
-    fileBeforeAndAfter(After)._1 mustEqual fileBeforeAndAfter(Before)._1
+    fileBeforeAndAfter(After)._1 shouldBe fileBeforeAndAfter(Before)._1
 
     val fileIds = fileBeforeAndAfter.mapValues(_._2)
 
@@ -99,18 +98,18 @@ class LfsBlobConverterSpec extends Specification {
 
     val lfsStoredFile = repo.getDirectory / "lfs" / "objects" / pointer.path
 
-    lfsStoredFile.exists must beTrue
+    lfsStoredFile.exists shouldBe true
 
-    lfsStoredFile.size must beSome(pointer.blobSize)
+    lfsStoredFile.size.value shouldBe pointer.blobSize
 
-    lfsStoredFile.bytes.toArray.blobId must eventually(be_==(originalFileId))
+    eventually { lfsStoredFile.bytes.toArray.blobId } shouldBe originalFileId
   }
 
   def verifyPointersForChangedFiles(diff: MapDiff[FileName, (BlobFileMode, ObjectId)])(implicit repo: FileRepository) = {
-    diff.only(Before) must beEmpty
-    diff.only(After).keys mustEqual Set(FileName(".gitattributes"))
+    diff.only(Before) shouldBe empty
+    diff.only(After).keys shouldBe Set(FileName(".gitattributes"))
 
-    forall(diff.changed) { fileName =>
+    forAll(diff.changed) { fileName =>
       verifyPointerInsertedFor(fileName, diff)
     }
   }
