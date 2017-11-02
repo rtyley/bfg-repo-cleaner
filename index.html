@@ -75,7 +75,8 @@ if (("rtyley.github.io" == window.location.host) && (window.location.protocol !=
 </ul>
 
 <h1 id="usage">Usage</h1>
-<p>First clone a fresh copy of your repo, using the <a href="http://stackoverflow.com/q/3959924/438886"><code>--mirror</code></a> flag:</p>
+<p>First, prior to using BFG to remove content, be sure that the target material has been removed in your latest commit. By default, BFG edits commits prior to your git HEAD in order to preserve the state of your current project.</p>
+<p>Second clone a fresh copy of your repo, using the <a href="http://stackoverflow.com/q/3959924/438886"><code>--mirror</code></a> flag:</p>
 <pre><code>$ git clone --mirror git://example.com/some-big-repo.git
 </code></pre>
 <p>This is a <a href="http://git-scm.com/docs/gitglossary.html#def_bare_repository">bare</a>
