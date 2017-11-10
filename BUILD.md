@@ -4,7 +4,7 @@ can run anywhere Java can.
 Here's a rough set of instructions for building the BFG, if you don't want to use the
 pre-built [downloads](http://rtyley.github.io/bfg-repo-cleaner/#download):
 
-* Install Java 6 or above
+* Install Java JDK7 or above
 * Install [sbt](http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html#installing-sbt)
 * `git clone git@github.com:rtyley/bfg-repo-cleaner.git`
 * `cd bfg-repo-cleaner`
