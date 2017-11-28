@@ -32,7 +32,7 @@ import com.madgag.git.bfg.model.{FileName, Tree, TreeBlobEntry, TreeBlobs, TreeS
 import com.madgag.git.{SizedObject, _}
 import com.madgag.inclusion.{IncExcExpression, _}
 import com.madgag.text.ByteSize
-import com.madgag.textmatching.{Glob, TextMatcher, TextMatcherType}
+import com.madgag.textmatching.{Glob, TextMatcher, TextMatcherType, TextReplacementConfig}
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
@@ -161,7 +161,8 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     { treeEntries: Seq[Tree.Entry] => treeEntries.groupBy(_.name).values.map(_.minBy(_.fileMode)).toSeq }
   }
 
-  lazy val lineModifier: Option[String => String] = TextReplacementConfig(textReplacementExpressions)
+  lazy val lineModifier: Option[String => String] =
+    TextReplacementConfig(textReplacementExpressions, "***REMOVED***")
 
   lazy val filterContentPredicate: (FileName => Boolean) = f => IncExcExpression(filenameFilters) includes (f.string)
 

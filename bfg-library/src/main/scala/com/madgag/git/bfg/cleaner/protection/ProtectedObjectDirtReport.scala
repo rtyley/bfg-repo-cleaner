@@ -30,7 +30,7 @@ import org.eclipse.jgit.revwalk.{RevObject, RevWalk}
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.TreeFilter
 
-import scala.collection.convert.wrapAsScala._
+import scala.collection.convert.ImplicitConversionsToScala._
 
 object ProtectedObjectDirtReport {
   def reportsFor(objectIdCleanerConfig: ObjectIdCleaner.Config, objectDB: ObjectDatabase)(implicit revWalk: RevWalk) = {

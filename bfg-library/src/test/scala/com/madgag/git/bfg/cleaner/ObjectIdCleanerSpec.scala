@@ -22,15 +22,13 @@ package com.madgag.git.bfg.cleaner
 
 import com.madgag.git._
 import com.madgag.git.bfg.cleaner.protection.ProtectedObjectCensus
-import com.madgag.git.test._
 import com.madgag.textmatching.Literal
 import org.eclipse.jgit.lib.ObjectId
-import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
+import org.eclipse.jgit.revwalk.RevCommit
 import org.scalatest.matchers.Matcher
 import org.scalatest.{FlatSpec, Inspectors, Matchers}
 
-import scala.collection.convert.wrapAsScala._
-
+import scala.collection.convert.ImplicitConversionsToScala._
 
 class ObjectIdCleanerSpec extends FlatSpec with Matchers {
   

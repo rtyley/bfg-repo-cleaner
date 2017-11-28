@@ -27,7 +27,7 @@ import org.eclipse.jgit.revwalk.RevSort._
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import org.eclipse.jgit.transport.ReceiveCommand
 
-import scala.collection.convert.wrapAll._
+import scala.collection.convert.ImplicitConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 

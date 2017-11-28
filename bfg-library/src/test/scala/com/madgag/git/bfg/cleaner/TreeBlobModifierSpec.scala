@@ -27,7 +27,7 @@ import com.madgag.git.bfg.model.TreeBlobEntry
 import com.madgag.git.test._
 import org.scalatest.{FlatSpec, Matchers}
 
-import scala.collection.convert.wrapAsScala._
+import scala.collection.convert.ImplicitConversionsToScala._
 
 class TreeBlobModifierSpec extends FlatSpec with Matchers {
 

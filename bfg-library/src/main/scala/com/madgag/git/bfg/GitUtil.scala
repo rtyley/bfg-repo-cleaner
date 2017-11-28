@@ -20,6 +20,7 @@
 
 package com.madgag.git.bfg
 
+import com.google.common.primitives.Ints
 import com.madgag.git.bfg.cleaner._
 import com.madgag.git.{SizedObject, _}
 import org.eclipse.jgit.internal.storage.file.ObjectDirectory
@@ -28,9 +29,8 @@ import org.eclipse.jgit.lib.ObjectReader._
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.storage.file.WindowCacheConfig
-import com.google.common.primitives.Ints
 
-import scala.collection.convert.wrapAsScala._
+import scala.collection.convert.ImplicitConversionsToScala._
 import scala.language.implicitConversions
 
 trait CleaningMapper[V] extends Cleaner[V] {

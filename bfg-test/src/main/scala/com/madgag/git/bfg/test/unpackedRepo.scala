@@ -10,7 +10,7 @@ import org.eclipse.jgit.treewalk.TreeWalk
 import org.scalatest.matchers.{MatchResult, Matcher}
 import org.scalatest.{FlatSpec, Inspectors, Matchers}
 
-import scala.collection.convert.wrapAsScala._
+import scala.collection.convert.ImplicitConversionsToScala._
 
 class unpackedRepo(filePath: String) extends FlatSpec with Matchers {
 

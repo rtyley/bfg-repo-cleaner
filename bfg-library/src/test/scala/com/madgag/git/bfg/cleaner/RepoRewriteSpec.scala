@@ -31,8 +31,7 @@ import com.madgag.git.bfg.cleaner.ObjectIdSubstitutor._
 import com.madgag.git.bfg.cleaner.protection.ProtectedObjectCensus
 import com.madgag.git.bfg.model.TreeBlobEntry
 import com.madgag.git.test._
-import com.madgag.textmatching.Literal
-import com.madgag.textmatching.RegexReplacer._
+import com.madgag.textmatching._
 import org.apache.commons.io.FilenameUtils
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.revwalk.RevWalk
@@ -40,7 +39,7 @@ import org.eclipse.jgit.util.RawParseUtils
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.PartialFunction.condOpt
-import scala.collection.convert.wrapAsScala._
+import scala.collection.convert.ImplicitConversionsToScala._
 
 class RepoRewriteSpec extends FlatSpec with Matchers {
 

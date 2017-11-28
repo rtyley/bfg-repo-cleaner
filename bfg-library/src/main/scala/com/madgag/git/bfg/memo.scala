@@ -23,7 +23,7 @@ package com.madgag.git.bfg
 import com.google.common.cache.{CacheBuilder, CacheLoader, CacheStats, LoadingCache}
 import com.madgag.git.bfg.cleaner._
 
-import scala.collection.convert.decorateAsScala._
+import scala.collection.JavaConverters._
 
 trait Memo[K, V] {
   def apply(z: K => V): MemoFunc[K, V]

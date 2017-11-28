@@ -1,13 +1,14 @@
 package com.madgag.git.bfg.model
 
-import java.nio.charset.Charset
+import java.nio.charset.{Charset, IllegalCharsetNameException, UnsupportedCharsetException}
 
 import com.madgag.git._
 import com.madgag.git.bfg.cleaner._
 import org.eclipse.jgit.lib.Constants.OBJ_COMMIT
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.RevCommit
-import java.nio.charset.{IllegalCharsetNameException,UnsupportedCharsetException}
+
+import scala.collection.convert.ImplicitConversionsToJava
 
 /*
  * Copyright (c) 2012, 2013 Roberto Tyley
@@ -36,7 +37,7 @@ object Commit {
 
 case class Commit(node: CommitNode, arcs: CommitArcs) {
   def toBytes: Array[Byte] = {
-    import scala.collection.convert.wrapAsJava._
+    import ImplicitConversionsToJava._
 
     val c = new CommitBuilder
     c.setParentIds(arcs.parents)

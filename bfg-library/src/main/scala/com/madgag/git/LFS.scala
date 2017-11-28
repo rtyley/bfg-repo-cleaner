@@ -28,10 +28,9 @@ import com.madgag.git.bfg.model.FileName
 import org.apache.commons.codec.binary.Hex._
 import org.eclipse.jgit.lib.ObjectLoader
 
-import scala.Predef
+import scala.collection.JavaConverters._
 import scalax.file.Path
 import scalax.file.defaultfs.DefaultPath
-import scala.collection.convert.decorateAsScala._
 
 object LFS {
 

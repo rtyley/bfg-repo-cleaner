@@ -16,7 +16,7 @@ import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import org.eclipse.jgit.transport.ReceiveCommand
 
-import scala.collection.convert.wrapAll._
+import scala.collection.convert.ImplicitConversions._
 import scala.collection.immutable.SortedMap
 import scalax.file.Path
 
