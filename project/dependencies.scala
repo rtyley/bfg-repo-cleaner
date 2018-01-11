@@ -29,4 +29,6 @@ object Dependencies {
 
   val scalaIoFile = "com.madgag" %% "scala-io-file" % "0.4.9"
 
+  val useNewerJava =  "com.madgag" % "use-newer-java" % "0.1"
+
 }

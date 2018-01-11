@@ -10,6 +10,12 @@ val gitDescription = taskKey[String]("Git description of working dir")
 
 gitDescription := Try[String](Process("git describe --all --always --dirty --long").lineStream.head.replace("heads/","").replace("-0-g","-")).getOrElse("unknown")
 
+libraryDependencies += useNewerJava
+
+mainClass := Some("use.newer.java.Version8")
+packageOptions in (Compile, packageBin) +=
+  Package.ManifestAttributes( "Main-Class-After-UseNewerJava-Check" -> "com.madgag.git.bfg.cli.Main" )
+
 // note you don't want the jar name to collide with the non-assembly jar, otherwise confusion abounds.
 assemblyJarName in assembly := s"${name.value}-${version.value}-${gitDescription.value}${jgitVersionOverride.map("-jgit-" + _).mkString}.jar"
 
@@ -66,3 +72,4 @@ fork in Test := true // JGit uses static (ie JVM-wide) config
 logBuffered in Test := false
 
 parallelExecution in Test := false
+
