@@ -20,16 +20,16 @@
 
 package com.madgag.git.bfg.cli
 
-import org.specs2.mutable._
 import com.madgag.git._
 import com.madgag.git.bfg.cli.test.unpackedRepo
 import org.eclipse.jgit.revwalk.{RevWalk, RevCommit}
 import org.eclipse.jgit.lib.ObjectReader
 import com.madgag.git.bfg.model.Commit
+import org.scalatest.{FlatSpec, Matchers}
 
-class PruneEmptyCommitsSpec extends Specification {
+class PruneEmptyCommitsSpec extends FlatSpec with Matchers {
 
-  sequential // concurrent testing against scala.App is not safe https://twitter.com/rtyley/status/340376844916387840
+  // concurrent testing against scala.App is not safe https://twitter.com/rtyley/status/340376844916387840
 
   def onlyTouchesPath(c: RevCommit, predicate: String => Boolean)(implicit revWalk: RevWalk, objectReader: ObjectReader): Boolean = if (c.getParentCount==0) {
     c.getTree.walk().exists(tw => predicate(tw.getPathString))
@@ -37,27 +37,25 @@ class PruneEmptyCommitsSpec extends Specification {
     c.getParents.forall(p => diff(c.getTree, p.getTree).forall(de => predicate(de.getOldPath) || predicate(de.getNewPath)))
   }
 
-  "CLI" should {
-
-    "not remove empty commits by default" in new unpackedRepo("/sample-repos/aRepoProneToEmptyCommitsOnCleaning.git.zip") {
-      ensureInvariant(commitHist("HEAD").size) {
-        ensureRemovalOf(commitHistory(haveFile("foo").atLeastOnce)) {
+  "CLI" should "not remove empty commits by default" in
+      new unpackedRepo("/sample-repos/aRepoProneToEmptyCommitsOnCleaning.git.zip") {
+      ensureInvariantValue(commitHist("HEAD").size) {
+        ensureRemovalFrom(commitHist()).ofCommitsThat(haveFile("foo")) {
           run("--delete-files foo --no-blob-protection")
         }
       }
     }
 
-    "remove empty commits if prune flag set" in new unpackedRepo("/sample-repos/aRepoProneToEmptyCommitsOnCleaning.git.zip") {
+    "CLI" should "remove empty commits if prune flag set" in new unpackedRepo("/sample-repos/aRepoProneToEmptyCommitsOnCleaning.git.zip") {
       val (commitsThatOnlyTouchFoo, commitsThatTouchNonFooFiles) = commitHist().partition(c => onlyTouchesPath(c, _.endsWith("foo")))
 
-      ensureRemovalOf(commitHistory(haveFile("foo").atLeastOnce)) {
-        run("--delete-files foo --no-blob-protection --prune-empty-commits")
+      ensureRemovalFrom(commitHist()).ofCommitsThat(haveFile("foo")) {
+        run("--delete-files foo --no-blob-protection --private --prune-empty-commits")
       }
 
-      def commitsEqualByAuthorIdent(a: Commit,b: Commit) = a.node.author == b.node.author
+      def commitAuthor(a: RevCommit) = Commit.apply(a).node.author
 
-      commitHist().map(Commit.apply) must containTheSameElementsAs(commitsThatTouchNonFooFiles.map(Commit.apply), commitsEqualByAuthorIdent)
+      commitHist().map(commitAuthor) should equal (commitsThatTouchNonFooFiles.map(commitAuthor))
     }
-  }
 }
 
