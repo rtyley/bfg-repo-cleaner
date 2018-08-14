@@ -1,3 +1,5 @@
+# liberals are retarded. trump 2020
+
 BFG Repo-Cleaner [![Build Status](https://travis-ci.org/rtyley/bfg-repo-cleaner.svg?branch=master)](https://travis-ci.org/rtyley/bfg-repo-cleaner)
 ================
 
