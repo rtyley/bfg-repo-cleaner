@@ -118,33 +118,44 @@ which will output <a href="https://repository.sonatype.org/service/local/artifac
 <h1 id="protected-commits">Your <em>current</em> files are sacred...</h1>
 
 <p>
-The BFG treats you like a reformed alcoholic: you've made some mistakes in the past, but now you've cleaned up your act. Thus the BFG assumes that
-your latest commit is a <em>good</em> one, with none of the dirty files you want removing from your history still in it. This assumption by the BFG
-protects your work, and gives you peace of mind knowing that the BFG is <em>only</em> changing your repo history, not meddling with the
-<em>current</em> files of your project.
+    By default the BFG doesn't modify the contents of your <em>latest</em> commit on your
+    <code>master</code> (or '<code>HEAD</code>') branch, even though it <em>will</em> clean
+    all the commits before it.
 </p>
 
-<p>By default the <code>HEAD</code> branch is protected, and while its history will be cleaned, the very latest commit
-(the 'tip') is a <strong>protected commit</strong> and its file-hierarchy won't be changed at all.</p>
-
-<p>If you want to protect the tips of several branches or tags (not just HEAD), just name them for the BFG:</p>
-
-<pre><code>$ bfg --strip-biggest-blobs 100<strong> --protect-blobs-from master,maint,next</strong> repo.git</code></pre>
+<p>
+    That's because your latest commit is likely to be the one
+    that you deploy to production, and a simple deletion of a private credential or a big
+    file is quite likely to result in broken code that no longer has the hard-coded data it
+    expects - you need to fix that, the BFG can't do it for you. Once you've committed your
+    changes- and your latest commit is <em>clean</em> with none of the undesired data in it -
+    you can run the BFG to perform it's simple deletion operations over all your historical
+    commits.
+</p>
 
 <p>Note:</p>
 <ul>
 
-<li>Cleaning Git repos is about <em>completely</em> eradicating bad stuff from history.
-If something 'bad' (like a 10MB file, when you're specifying 
-<code>--strip-blobs-bigger-than 5M</code>) is in a protected commit, it <em>won't</em> be 
-deleted - it'll persist in your repository,
-<a href="https://github.com/rtyley/bfg-repo-cleaner/issues/53#issuecomment-50088997">even
-if the BFG deletes if from earlier commits</a>. If you want the BFG to delete
-something <strong>you need to make sure your current commits are <em>clean</em></strong>.
+    <li>Cleaning Git repos is about <em>completely</em> eradicating bad stuff from history.
+        If something 'bad' (like a 10MB file, when you're specifying
+        <code>--strip-blobs-bigger-than 5M</code>) is in a protected commit, it <em>won't</em> be
+        deleted - it'll persist in your repository,
+        <a href="https://github.com/rtyley/bfg-repo-cleaner/issues/53#issuecomment-50088997">even
+            if the BFG deletes if from earlier commits</a>. If you want the BFG to delete
+        something <strong>you need to make sure your current commits are <em>clean</em></strong>.
 
-<li>Note that although the files in those protected commits won't be changed, when those commits follow on from earlier dirty commits, their commit 
-ids <strong>will</strong> change, to reflect the changed history - only the SHA-1 id of the filesystem-tree will remain the same.
+    <li>Note that although the files in those protected commits won't be changed, when those commits follow on from earlier dirty commits, their commit
+        ids <strong>will</strong> change, to reflect the changed history - only the SHA-1 id of the filesystem-tree will remain the same.
 </ul>
+
+<p>
+    If you want to turn off the protection (in general, not recommended) you can
+    use the <code>--no-blob-protection</code> flag:
+</p>
+
+<pre><code>$ bfg --strip-biggest-blobs 100 <strong>--no-blob-protection</strong> repo.git</code></pre>
+
+
 
 <h1 id="speed">Faster...</h1>
 <p>The BFG is <a href="https://docs.google.com/spreadsheet/ccc?key=0AsR1d5Zpes8HdER3VGU1a3dOcmVHMmtzT2dsS2xNenc">10 - 720x</a> faster
@@ -190,7 +201,7 @@ Roberto's creations (<a href="https://play.google.com/store/apps/details?id=com.
 </p>
 <h1>Requirements</h1>
 <ul>
-<li>The <a href="http://java.com/en/download/manual.jsp">Java Runtime Environment</a> (<b>Java 8</b> or above - BFG <a href="http://repo1.maven.org/maven2/com/madgag/bfg/1.12.16/bfg-1.12.16.jar">v1.12.16</a> was the last version to support Java 7)</li>
+<li>The <a href="https://www.java.com/en/download/manual.jsp">Java Runtime Environment</a> (<b>Java 8</b> or above - BFG <a href="http://repo1.maven.org/maven2/com/madgag/bfg/1.12.16/bfg-1.12.16.jar">v1.12.16</a> was the last version to support Java 7)</li>
 </ul>
 <p>That's it - the Scala library and all other dependencies are folded into the <a class="latest-download-link" data-event-category="Requirements Link" href="#download">downloadable jar</a>.</p>
 
