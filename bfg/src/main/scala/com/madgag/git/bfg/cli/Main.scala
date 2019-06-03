@@ -23,7 +23,6 @@ package com.madgag.git.bfg.cli
 import com.madgag.git._
 import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.cleaner._
-import com.madgag.git.bfg.cli.stoptrump.dontGiveUp
 
 object Main extends App {
 
