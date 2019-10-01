@@ -89,7 +89,7 @@ you should <strong>make a backup of it</strong> to ensure you don't lose anythin
 $ git reflog expire --expire=now --all && git gc --prune=now --aggressive
 </code></pre>
 <p>Finally, once you're happy with the updated state of your repo, push it back up <em>(note that because your clone command used the <code>--mirror</code> flag, this push will update <strong>all</strong> refs on your remote server)</em>:</p>
-<pre><code>$ git push</code></pre>
+<pre><code>$ git push --force-with-lease</code></pre>
 <p>At this point, you're ready for everyone to ditch their old copies of the repo and do fresh clones of the nice, new pristine data. It's best to delete all old clones, as they'll have dirty history that you <i>don't</i> want to risk pushing back into your newly cleaned repo.
 </p>
 
