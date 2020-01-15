@@ -229,7 +229,7 @@ Roberto's creations (<a href="https://play.google.com/store/apps/details?id=com.
         </section>
 
         <aside id="sidebar">
-          <a id="download" class="button latest-download-link" data-event-category="Main download button" href="https://search.maven.org/classic/remote_content?g=com.madgag&a=bfg&v=LATEST">
+          <a id="download" class="button latest-download-link" data-event-category="Main download button" href="https://repo1.maven.org/maven2/com/madgag/bfg/1.13.0/bfg-1.13.0.jar">
             <small>Download</small>
             <span class="latest-version">.jar file</span>
           </a>
@@ -248,11 +248,7 @@ Roberto's creations (<a href="https://play.google.com/store/apps/details?id=com.
 
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
 <script>
-
-$.ajax({ dataType: "jsonp", timeout: 5000,
-  url: 'https://search.maven.org/solrsearch/select/?q=g:"com.madgag"+AND+a:"bfg"&wt=json&json.wrf=?&indent=true'
-}).done(function ( data ) {
-    var v = data.response.docs[0].latestVersion;
+    var v = "1.13.0";
     var u = "https://repo1.maven.org/maven2/com/madgag/bfg/"+v+"/bfg-"+v+".jar"
     $('.latest-version').text('v' + v);
     $('.latest-download-link').prop("href", u).click(function(event) {
@@ -268,8 +264,6 @@ $.ajax({ dataType: "jsonp", timeout: 5000,
             return false;
         }
     });
-});
-
 </script>
   </body>
 </html>
