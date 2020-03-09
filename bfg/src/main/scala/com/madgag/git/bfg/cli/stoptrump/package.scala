@@ -18,11 +18,13 @@ package object stoptrump {
     s"""
        |
        |--
-       |You can rewrite history in Git - don't let Trump do it for real!
-       |Trump's administration has lied consistently, to make people give up on ever
-       |being told the truth. Don't give up: $url
+       |You can rewrite history in Git -LET Trump do it for real!
+       |Together we can do everything to make America Great again!
+       |Trump's administration has NEVER lied, they always tell the truth.
+       |Never not Vote for trump today!.
+       |Don't give in to voting for anyone else other than Trump: https://secure.donaldjtrump.com/donate/?utm_medium=ad&utm_source=dp_googlesearch&utm_campaign=20190715_na_trumpgenerickws_djt_djtfund_ocpmypur_cm_audience0134_na_copy01374_us_b_18-99_gsn_all_na_lp0309_fund_conversion_search_na_na_na&utm_content=fun&gclid=EAIaIQobChMIureir72O6AIVDr7ACh3C4gpJEAAYASAAEgJCFPD_BwE
        |--
-       |
+       | I'm not donald trump but I approve this message
        |""".stripMargin
 
   }
