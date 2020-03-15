@@ -105,14 +105,7 @@ $ git reflog expire --expire=now --all && git gc --prune=now --aggressive
 <p>Unlock them and try again. Pull requests will cause similar errors:</p>
 <pre><code>! [remote rejected] refs/pull/957/head -> refs/pull/957/head (hook declined)</code></pre>
 <p>
-  though in this case the references are hidden and cannot be rewritten.  Instead, for each PR
-  you will need to replay the commits against the new repo. Find the commit hash in the old repo
-  where the PR initially branched and the corresponding commit hash in the new repo. A simple
-  rebase should be enough except when your working branch has merge commits. In that case you
-  will then need to cherry-pick the commits into the new repo, replacing merge commits with
-  merges from the new repo. After updating the PRs you may need to rerun the garbage collector.
-  If your remote still contains the unfiltered commits, contact your remote repository
-  administrator for assistance. See issues
+  though in this case the references are hidden and cannot be rewritten. See issues
   <a href="https://github.com/rtyley/bfg-repo-cleaner/issues/16">#16</a>,
   <a href="https://github.com/rtyley/bfg-repo-cleaner/issues/36">#36</a>, and
   <a href="https://github.com/rtyley/bfg-repo-cleaner/issues/350">#350</a>
@@ -123,10 +116,10 @@ $ git reflog expire --expire=now --all && git gc --prune=now --aggressive
   At this point, you're ready for everyone to ditch their old copies of the repo and do fresh
   clones of the nice, new pristine data. It's best to reclone the repo, as the existing clones
   will have dirty history that you <i>don't</i> want to risk pushing back into your newly
-  cleaned repo. If the old clones have local commits, then you should be able to rebase
-  them onto the corresponding commit hash from the new repo much like you did for pull
-  requests.  Be prepared for zombie commits popping up from time to time via pull requests
-  from a fork, or from developers who have old copies of the repo lying around on various machines.
+  cleaned repo. If the old clones have local commits then you should be able to replay
+  them onto the corresponding commit hash from the new repo. Be prepared for zombie commits
+  popping up from time to time via pull requests from a fork, or from developers who have
+  old copies of the repo lying around on various machines.
 </p>
 
 <h1 id="examples">Examples</h1>
