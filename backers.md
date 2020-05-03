@@ -1,4 +1,4 @@
-Many thanks to supporters of the BFG!
+# Many thanks to supporters of the BFG!
 -----
 
 Contribute towards the open-source development of the BFG on [**BountySource**](https://www.bountysource.com/teams/bfg-repo-cleaner)
