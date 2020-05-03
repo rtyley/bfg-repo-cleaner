@@ -1,6 +1,7 @@
 # BFG Repo-Cleaner
 
-_Removes large or troublesome blobs like git-filter-branch does, but faster  - 
+Removes large or troublesome blobs like git-filter-branch does, but faster
+
 [![Build Status](https://travis-ci.org/rtyley/bfg-repo-cleaner.svg?branch=master)](https://travis-ci.org/rtyley/bfg-repo-cleaner)
 
 ## About
