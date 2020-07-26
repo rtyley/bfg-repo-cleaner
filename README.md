@@ -13,4 +13,6 @@ alternative to `git-filter-branch` for cleansing bad data out of your Git reposi
 * Removing **Crazy Big Files**
 * Removing **Passwords, Credentials** & other **Private data**
 
+[![](https://media.giphy.com/media/U8560aiWTurW4iAOLn/giphy.gif)](https://media.giphy.com/media/U8560aiWTurW4iAOLn/giphy.gif)
+
 Main documentation for The BFG is here : **https://rtyley.github.io/bfg-repo-cleaner/**
