@@ -1,10 +1,16 @@
 language: scala
+
+os: linux
+
 dist: trusty
+
 scala:
    - 2.11.11
+   - 2.11.12
 
 jdk:
   - oraclejdk8
+  - openjdk8
 
 # These directories are cached to S3 at the end of the build
 cache:
@@ -16,4 +22,3 @@ before_cache:
   # Cleanup the cached directories to avoid unnecessary cache updates
   - find $HOME/.ivy2/cache -name "ivydata-*.properties" -print -delete
   - find $HOME/.sbt        -name "*.lock"               -print -delete
-
