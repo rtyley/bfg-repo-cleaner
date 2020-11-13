@@ -42,6 +42,22 @@ class BlobReplacer(badBlobs: Set[ObjectId], blobInserter: => BlobInserter) exten
   }
 }
 
+class TreeBlobTransformer(transformer: TreeBlobEntry => TreeBlobEntry) extends Cleaner[TreeBlobs] {
+  
+  def this(transformers: Seq[TreeBlobEntry => TreeBlobEntry]) = this(transformers.reduceLeft(_ andThen _))
+  
+  override def apply(treeBlobs: TreeBlobs) = treeBlobs.entries.map(transformer)
+}
+
+class Chmoder(specification: Seq[(BlobFileMode, TextMatcher)]) extends TreeBlobTransformer(
+  specification.map {
+    case(m,fnm) => {(tbe: TreeBlobEntry) => tbe match {
+      case e if (fnm(e.filename)) => e.copy(mode = m)
+      case e => e
+    }}
+  }
+)
+
 
 
 

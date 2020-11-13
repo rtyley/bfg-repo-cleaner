@@ -25,6 +25,7 @@ import com.madgag.git.bfg.cli.test.unpackedRepo
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.revwalk.RevCommit
 import org.scalatest.{FlatSpec, Inspectors, Matchers, OptionValues}
+import org.eclipse.jgit.lib.FileMode.{REGULAR_FILE,EXECUTABLE_FILE}
 
 import scalax.file.ImplicitConversions._
 import scalax.file.Path
@@ -122,6 +123,14 @@ class MainSpec extends FlatSpec with Matchers with OptionValues with Inspectors 
   "Corrupt trees containing duplicate filenames" should "be cleaned by removing the file with the duplicate FileName, leaving the folder" in new unpackedRepo("/sample-repos/corruptTreeDupFileName.git.zip") {
     ensureRemovalFrom(commitHist()).ofCommitsThat(haveFile("2.0.0")) {
       run("--fix-filename-duplicates-preferring tree")
+    }
+  }
+
+  "Corrupt trees containing bad file modes" should "make .pl and .sh files executable and all other files non-executable" in new unpackedRepo("/sample-repos/chmodExample.git.zip") {
+    ensureRemovalFrom(commitHist()).ofCommitsThat(
+      haveFileMode("test.pl", REGULAR_FILE) or haveFileMode("test.sh", REGULAR_FILE) or haveFileMode("test.txt", EXECUTABLE_FILE)
+    ) {
+      run("--no-blob-protection --chmod:-x=*.* --chmod:+x=*.{sh,pl}")
     }
   }
 }

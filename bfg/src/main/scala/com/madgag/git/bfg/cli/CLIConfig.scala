@@ -28,7 +28,7 @@ import com.madgag.git.bfg.cleaner._
 import com.madgag.git.bfg.cleaner.kit.BlobInserter
 import com.madgag.git.bfg.cleaner.protection.ProtectedObjectCensus
 import com.madgag.git.bfg.model.FileName.ImplicitConversions._
-import com.madgag.git.bfg.model.{FileName, Tree, TreeBlobEntry, TreeBlobs, TreeSubtrees}
+import com.madgag.git.bfg.model.{FileName, Tree, TreeBlobEntry, TreeBlobs, TreeSubtrees, BlobFileMode, RegularFile, ExecutableFile}
 import com.madgag.git.{SizedObject, _}
 import com.madgag.inclusion.{IncExcExpression, _}
 import com.madgag.text.ByteSize
@@ -36,24 +36,29 @@ import com.madgag.textmatching.{Glob, TextMatcher, TextMatcherType, TextReplacem
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
-import scopt.{OptionParser, Read}
+import scopt.{OptionDef, OptionParser, Read}
 
 import scalax.file.ImplicitConversions._
 
 
 object CLIConfig {
   val parser = new OptionParser[CLIConfig]("bfg") {
-
-    def fileMatcher(name: String, defaultType: TextMatcherType = Glob) = {
-      implicit val textMatcherRead = Read.reads { TextMatcher(_, defaultType) }
-
-      opt[TextMatcher](name).valueName(s"<${defaultType.expressionPrefix}>").validate { m =>
-        if (m.expression.contains('/')) {
+    
+    val defaultType = Glob
+    implicit val textMatcherRead = Read.reads { TextMatcher(_, defaultType) }
+    
+    def fileMatcher[A](opt: OptionDef[A,CLIConfig], extractTextMatcher: A => TextMatcher = identity[TextMatcher] _): OptionDef[A, CLIConfig] = {
+      opt.valueName(s"<${defaultType.expressionPrefix}>").validate { m =>
+        if (extractTextMatcher(m).expression.contains('/')) {
           failure("*** Can only match on filename, NOT path *** - remove '/' path segments")
         } else success
       }
     }
-
+    
+    def fileMatcher(name: String): OptionDef[TextMatcher, CLIConfig] = {
+      fileMatcher(opt[TextMatcher](name))
+    }
+    
     val exactVersion = BuildInfo.version + (if (BuildInfo.version.contains("-SNAPSHOT")) s" (${BuildInfo.gitDescription})" else "")
 
     head("bfg", exactVersion)
@@ -117,6 +122,18 @@ object CLIConfig {
 
         c.copy(fixFilenameDuplicatesPreferring = ord)
     }
+    fileMatcher(
+        opt[(String,TextMatcher)]("chmod"),
+        (t:(String,TextMatcher)) => t match {case (_,tm) => tm}
+    ).
+    unbounded.
+    keyName("<-x|+x>").
+        text("change executable mode of files matching glob; option may be specified multiple times, and will be processed in order specified. e.g.,--chmod:-x=*.* --chmod:+x=*.{sh,.pl} will make all files non-executable except *.sh and *.pl files").
+        action { (v, c) => c.copy(chmod = c.chmod :+ (v match {
+          case ("+x", fm) => (ExecutableFile, fm)
+          case ("-x", fm) => (RegularFile, fm)
+          case other => throw new IllegalArgumentException(s"'$other' should be '+x' or '-x'")
+        }))}
     arg[File]("<repo>") optional() action { (x, c) =>
       c.copy(repoLocation = x) } text("file path for Git repository to clean")
   }
@@ -136,7 +153,8 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      strictObjectChecking: Boolean = false,
                      sensitiveData: Option[Boolean] = None,
                      massiveNonFileObjects: Option[Long] = None,
-                     repoLocation: File = new File(System.getProperty("user.dir"))) {
+                     repoLocation: File = new File(System.getProperty("user.dir")),
+                     chmod: Seq[(BlobFileMode, TextMatcher)] = Seq()) {
 
   lazy val gitdir = resolveGitDirFor(repoLocation)
 
@@ -218,7 +236,9 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
       }
     }
 
-    Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier, lfsBlobConverter).flatten
+    lazy val chmodCleaner = if(chmod isEmpty) None else Some(new Chmoder(chmod))
+
+    Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier, lfsBlobConverter, chmodCleaner).flatten
   }
 
   lazy val definesNoWork = treeBlobCleaners.isEmpty && folderDeletion.isEmpty && treeEntryListCleaners.isEmpty

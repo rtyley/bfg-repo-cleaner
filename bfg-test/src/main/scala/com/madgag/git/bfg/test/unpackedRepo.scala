@@ -4,7 +4,7 @@ import com.madgag.git._
 import com.madgag.git.test._
 import org.eclipse.jgit.internal.storage.file.{GC, ObjectDirectory}
 import org.eclipse.jgit.lib.Constants.OBJ_BLOB
-import org.eclipse.jgit.lib.{ObjectId, ObjectReader, Repository}
+import org.eclipse.jgit.lib.{ObjectId, ObjectReader, Repository, FileMode}
 import org.eclipse.jgit.revwalk.{RevCommit, RevTree}
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.scalatest.matchers.{MatchResult, Matcher}
@@ -57,6 +57,9 @@ class unpackedRepo(filePath: String) extends FlatSpec with Matchers {
       }
     }
   }
+
+  def haveFileMode(name: String, fm: FileMode): Matcher[ObjectId] =
+    haveTreeEntry(name, (file : TreeWalk) => file.getFileMode == fm && file.getNameString == name)
 
   def treeEntryNames(t: RevTree, p: TreeWalk => Boolean): Seq[String] =
     t.walk(postOrderTraversal = true).withFilter(p).map(_.getNameString).toList
