@@ -21,10 +21,11 @@
 package com.madgag.git.bfg.cli
 
 import com.madgag.git.bfg.cli.test.unpackedRepo
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 // JGit has JVM-wide configuration for cache window size: https://git.eclipse.org/r/#/q/Ibf2ef604bac08885b2b3bd85f0dc31995132b682,n,z
-class MassiveNonFileObjectsRequiresOwnJvmSpec extends FlatSpec with Matchers {
+class MassiveNonFileObjectsRequiresOwnJvmSpec extends AnyFlatSpec with Matchers {
 
   // concurrent testing against scala.App is not safe https://twitter.com/rtyley/status/340376844916387840
 

@@ -23,13 +23,13 @@ package com.madgag.git.bfg.cli
 import com.madgag.git._
 import com.madgag.git.bfg.cli.test.unpackedRepo
 import org.eclipse.jgit.lib.ObjectId
-import org.eclipse.jgit.revwalk.RevCommit
-import org.scalatest.{FlatSpec, Inspectors, Matchers, OptionValues}
-
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.{Inspectors, OptionValues}
 import scalax.file.ImplicitConversions._
 import scalax.file.Path
 
-class MainSpec extends FlatSpec with Matchers with OptionValues with Inspectors {
+class MainSpec extends AnyFlatSpec with Matchers with OptionValues with Inspectors {
 
   // concurrent testing against scala.App is not safe https://twitter.com/rtyley/status/340376844916387840
 

@@ -22,9 +22,10 @@ package com.madgag.git.bfg
 
 import com.madgag.git.bfg.model.{CommitNode, Footer}
 import org.eclipse.jgit.lib.PersonIdent
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class MessageFooterSpec extends FlatSpec with Matchers {
+class MessageFooterSpec extends AnyFlatSpec with Matchers {
 
   val person = new PersonIdent("Dave Eg", "dave@e.com")
 

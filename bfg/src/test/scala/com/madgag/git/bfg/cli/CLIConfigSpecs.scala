@@ -1,9 +1,10 @@
 package com.madgag.git.bfg.cli
 
 import com.madgag.git.bfg.model.FileName
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class CLIConfigSpecs extends FlatSpec with Matchers {
+class CLIConfigSpecs extends AnyFlatSpec with Matchers {
 
 
   def parse(args: String) = CLIConfig.parser.parse(args.split(' ') :+ "my-repo.git", CLIConfig()).get.filterContentPredicate

@@ -21,9 +21,11 @@
 package com.madgag.git.bfg.model
 
 import com.madgag.git.bfg.test.unpackedRepo
-import org.scalatest.{FlatSpec, Inspectors, Matchers}
+import org.scalatest.Inspectors
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class CommitSpec extends FlatSpec with Matchers with Inspectors {
+class CommitSpec extends AnyFlatSpec with Matchers with Inspectors {
   "Commit model" should "calculate the same Git commit id for any given commit" in new unpackedRepo("/sample-repos/example.git.zip") {
     forAll (commitHist()) { revCommit =>
       Commit(revCommit).id shouldBe revCommit.toObjectId

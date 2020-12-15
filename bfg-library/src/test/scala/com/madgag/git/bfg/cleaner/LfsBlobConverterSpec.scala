@@ -28,11 +28,12 @@ import com.madgag.git.test._
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.lib.ObjectId
 import org.scalatest.concurrent.Eventually
-import org.scalatest.{FlatSpec, Inspectors, Matchers, OptionValues}
-
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.{Inspectors, OptionValues}
 import scalax.file.ImplicitConversions._
 
-class LfsBlobConverterSpec extends FlatSpec with Matchers with OptionValues with Inspectors with Eventually {
+class LfsBlobConverterSpec extends AnyFlatSpec with Matchers with OptionValues with Inspectors with Eventually {
 
   "LfsBlobConverter" should "successfully shift the blob to the LFS store" in {
     implicit val repo = unpackRepo("/sample-repos/example.git.zip")

@@ -20,9 +20,10 @@
 
 package com.madgag.text
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class ByteSizeSpecs extends FlatSpec with Matchers {
+class ByteSizeSpecs extends AnyFlatSpec with Matchers {
   "Size parser" should "understand 1B" in {
     ByteSize.parse("0B") shouldBe 0
     ByteSize.parse("1B") shouldBe 1

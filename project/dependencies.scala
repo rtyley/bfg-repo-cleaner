@@ -17,15 +17,15 @@ object Dependencies {
 
   val scalaGitTest = "com.madgag.scala-git" %% "scala-git-test" % scalaGitVersion
 
-  val scalatest = "org.scalatest" %% "scalatest" % "3.0.4"
+  val scalatest = "org.scalatest" %% "scalatest" % "3.2.2"
 
   val madgagCompress = "com.madgag" % "util-compress" % "1.33"
 
   val textmatching = "com.madgag" %% "scala-textmatching" % "2.3"
 
-  val scopt = "com.github.scopt" %% "scopt" % "3.5.0"
+  val scopt = "com.github.scopt" %% "scopt" % "3.7.1"
 
-  val guava = Seq("com.google.guava" % "guava" % "19.0", "com.google.code.findbugs" % "jsr305" % "2.0.3")
+  val guava = Seq("com.google.guava" % "guava" % "30.1-jre", "com.google.code.findbugs" % "jsr305" % "2.0.3")
 
   val scalaIoFile = "com.madgag" %% "scala-io-file" % "0.4.9"
 

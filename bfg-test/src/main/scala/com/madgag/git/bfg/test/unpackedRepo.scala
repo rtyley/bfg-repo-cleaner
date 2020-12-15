@@ -7,12 +7,14 @@ import org.eclipse.jgit.lib.Constants.OBJ_BLOB
 import org.eclipse.jgit.lib.{ObjectId, ObjectReader, Repository}
 import org.eclipse.jgit.revwalk.{RevCommit, RevTree}
 import org.eclipse.jgit.treewalk.TreeWalk
+import org.scalatest.Inspectors
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import org.scalatest.matchers.{MatchResult, Matcher}
-import org.scalatest.{FlatSpec, Inspectors, Matchers}
 
 import scala.collection.convert.ImplicitConversionsToScala._
 
-class unpackedRepo(filePath: String) extends FlatSpec with Matchers {
+class unpackedRepo(filePath: String) extends AnyFlatSpec with Matchers {
 
   implicit val repo = unpackRepo(filePath)
   implicit val objectDirectory = repo.getObjectDatabase.asInstanceOf[ObjectDirectory]

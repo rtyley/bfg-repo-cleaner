@@ -24,12 +24,13 @@ import com.madgag.git.LFS.Pointer
 import com.madgag.git.test._
 import org.eclipse.jgit.lib.Constants._
 import org.eclipse.jgit.lib.ObjectInserter
-import org.scalatest.{FlatSpec, Matchers, OptionValues}
-
+import org.scalatest.OptionValues
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import scalax.file.Path
 import scalax.file.Path._
 
-class LFSSpec extends FlatSpec with Matchers with OptionValues {
+class LFSSpec extends AnyFlatSpec with Matchers with OptionValues {
   "Our implementation of Git LFS Pointers" should "create pointers that have the same Git id as the ones produced by `git lfs pointer`" in {
     val pointer = LFS.Pointer("b2893eddd9b394bfb7efadafda2ae0be02c573fdd83a70f26c781a943f3b7016", 21616)
 

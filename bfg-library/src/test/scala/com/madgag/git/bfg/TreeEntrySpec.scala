@@ -24,9 +24,10 @@ import com.madgag.git.bfg.model.{FileName, Tree}
 import org.eclipse.jgit.lib.FileMode
 import org.eclipse.jgit.lib.FileMode._
 import org.eclipse.jgit.lib.ObjectId.zeroId
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class TreeEntrySpec extends FlatSpec with Matchers {
+class TreeEntrySpec extends AnyFlatSpec with Matchers {
 
   def a(mode: FileMode, name: String) = Tree.Entry(FileName(name), mode, zeroId)
 

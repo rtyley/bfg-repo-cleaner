@@ -6,7 +6,6 @@ package object stoptrump {
   val urls = Seq(
     "https://www.aclu.org/",
     "https://www.theguardian.com/us-news/trump-administration",
-    "https://github.com/bkeepers/stop-trump",
     "https://www.rescue.org/topic/refugees-america"
   )
 
@@ -19,7 +18,7 @@ package object stoptrump {
        |
        |--
        |You can rewrite history in Git - don't let Trump do it for real!
-       |Trump's administration has lied consistently, to make people give up on ever
+       |Trump's administration has lied consistently, trying to make people give up on ever
        |being told the truth. Don't give up: $url
        |--
        |

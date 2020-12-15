@@ -25,12 +25,14 @@ import com.madgag.git.bfg.cleaner.protection.ProtectedObjectCensus
 import com.madgag.textmatching.Literal
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.revwalk.RevCommit
+import org.scalatest.Inspectors
+import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.Matcher
-import org.scalatest.{FlatSpec, Inspectors, Matchers}
+import org.scalatest.matchers.should.Matchers
 
 import scala.collection.convert.ImplicitConversionsToScala._
 
-class ObjectIdCleanerSpec extends FlatSpec with Matchers {
+class ObjectIdCleanerSpec extends AnyFlatSpec with Matchers {
   
   "cleaning" should "not have a StackOverflowError cleaning a repo with deep history" ignore new unpackedRepo("/sample-repos/deep-history.zip") {
     val dirtyCommitWithDeepHistory = "d88ac4f99511667fc0617ea026f3a0ce8a25fd07".asObjectId

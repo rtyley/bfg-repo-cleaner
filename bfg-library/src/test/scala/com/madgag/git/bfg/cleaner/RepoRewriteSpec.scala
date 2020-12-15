@@ -20,11 +20,6 @@
 
 package com.madgag.git.bfg.cleaner
 
-import java.io.StringReader
-import java.net.URLEncoder
-import java.util.Properties
-import java.util.regex.Pattern._
-
 import com.madgag.git._
 import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.cleaner.ObjectIdSubstitutor._
@@ -36,12 +31,17 @@ import org.apache.commons.io.FilenameUtils
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.util.RawParseUtils
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
+import java.io.StringReader
+import java.net.URLEncoder
+import java.util.Properties
+import java.util.regex.Pattern._
 import scala.PartialFunction.condOpt
 import scala.collection.convert.ImplicitConversionsToScala._
 
-class RepoRewriteSpec extends FlatSpec with Matchers {
+class RepoRewriteSpec extends AnyFlatSpec with Matchers {
 
   "Git repo" should "not explode" in {
     implicit val repo = unpackRepo("/sample-repos/example.git.zip")

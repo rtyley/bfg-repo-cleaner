@@ -24,9 +24,10 @@ import com.madgag.git._
 import com.madgag.git.bfg.cleaner.ObjectIdSubstitutor.hexRegex
 import com.madgag.git.test._
 import org.eclipse.jgit.lib.ObjectId
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class ObjectIdSubstitutorSpec extends FlatSpec with Matchers {
+class ObjectIdSubstitutorSpec extends AnyFlatSpec with Matchers {
 
   "Object Id Substitutor regex" should "match hex strings" in {
     "01234567890" should include regex hexRegex
