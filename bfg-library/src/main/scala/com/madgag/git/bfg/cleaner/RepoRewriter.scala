@@ -20,6 +20,7 @@
 
 package com.madgag.git.bfg.cleaner
 
+import scala.collection.parallel.CollectionConverters._
 import com.madgag.git._
 import com.madgag.git.bfg.Timing
 import org.eclipse.jgit.lib.ObjectId

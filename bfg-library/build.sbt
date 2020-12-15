@@ -1,4 +1,12 @@
 import Dependencies._
 
-libraryDependencies ++= guava :+ scalaIoFile :+ textmatching :+ scalaGit :+ jgit :+ slf4jSimple :+ scalaGitTest % "test"
+libraryDependencies ++= guava ++ Seq(
+  parCollections,
+  scalaCollectionPlus,
+  textmatching,
+  scalaGit,
+  jgit,
+  slf4jSimple,
+  scalaGitTest % Test
+)
 

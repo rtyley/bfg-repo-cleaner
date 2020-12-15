@@ -68,6 +68,6 @@ case class ProtectedObjectDirtReport(revObject: RevObject, originalTreeOrBlob: R
     tw.addTree(originalTreeOrBlob.asRevTree)
     tw.addTree(newId.asRevTree)
     tw.setFilter(TreeFilter.ANY_DIFF)
-    DiffEntry.scan(tw).filterNot(_.getChangeType == ADD)
+    DiffEntry.scan(tw).filterNot(_.getChangeType == ADD).toSeq
   }
 }

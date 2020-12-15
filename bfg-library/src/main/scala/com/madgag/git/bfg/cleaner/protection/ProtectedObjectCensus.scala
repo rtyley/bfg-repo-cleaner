@@ -23,6 +23,7 @@ package com.madgag.git.bfg.cleaner.protection
 import com.madgag.git._
 import org.eclipse.jgit.lib.{ObjectId, Repository}
 import org.eclipse.jgit.revwalk._
+import com.madgag.scala.collection.decorators._
 
 /**
  * PROTECTING TREES :
@@ -72,7 +73,7 @@ object ProtectedObjectCensus {
     // blobs come from direct blob references and tag references
     // trees come from direct tree references, commit & tag references
 
-    val treeAndBlobProtection = objectProtection.keys.groupBy(treeOrBlobPointedToBy).mapValues(_.toSet) // use Either?
+    val treeAndBlobProtection = objectProtection.keys.groupUp(treeOrBlobPointedToBy)(_.toSet) // use Either?
 
     val directBlobProtection = treeAndBlobProtection collect {
       case (Left(blob), p) => blob.getId -> p
@@ -80,7 +81,7 @@ object ProtectedObjectCensus {
     val treeProtection = treeAndBlobProtection collect {
       case (Right(tree), p) => tree -> p
     }
-    val indirectBlobProtection = treeProtection.keys.flatMap(tree => allBlobsUnder(tree).map(_ -> tree)).groupBy(_._1).mapValues(_.map(_._2).toSet)
+    val indirectBlobProtection = treeProtection.keys.flatMap(tree => allBlobsUnder(tree).map(_ -> tree)).groupUp(_._1)(_.map(_._2).toSet)
 
     ProtectedObjectCensus(objectProtection, treeProtection, directBlobProtection, indirectBlobProtection)
   }

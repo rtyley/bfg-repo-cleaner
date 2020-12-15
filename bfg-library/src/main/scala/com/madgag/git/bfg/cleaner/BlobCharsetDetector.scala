@@ -20,34 +20,36 @@
 
 package com.madgag.git.bfg.cleaner
 
+import com.google.common.io.ByteStreams
+import com.google.common.io.ByteStreams.toByteArray
+import com.madgag.git.bfg.model.TreeBlobEntry
+import org.eclipse.jgit.diff.RawText
+import org.eclipse.jgit.lib.ObjectLoader
+
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.charset.CodingErrorAction._
-
-import com.madgag.git.bfg.model.TreeBlobEntry
-import org.eclipse.jgit.diff.RawText
-import org.eclipse.jgit.lib.ObjectStream
-
-import scala.util.Try
-import scalax.io.managed.InputStreamResource
+import scala.util.{Try, Using}
 
 
 trait BlobCharsetDetector {
   // should return None if this is a binary file that can not be converted to text
-  def charsetFor(entry: TreeBlobEntry, streamResource: InputStreamResource[ObjectStream]): Option[Charset]
+  def charsetFor(entry: TreeBlobEntry, objectLoader: ObjectLoader): Option[Charset]
 }
 
 
 object QuickBlobCharsetDetector extends BlobCharsetDetector {
 
-  val CharSets = Seq(Charset.forName("UTF-8"), Charset.defaultCharset(), Charset.forName("ISO-8859-1")).distinct
+  val CharSets: Seq[Charset] =
+    Seq(Charset.forName("UTF-8"), Charset.defaultCharset(), Charset.forName("ISO-8859-1")).distinct
 
-  def charsetFor(entry: TreeBlobEntry, streamResource: InputStreamResource[ObjectStream]): Option[Charset] =
-    Some(streamResource.bytes.take(8000).toArray).filterNot(RawText.isBinary).flatMap {
+  def charsetFor(entry: TreeBlobEntry, objectLoader: ObjectLoader): Option[Charset] = {
+    Using(ByteStreams.limit(objectLoader.openStream(), 8000))(toByteArray).toOption.filterNot(RawText.isBinary).flatMap {
       sampleBytes =>
         val b = ByteBuffer.wrap(sampleBytes)
         CharSets.find(cs => Try(decode(b, cs)).isSuccess)
     }
+  }
 
   private def decode(b: ByteBuffer, charset: Charset) {
     charset.newDecoder.onMalformedInput(REPORT).onUnmappableCharacter(REPORT).decode(b)

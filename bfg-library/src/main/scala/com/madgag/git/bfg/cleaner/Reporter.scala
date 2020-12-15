@@ -1,10 +1,9 @@
 package com.madgag.git.bfg.cleaner
 
-import java.text.SimpleDateFormat
-import java.util.Date
-
+import com.google.common.io.Files.asCharSink
 import com.madgag.collection.concurrent.ConcurrentMultiMap
 import com.madgag.git._
+import com.madgag.git.bfg.cleaner.Reporter.dump
 import com.madgag.git.bfg.cleaner.protection.{ProtectedObjectCensus, ProtectedObjectDirtReport}
 import com.madgag.git.bfg.model.FileName
 import com.madgag.text.Text._
@@ -16,17 +15,30 @@ import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import org.eclipse.jgit.transport.ReceiveCommand
 
+import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.file.Files.createDirectories
+import java.nio.file.Path
+import java.time.ZonedDateTime
 import scala.collection.convert.ImplicitConversions._
 import scala.collection.immutable.SortedMap
-import scalax.file.Path
+import scala.jdk.CollectionConverters._
+
+
+object Reporter {
+  def dump(path: Path, iter: Iterable[String]): Unit = {
+    val sink = asCharSink(path.toFile, UTF_8)
+
+    sink.writeLines(iter.asJava, "\n")
+  }
+}
 
 trait Reporter {
 
   val progressMonitor: ProgressMonitor
 
-  def reportRefsForScan(allRefs: Traversable[Ref])(implicit objReader: ObjectReader)
+  def reportRefsForScan(allRefs: Iterable[Ref])(implicit objReader: ObjectReader)
 
-  def reportRefUpdateStart(refUpdateCommands: Traversable[ReceiveCommand])
+  def reportRefUpdateStart(refUpdateCommands: Iterable[ReceiveCommand])
 
   def reportObjectProtection(objectIdCleanerConfig: ObjectIdCleaner.Config)(implicit objectDB: ObjectDatabase, revWalk: RevWalk)
 
@@ -38,16 +50,21 @@ trait Reporter {
 class CLIReporter(repo: Repository) extends Reporter {
 
   lazy val reportsDir = {
-    val now = new Date()
-    def format(s: String) = new SimpleDateFormat(s).format(now)
-    val dir = Path.fromString(repo.topDirectory.getAbsolutePath + ".bfg-report") / format("yyyy-MM-dd") / format("HH-mm-ss")
-    dir.doCreateDirectory()
+    val now = ZonedDateTime.now()
+
+    val topDirPath = repo.topDirectory.toPath.toAbsolutePath
+
+    val reportsDir = topDirPath.resolveSibling(s"${topDirPath.getFileName}.bfg-report")
+
+    val dir = reportsDir.resolve(now.formatted("yyyy-MM-dd")).resolve(now.formatted("HH-mm-ss"))
+
+    createDirectories(dir)
     dir
   }
 
   lazy val progressMonitor = new TextProgressMonitor
 
-  def reportRefUpdateStart(refUpdateCommands: Traversable[ReceiveCommand]) {
+  def reportRefUpdateStart(refUpdateCommands: Iterable[ReceiveCommand]) {
     println(title("Updating " + plural(refUpdateCommands, "Ref")))
 
     val summaryTableCells = refUpdateCommands.map(update => (update.getRefName, update.getOldId.shortName, update.getNewId.shortName))
@@ -57,7 +74,7 @@ class CLIReporter(repo: Repository) extends Reporter {
     println
   }
 
-  def reportRefsForScan(allRefs: Traversable[Ref])(implicit objReader: ObjectReader) {
+  def reportRefsForScan(allRefs: Iterable[Ref])(implicit objReader: ObjectReader) {
     val refsByObjType = allRefs.groupBy {
       ref => objReader.open(ref.getObjectId).getType
     } withDefault Seq.empty
@@ -107,8 +124,8 @@ class CLIReporter(repo: Repository) extends Reporter {
       (d.path +: extraInfo.toSeq).mkString(" ")
     }
 
-    val protectedDirtDir = reportsDir / "protected-dirt"
-    protectedDirtDir.doCreateDirectory()
+    val protectedDirtDir = reportsDir.resolve("protected-dirt")
+    createDirectories(protectedDirtDir)
 
     val reports = ProtectedObjectDirtReport.reportsFor(objectIdCleanerConfig, objectDB)
 
@@ -128,10 +145,13 @@ class CLIReporter(repo: Repository) extends Reporter {
                 dirtyFile => println("\t- " + dirtyFile)
               }
 
-              val protectorRefsFileNameSafe = protectorRevs.mkString("_").replace(protectedDirtDir.separator, "-")
-              val diffFile = protectedDirtDir / s"${report.revObject.shortName}-${protectorRefsFileNameSafe}.csv"
+              val protectorRefsFileNameSafe: String = protectorRevs.mkString("_").replace(
+                protectedDirtDir.getFileSystem.getSeparator,
+                "-"
+              )
+              val diffFile = protectedDirtDir.resolve(s"${report.revObject.shortName}-$protectorRefsFileNameSafe.csv")
 
-              diffFile.writeStrings(diffEntries.map {
+              dump(diffFile, diffEntries.map {
                 diffEntry =>
                   val de = diffDetails(diffEntry)
 
@@ -140,7 +160,7 @@ class CLIReporter(repo: Repository) extends Reporter {
                   val elems = Seq(de.id.name, diffEntry.getChangeType.name, de.mode.name, de.path, de.size.getOrElse(""), modifiedLines.getOrElse(""))
 
                   elems.mkString(",")
-              }, "\n")
+              })
               }
             }
         }
@@ -154,7 +174,7 @@ class CLIReporter(repo: Repository) extends Reporter {
       |
       |Details of protected dirty content have been recorded here :
       |
-      |${protectedDirtDir.path + protectedDirtDir.separator}
+      |${protectedDirtDir.toAbsolutePath.toString + protectedDirtDir.getFileSystem.getSeparator}
       |
       |If you *really* want this content gone, make a manual commit that removes it,
       |and then run the BFG on a fresh copy of your repo.
@@ -209,8 +229,8 @@ class CLIReporter(repo: Repository) extends Reporter {
 
     reportTreeDirtHistory()
 
-    lazy val mapFile = reportsDir / "object-id-map.old-new.txt"
-    lazy val cacheStatsFile = reportsDir / "cache-stats.txt"
+    lazy val mapFile: Path = reportsDir.resolve("object-id-map.old-new.txt")
+    lazy val cacheStatsFile: Path = reportsDir.resolve("cache-stats.txt")
 
     val changedIds = objectIdCleaner.cleanedObjectMap()
 
@@ -226,9 +246,11 @@ class CLIReporter(repo: Repository) extends Reporter {
         println(title(s"$actionType files"))
         Tables.formatTable(tableTitles, dataByFilename.map(f).toSeq).map("\t" + _).foreach(println)
 
-        (reportsDir / s"${actionType.toLowerCase}-files.txt").writeStrings(dataByFilename.flatMap {
+        val actionFile = reportsDir.resolve(s"${actionType.toLowerCase}-files.txt")
+
+        dump(actionFile, dataByFilename.flatMap {
           case (filename, changes) => changes.map(fi.andThen(fid => (fid :+ filename).mkString(" ")))
-        }, "\n")
+        })
       }
     }
 
@@ -242,11 +264,11 @@ class CLIReporter(repo: Repository) extends Reporter {
       case (filename, oldIds) => (filename, Text.abbreviate(oldIds.map(oldId => oldId.shortName + oldId.sizeOpt.map(size => s" (${ByteSize.format(size)})").mkString), "...").mkString(", "))
     } { oldId => Seq(oldId.name, oldId.sizeOpt.mkString) }
 
-    println(s"\n\nIn total, ${changedIds.size} object ids were changed. Full details are logged here:\n\n\t${reportsDir.path}")
+    println(s"\n\nIn total, ${changedIds.size} object ids were changed. Full details are logged here:\n\n\t$reportsDir")
 
-    mapFile.writeStrings(SortedMap[AnyObjectId, ObjectId](changedIds.toSeq: _*).view.map { case (o,n) => s"${o.name} ${n.name}"}, "\n")
+    dump(mapFile,SortedMap[AnyObjectId, ObjectId](changedIds.toSeq: _*).view.map { case (o,n) => s"${o.name} ${n.name}"})
 
-    cacheStatsFile.writeStrings(objectIdCleaner.stats().seq.map(_.toString()), "\n")
+    dump(cacheStatsFile,objectIdCleaner.stats().seq.map(_.toString()))
 
     println("\nBFG run is complete! When ready, run: git reflog expire --expire=now --all && git gc --prune=now --aggressive")
 

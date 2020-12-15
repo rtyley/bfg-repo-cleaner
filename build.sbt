@@ -3,9 +3,9 @@ import common._
 
 organization in ThisBuild := "com.madgag"
 
-scalaVersion in ThisBuild := "2.12.12"
+scalaVersion in ThisBuild := "2.13.4"
 
-scalacOptions in ThisBuild ++= Seq("-deprecation", "-feature", "-language:postfixOps")
+scalacOptions in ThisBuild ++= Seq("-feature", "-language:postfixOps")
 
 licenses in ThisBuild := Seq("GPLv3" -> url("http://www.gnu.org/licenses/gpl-3.0.html"))
 

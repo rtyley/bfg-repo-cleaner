@@ -31,7 +31,10 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{Inspectors, OptionValues}
-import scalax.file.ImplicitConversions._
+import com.madgag.git.bfg.model._
+
+import java.nio.file.Files.readAllBytes
+import java.nio.file.{Files, Path}
 
 class LfsBlobConverterSpec extends AnyFlatSpec with Matchers with OptionValues with Inspectors with Eventually {
 
@@ -97,13 +100,13 @@ class LfsBlobConverterSpec extends AnyFlatSpec with Matchers with OptionValues w
 
     val pointer = Pointer.parse(pointerObjectId.open.getCachedBytes)
 
-    val lfsStoredFile = repo.getDirectory / "lfs" / "objects" / pointer.path
+    val lfsStoredFile: Path = repo.getDirectory.toPath.resolve(Seq("lfs", "objects") ++ pointer.path)
 
-    lfsStoredFile.exists shouldBe true
+    Files.exists(lfsStoredFile) shouldBe true
 
-    lfsStoredFile.size.value shouldBe pointer.blobSize
+    Files.size(lfsStoredFile) shouldBe pointer.blobSize
 
-    eventually { lfsStoredFile.bytes.toArray.blobId } shouldBe originalFileId
+    eventually { readAllBytes(lfsStoredFile).blobId } shouldBe originalFileId
   }
 
   def verifyPointersForChangedFiles(diff: MapDiff[FileName, (BlobFileMode, ObjectId)])(implicit repo: FileRepository) = {

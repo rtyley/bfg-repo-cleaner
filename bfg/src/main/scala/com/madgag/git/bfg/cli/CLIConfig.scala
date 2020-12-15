@@ -20,8 +20,7 @@
 
 package com.madgag.git.bfg.cli
 
-import java.io.File
-
+import com.google.common.io.CharSource
 import com.madgag.git.bfg.BuildInfo
 import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.cleaner._
@@ -38,7 +37,9 @@ import org.eclipse.jgit.lib._
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import scopt.{OptionParser, Read}
 
-import scalax.file.ImplicitConversions._
+import java.io.File
+import java.nio.file.Files
+import scala.jdk.CollectionConverters._
 
 
 object CLIConfig {
@@ -54,6 +55,8 @@ object CLIConfig {
       }
     }
 
+    def readLinesFrom(v: File): Seq[String] = Files.readAllLines(v.toPath).asScala.toSeq
+
     val exactVersion = BuildInfo.version + (if (BuildInfo.version.contains("-SNAPSHOT")) s" (${BuildInfo.gitDescription})" else "")
 
     head("bfg", exactVersion)
@@ -66,7 +69,8 @@ object CLIConfig {
       (v, c) => c.copy(stripBiggestBlobs = Some(v))
     }
     opt[File]("strip-blobs-with-ids").abbr("bi").valueName("<blob-ids-file>").text("strip blobs with the specified Git object ids").action {
-      (v, c) => c.copy(stripBlobsWithIds = Some(v.lines().map(_.trim).filterNot(_.isEmpty).map(_.asObjectId).toSet))
+      (v, c) =>
+        c.copy(stripBlobsWithIds = Some(readLinesFrom(v).map(_.trim).filterNot(_.isEmpty).map(_.asObjectId).toSet))
     }
     fileMatcher("delete-files").abbr("D").text("delete files with the specified names (eg '*.class', '*.{txt,log}' - matches on file name, not path within repo)").action {
       (v, c) => c.copy(deleteFiles = Some(v))
@@ -80,7 +84,7 @@ object CLIConfig {
     opt[File]("replace-text").abbr("rt").valueName("<expressions-file>").text("filter content of files, replacing matched text. Match expressions should be listed in the file, one expression per line - " +
       "by default, each expression is treated as a literal, but 'regex:' & 'glob:' prefixes are supported, with '==>' to specify a replacement " +
       "string other than the default of '***REMOVED***'.").action {
-      (v, c) => c.copy(textReplacementExpressions = v.lines().filterNot(_.trim.isEmpty).toSeq)
+      (v, c) => c.copy(textReplacementExpressions = readLinesFrom(v).filterNot(_.trim.isEmpty))
     }
     fileMatcher("filter-content-including").abbr("fi").text("do file-content filtering on files that match the specified expression (eg '*.{txt,properties}')").action {
       (v, c) => c.copy(filenameFilters = c.filenameFilters :+ Include(v))
@@ -117,7 +121,7 @@ object CLIConfig {
 
         c.copy(fixFilenameDuplicatesPreferring = ord)
     }
-    arg[File]("<repo>") optional() action { (x, c) =>
+    arg[File]("<repo>").optional().action { (x, c) =>
       c.copy(repoLocation = x) } text("file path for Git repository to clean")
   }
 }
@@ -130,7 +134,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      fixFilenameDuplicatesPreferring: Option[Ordering[FileMode]] = None,
                      filenameFilters: Seq[Filter[String]] = Nil,
                      filterSizeThreshold: Long = BlobTextModifier.DefaultSizeThreshold,
-                     textReplacementExpressions: Traversable[String] = List.empty,
+                     textReplacementExpressions: Iterable[String] = List.empty,
                      stripBlobsWithIds: Option[Set[ObjectId]] = None,
                      lfsConversion: Option[String] = None,
                      strictObjectChecking: Boolean = false,
@@ -152,7 +156,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   lazy val folderDeletion: Option[Cleaner[TreeSubtrees]] = deleteFolders.map {
     textMatcher => { subtrees: TreeSubtrees =>
-      TreeSubtrees(subtrees.entryMap.filterKeys(filename => !textMatcher(filename)))
+      TreeSubtrees(subtrees.entryMap.view.filterKeys(filename => !textMatcher(filename)).toMap)
     }
   }
 

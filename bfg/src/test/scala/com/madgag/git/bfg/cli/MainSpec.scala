@@ -22,12 +22,14 @@ package com.madgag.git.bfg.cli
 
 import com.madgag.git._
 import com.madgag.git.bfg.cli.test.unpackedRepo
+import com.madgag.git.bfg.model._
 import org.eclipse.jgit.lib.ObjectId
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{Inspectors, OptionValues}
-import scalax.file.ImplicitConversions._
-import scalax.file.Path
+
+import java.nio.file.Files
+import scala.jdk.CollectionConverters._
 
 class MainSpec extends AnyFlatSpec with Matchers with OptionValues with Inspectors {
 
@@ -51,18 +53,18 @@ class MainSpec extends AnyFlatSpec with Matchers with OptionValues with Inspecto
   }
 
   "removing big blobs" should "definitely still remove blobs even if they have identical size" in new unpackedRepo("/sample-repos/moreThanOneBigBlobWithTheSameSize.git.zip") {
-    ensureRemovalOfBadEggs(packedBlobsOfSize(1024), (contain allElementsOf Set(abbrId("06d7"), abbrId("cb2c"))).matcher[Traversable[ObjectId]]) {
+    ensureRemovalOfBadEggs(packedBlobsOfSize(1024), (contain allElementsOf Set(abbrId("06d7"), abbrId("cb2c"))).matcher[Iterable[ObjectId]]) {
       run("--strip-blobs-bigger-than 512B")
     }
   }
 
   "converting to Git LFS" should "create a file in lfs/objects" in new unpackedRepo("/sample-repos/repoWithBigBlobs.git.zip") {
-    ensureRemovalOfBadEggs(packedBlobsOfSize(11238), (contain only abbrId("596c")).matcher[Traversable[ObjectId]]) {
+    ensureRemovalOfBadEggs(packedBlobsOfSize(11238), (contain only abbrId("596c")).matcher[Iterable[ObjectId]]) {
       run("--convert-to-git-lfs *.png --no-blob-protection")
     }
-    val lfsFile = repo.getDirectory / "lfs" / "objects" / "e0" / "eb" / "e0ebd49837a1cced34b9e7d3ff2fa68a8100df8f158f165ce139e366a941ba6e"
+    val lfsFile = repo.getDirectory.toPath.resolve(Seq("lfs", "objects", "e0", "eb", "e0ebd49837a1cced34b9e7d3ff2fa68a8100df8f158f165ce139e366a941ba6e"))
 
-    lfsFile.size.value shouldBe 11238
+    Files.size(lfsFile) shouldBe 11238
   }
 
   "removing a folder named '.git'" should "work" in new unpackedRepo("/sample-repos/badRepoContainingDotGitFolder.git.zip") {
@@ -91,11 +93,11 @@ class MainSpec extends AnyFlatSpec with Matchers with OptionValues with Inspecto
     implicit val r = reader
 
     val badBlobs = Set(abbrId("db59"), abbrId("86f9"))
-    val blobIdsFile = Path.createTempFile()
-    blobIdsFile.writeStrings(badBlobs.map(_.name()), "\n")
+    val blobIdsFile = Files.createTempFile("test-strip-blobs",".ids")
+    Files.write(blobIdsFile, badBlobs.map(_.name()).asJava)
 
     ensureRemovalFrom(commitHist()).ofCommitsThat(haveCommitWhereObjectIds(contain(abbrId("db59")))) {
-      run(s"--strip-blobs-with-ids ${blobIdsFile.path}")
+      run(s"--strip-blobs-with-ids ${blobIdsFile}")
     }
   }
 

@@ -68,7 +68,7 @@ class unpackedRepo(filePath: String) extends AnyFlatSpec with Matchers {
     if (specificRefs.isEmpty) logCommand.all else specificRefs.foldLeft(logCommand)((lc, ref) => lc.add(repo.resolve(ref)))
   }.call.toSeq.reverse
 
-  def haveCommitWhereObjectIds(boom: Matcher[Traversable[ObjectId]])(implicit reader: ObjectReader): Matcher[RevCommit] = boom compose {
+  def haveCommitWhereObjectIds(boom: Matcher[Iterable[ObjectId]])(implicit reader: ObjectReader): Matcher[RevCommit] = boom compose {
     (c: RevCommit) => c.getTree.walk().map(_.getObjectId(0)).toSeq
   }
 
@@ -84,7 +84,7 @@ class unpackedRepo(filePath: String) extends AnyFlatSpec with Matchers {
     r: Repository => commitHist(refs:_*)(r)
   }
 
-  def ensureRemovalOfBadEggs[S,T](expr : => Traversable[S], exprResultMatcher: Matcher[Traversable[S]])(block: => T) = {
+  def ensureRemovalOfBadEggs[S,T](expr : => Iterable[S], exprResultMatcher: Matcher[Iterable[S]])(block: => T) = {
     gc()
     expr should exprResultMatcher
 

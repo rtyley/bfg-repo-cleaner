@@ -20,19 +20,36 @@
 
 package com.madgag.git.bfg.cleaner
 
-import java.io.ByteArrayOutputStream
+import com.google.common.io.{ByteSink, ByteSource, ByteStreams, CharSink, CharStreams}
+import com.madgag.git.bfg.model._
 
+import java.io.{ByteArrayOutputStream, InputStream}
 import com.madgag.git.ThreadLocalObjectDatabaseResources
 import com.madgag.git.bfg.model.TreeBlobEntry
 import org.eclipse.jgit.lib.Constants.OBJ_BLOB
+import org.eclipse.jgit.lib.ObjectLoader
 
-import scalax.io.Resource
+import java.nio.charset.Charset
+import java.util.Scanner
+import java.util.regex.Pattern
+import scala.jdk.CollectionConverters.IterableHasAsJava
 
 
 object BlobTextModifier {
 
   val DefaultSizeThreshold: Long = 1024 * 1024
 
+  val pat: Pattern = Pattern.compile(".*\\R|.+\\z")
+
+  def wrappy(objectLoader: ObjectLoader, charset: Charset): Iterable[String] = new Iterable[String] {
+    override def iterator: Iterator[String] = new Iterator[String] {
+      val scanner = new Scanner(objectLoader.openStream(), charset.name())
+
+      override def hasNext: Boolean = scanner.hasNext
+
+      override def next(): String = scanner.findWithinHorizon(pat,0)
+    }
+  }
 }
 
 trait BlobTextModifier extends TreeBlobModifier {
@@ -50,17 +67,13 @@ trait BlobTextModifier extends TreeBlobModifier {
     def filterTextIn(e: TreeBlobEntry, lineCleaner: String => String): TreeBlobEntry = {
       def isDirty(line: String) = lineCleaner(line) != line
 
+      val loader = threadLocalObjectDBResources.reader().open(e.objectId)
       val opt = for {
-        loader         <- Some(threadLocalObjectDBResources.reader().open(e.objectId))
-        if loader.getSize < sizeThreshold
-        streamResource <- Some(Resource.fromInputStream(loader.openStream()))
-        charset        <- charsetDetector.charsetFor(e, streamResource)
-        reader         <- Some(streamResource.reader(charset))
-        lines = reader.lines(includeTerminator = true)
-        if lines.exists(isDirty)
+        charset <- charsetDetector.charsetFor(e, loader) if loader.getSize < sizeThreshold
+        lines: Iterable[String] = BlobTextModifier.wrappy(loader, charset) if lines.exists(isDirty)
       } yield {
         val b = new ByteArrayOutputStream(loader.getSize.toInt)
-        lines.view.map(lineCleaner).foreach(line => b.write(line.getBytes(charset)))
+        lines.map(lineCleaner).foreach(line => b.write(line.getBytes(charset)))
         val oid = threadLocalObjectDBResources.inserter().insert(OBJ_BLOB, b.toByteArray)
         e.copy(objectId = oid)
       }

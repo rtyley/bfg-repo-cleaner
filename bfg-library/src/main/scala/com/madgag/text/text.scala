@@ -20,11 +20,9 @@
 
 package com.madgag.text
 
-import scala.collection.GenTraversableOnce
-
 object Text {
 
-  def abbreviate[A](elems: Traversable[A], truncationToken: A, maxElements: Int = 3) = {
+  def abbreviate[A](elems: Iterable[A], truncationToken: A, maxElements: Int = 3) = {
     val firstElems = elems.take(maxElements + 1)
     if (firstElems.size > maxElements) {
       firstElems.take(maxElements-1).toSeq :+ truncationToken
@@ -33,5 +31,5 @@ object Text {
     }
   }
 
-  def plural[A](list: GenTraversableOnce[A], noun: String) = list.size + " " + noun + (if (list.size == 1) "" else "s")
+  def plural[A](list: Iterable[A], noun: String) = list.size + " " + noun + (if (list.size == 1) "" else "s")
 }

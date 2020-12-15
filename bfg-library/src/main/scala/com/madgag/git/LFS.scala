@@ -20,34 +20,34 @@
 
 package com.madgag.git
 
-import java.nio.charset.Charset
-import java.security.{DigestOutputStream, MessageDigest}
-
 import com.google.common.base.Splitter
 import com.madgag.git.bfg.model.FileName
 import org.apache.commons.codec.binary.Hex._
 import org.eclipse.jgit.lib.ObjectLoader
 
+import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.charset.{Charset, StandardCharsets}
+import java.nio.file.{Files, Path}
+import java.security.{DigestOutputStream, MessageDigest}
 import scala.collection.JavaConverters._
-import scalax.file.Path
-import scalax.file.defaultfs.DefaultPath
+import scala.util.Using
 
 object LFS {
 
-  val ObjectsPath = Path("lfs" , "objects")
+  val ObjectsPath: Seq[String] = Seq("lfs" , "objects")
 
-  val PointerCharset = Charset.forName("UTF-8")
+  val PointerCharset: Charset = UTF_8
 
   case class Pointer(shaHex: String, blobSize: Long) {
 
-    lazy val text = s"""|version https://git-lfs.github.com/spec/v1
-                        |oid sha256:$shaHex
-                        |size $blobSize
-                        |""".stripMargin
+    lazy val text: String = s"""|version https://git-lfs.github.com/spec/v1
+                                |oid sha256:$shaHex
+                                |size $blobSize
+                                |""".stripMargin
 
-    lazy val bytes = text.getBytes(PointerCharset)
+    lazy val bytes: Array[Byte] = text.getBytes(PointerCharset)
 
-    lazy val path = Path(shaHex.substring(0, 2), shaHex.substring(2, 4), shaHex)
+    lazy val path: Seq[String] = Seq(shaHex.substring(0, 2), shaHex.substring(2, 4), shaHex)
   }
 
   object Pointer {
@@ -65,12 +65,12 @@ object LFS {
 
   val GitAttributesFileName = FileName(".gitattributes")
 
-  def pointerFor(loader: ObjectLoader, tmpFile: DefaultPath) = {
+  def pointerFor(loader: ObjectLoader, tmpFile: Path) = {
     val digest = MessageDigest.getInstance("SHA-256")
 
-    for {
-      outStream <- tmpFile.outputStream()
-    } loader.copyTo(new DigestOutputStream(outStream, digest))
+    Using(Files.newOutputStream(tmpFile)) { outStream =>
+      loader.copyTo(new DigestOutputStream(outStream, digest))
+    }
 
     Pointer(encodeHexString(digest.digest()), loader.getSize)
   }

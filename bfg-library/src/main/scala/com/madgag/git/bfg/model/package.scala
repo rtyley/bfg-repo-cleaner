@@ -20,11 +20,27 @@
 
 package com.madgag.git.bfg
 
+import com.google.common.io.ByteSource
+import com.madgag.git.LFS
+import org.eclipse.jgit.lib.ObjectLoader
 import org.eclipse.jgit.revwalk.RevCommit
+
+import java.io.InputStream
+import java.nio.file.Path
 
 
 package object model {
   implicit class RichRevCommit(revCommit: RevCommit) {
-    lazy val arcs = CommitArcs(revCommit.getParents, revCommit.getTree)
+    lazy val arcs: CommitArcs = CommitArcs(revCommit.getParents, revCommit.getTree)
+  }
+
+  implicit class RichPath(path: Path) {
+    def resolve(pathSegments: Seq[String]): Path = pathSegments.foldLeft(path)(_ resolve _)
+  }
+
+  implicit class RichObjectLoader(objectLoader: ObjectLoader) {
+    lazy val asByteSource = new ByteSource {
+      override def openStream(): InputStream = objectLoader.openStream()
+    }
   }
 }

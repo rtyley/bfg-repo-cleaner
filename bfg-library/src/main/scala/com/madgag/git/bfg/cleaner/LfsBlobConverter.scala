@@ -20,8 +20,7 @@
 
 package com.madgag.git.bfg.cleaner
 
-import java.nio.charset.Charset
-
+import com.google.common.io.ByteSource
 import com.madgag.git.LFS._
 import com.madgag.git._
 import com.madgag.git.bfg.model._
@@ -30,17 +29,17 @@ import com.madgag.textmatching.{Glob, TextMatcher}
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.lib.{ObjectId, ObjectReader}
 
-import scala.util.Try
-import scalax.file.ImplicitConversions._
-import scalax.file.Path.createTempFile
-import scalax.io.JavaConverters._
+import java.nio.charset.Charset
+import java.nio.file.{Files, Path}
+import scala.jdk.StreamConverters._
+import scala.util.{Try, Using}
 
 class LfsBlobConverter(
   lfsGlobExpression: String,
   repo: FileRepository
 ) extends TreeBlobModifier {
 
-  val lfsObjectsDir = repo.getDirectory / LFS.ObjectsPath
+  val lfsObjectsDir: Path = repo.getDirectory.toPath.resolve(LFS.ObjectsPath)
 
   val threadLocalObjectDBResources = repo.getObjectDatabase.threadLocalResources
 
@@ -67,11 +66,12 @@ class LfsBlobConverter(
     } {
       case (_, oldGitAttributesId) =>
         val objectLoader = threadLocalObjectDBResources.reader().open(oldGitAttributesId)
-        val oldAttributes = objectLoader.getCachedBytes.asInput.lines().toSeq
-
-        if (oldAttributes.contains(gitAttributesLine)) oldGitAttributesId else {
-          storeBlob((oldAttributes :+ gitAttributesLine).mkString("\n"))
-        }
+        Using(ByteSource.wrap(objectLoader.getCachedBytes).asCharSource(UTF_8).lines()) { oldAttributesStream =>
+          val oldAttributes = oldAttributesStream.toScala(Seq)
+          if (oldAttributes.contains(gitAttributesLine)) oldGitAttributesId else {
+            storeBlob((oldAttributes :+ gitAttributesLine).mkString("\n"))
+          }
+        }.get
     }
     cleanedBlobs.copy(entryMap = cleanedBlobs.entryMap + (GitAttributesFileName -> (RegularFile, newGitAttributesId)))
   }
@@ -94,17 +94,17 @@ class LfsBlobConverter(
   def tryStoringLfsFileFor(blobId: ObjectId)(implicit r: ObjectReader): Try[Pointer] = {
     val loader = blobId.open
     
-    val tmpFile = createTempFile(s"bfg.git-lfs.conv-${blobId.name}")
+    val tmpFile: Path = Files.createTempFile(s"bfg.git-lfs.conv-${blobId.name}","dat")
     
     val pointer = pointerFor(loader, tmpFile)
 
-    val lfsPath = lfsObjectsDir / pointer.path
+    val lfsPath = lfsObjectsDir.resolve(pointer.path)
 
-    val ensureLfsFile = Try(if (!lfsPath.exists) tmpFile moveTo lfsPath).recover {
-      case _ if lfsPath.size.contains(loader.getSize) =>
+    val ensureLfsFile = Try(if (!Files.exists(lfsPath)) Files.move(tmpFile, lfsPath)).recover {
+      case _ if Files.exists(lfsPath) && Files.size(lfsPath) == loader.getSize =>
     }
 
-    Try(tmpFile.delete(force = true))
+    Try(Files.deleteIfExists(tmpFile))
 
     ensureLfsFile.map(_ => pointer)
   }
