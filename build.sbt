@@ -1,7 +1,5 @@
 import Dependencies._
 import common._
-import Defaults._
-import com.typesafe.sbt.pgp.PgpKeys._
 
 organization in ThisBuild := "com.madgag"
 
@@ -19,10 +17,6 @@ libraryDependencies in ThisBuild += scalatest % "test"
 
 lazy val root = Project(id = "bfg-parent", base = file(".")) aggregate (bfg, bfgTest, bfgLibrary)
 
-releaseSignedArtifactsSettings
-
-publishSigned := {}
-
 lazy val bfgTest = bfgProject("bfg-test")
 
 lazy val bfgLibrary = bfgProject("bfg-library") dependsOn(bfgTest % "test")
@@ -33,8 +27,7 @@ lazy val bfgBenchmark = bfgProject("bfg-benchmark")
 
 publishMavenStyle in ThisBuild := true
 
-publishTo in ThisBuild :=
-  Some(if (isSnapshot.value) Opts.resolver.sonatypeSnapshots else Opts.resolver.sonatypeStaging)
+publishTo in ThisBuild := sonatypePublishToBundle.value
 
 pomIncludeRepository in ThisBuild := { _ => false }
 
