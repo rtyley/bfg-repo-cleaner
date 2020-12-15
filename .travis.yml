@@ -1,10 +1,10 @@
 language: scala
-dist: trusty
+dist: xenial
 scala:
-   - 2.11.11
+   - 2.12.12
 
 jdk:
-  - oraclejdk8
+  - openjdk8
 
 # These directories are cached to S3 at the end of the build
 cache:
