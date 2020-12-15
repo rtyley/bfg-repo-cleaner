@@ -20,13 +20,14 @@
 
 package com.madgag.git.bfg.cleaner
 
-import java.io.ByteArrayOutputStream
-
 import com.madgag.git.ThreadLocalObjectDatabaseResources
 import com.madgag.git.bfg.model.TreeBlobEntry
+import com.madgag.linesplitting.LineBreakPreservingIterator
 import org.eclipse.jgit.lib.Constants.OBJ_BLOB
+import org.eclipse.jgit.lib.ObjectLoader
 
-import scalax.io.Resource
+import java.io.{ByteArrayOutputStream, InputStreamReader}
+import java.nio.charset.Charset
 
 
 object BlobTextModifier {
@@ -50,17 +51,13 @@ trait BlobTextModifier extends TreeBlobModifier {
     def filterTextIn(e: TreeBlobEntry, lineCleaner: String => String): TreeBlobEntry = {
       def isDirty(line: String) = lineCleaner(line) != line
 
+      val loader = threadLocalObjectDBResources.reader().open(e.objectId)
       val opt = for {
-        loader         <- Some(threadLocalObjectDBResources.reader().open(e.objectId))
-        if loader.getSize < sizeThreshold
-        streamResource <- Some(Resource.fromInputStream(loader.openStream()))
-        charset        <- charsetDetector.charsetFor(e, streamResource)
-        reader         <- Some(streamResource.reader(charset))
-        lines = reader.lines(includeTerminator = true)
-        if lines.exists(isDirty)
+        charset <- charsetDetector.charsetFor(e, loader)
+        if loader.getSize < sizeThreshold && linesFor(loader, charset).exists(isDirty)
       } yield {
         val b = new ByteArrayOutputStream(loader.getSize.toInt)
-        lines.view.map(lineCleaner).foreach(line => b.write(line.getBytes(charset)))
+        linesFor(loader, charset).map(lineCleaner).foreach(line => b.write(line.getBytes(charset)))
         val oid = threadLocalObjectDBResources.inserter().insert(OBJ_BLOB, b.toByteArray)
         e.copy(objectId = oid)
       }
@@ -72,5 +69,9 @@ trait BlobTextModifier extends TreeBlobModifier {
       case Some(lineCleaner) => filterTextIn(entry, lineCleaner).withoutName
       case None => entry.withoutName
     }
+  }
+
+  private def linesFor(loader: ObjectLoader, charset: Charset): Iterator[String] = {
+    new LineBreakPreservingIterator(new InputStreamReader(loader.openStream(), charset))
   }
 }

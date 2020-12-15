@@ -3,7 +3,7 @@ import common._
 
 organization in ThisBuild := "com.madgag"
 
-scalaVersion in ThisBuild := "2.12.12"
+scalaVersion in ThisBuild := "2.13.4"
 
 scalacOptions in ThisBuild ++= Seq("-deprecation", "-feature", "-language:postfixOps")
 
@@ -27,11 +27,7 @@ lazy val bfg = bfgProject("bfg") enablePlugins(BuildInfoPlugin) dependsOn(bfgLib
 
 lazy val bfgBenchmark = bfgProject("bfg-benchmark")
 
-publishMavenStyle in ThisBuild := true
-
 publishTo in ThisBuild := sonatypePublishToBundle.value
-
-pomIncludeRepository in ThisBuild := { _ => false }
 
 pomExtra in ThisBuild := (
   <scm>

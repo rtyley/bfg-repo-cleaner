@@ -1,10 +1,13 @@
 package model
 
+import com.google.common.io.CharSource
+import com.google.common.io.Files.asCharSource
+
+import java.io.File
+import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.file.{Files, Path}
+import scala.jdk.StreamConverters._
 import scala.sys.process.{Process, ProcessBuilder}
-import scalax.file.ImplicitConversions._
-import scalax.file.Path
-import scalax.file.defaultfs.DefaultPath
-import scalax.io.Input
 
 trait EngineInvocation
 
@@ -15,19 +18,19 @@ case class GFBInvocation(args: Seq[String]) extends EngineInvocation
 
 trait InvocableEngine[InvocationArgs <: EngineInvocation] {
 
-    def processFor(invocation: InvocationArgs)(repoPath: DefaultPath): ProcessBuilder
+    def processFor(invocation: InvocationArgs)(repoPath: File): ProcessBuilder
 }
 
 case class InvocableBFG(java: Java, bfgJar: BFGJar) extends InvocableEngine[BFGInvocation] {
 
-  def processFor(invocation: BFGInvocation)(repoPath: DefaultPath) =
-    Process(s"${java.javaCmd} -jar ${bfgJar.path.path} ${invocation.args}", repoPath)
+  def processFor(invocation: BFGInvocation)(repoPath: File) =
+    Process(s"${java.javaCmd} -jar ${bfgJar.path} ${invocation.args}", repoPath)
 
 }
 
 object InvocableGitFilterBranch extends InvocableEngine[GFBInvocation] {
 
-  def processFor(invocation: GFBInvocation)(repoPath: DefaultPath) =
+  def processFor(invocation: GFBInvocation)(repoPath: File) =
     Process(Seq("git", "filter-branch") ++ invocation.args, repoPath)
 }
 
@@ -42,11 +45,11 @@ We want to allow the user to vary:
 trait EngineType[InvocationType <: EngineInvocation] {
   val configName: String
 
-  def argsFor(config: Input): InvocationType
+  def argsFor(config: CharSource): InvocationType
 
   def argsOptsFor(commandDir: Path): Option[InvocationType] = {
-    val paramsPath = commandDir / s"$configName.txt"
-    if (paramsPath.exists) Some(argsFor(paramsPath)) else None
+    val paramsPath = commandDir.resolve(s"$configName.txt")
+    if (Files.exists(paramsPath)) Some(argsFor(asCharSource(paramsPath.toFile, UTF_8))) else None
   }
 }
 
@@ -54,12 +57,12 @@ case object BFG extends EngineType[BFGInvocation] {
 
   val configName = "bfg"
 
-  def argsFor(config: Input) = BFGInvocation(config.string)
+  def argsFor(config: CharSource) = BFGInvocation(config.read())
 }
 
 case object GitFilterBranch extends EngineType[GFBInvocation] {
 
   val configName = "gfb"
 
-  def argsFor(config: Input) = GFBInvocation(config.lines().toSeq)
+  def argsFor(config: CharSource) = GFBInvocation(config.lines().toScala(Seq))
 }

@@ -33,10 +33,8 @@ object ByteSize {
   }
 
   def format(bytes: Long): String = {
-    if (bytes < unit) {
-      bytes + " B"
-    } else {
-      val exp = (log(bytes) / log(unit)).toInt
+    if (bytes < unit) s"$bytes B " else {
+      val exp = (log(bytes.toDouble) / log(unit)).toInt
       val pre = magnitudeChars(exp)
       "%.1f %sB".format(bytes / pow(unit, exp), pre)
     }

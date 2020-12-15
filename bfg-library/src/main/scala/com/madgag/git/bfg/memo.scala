@@ -20,10 +20,9 @@
 
 package com.madgag.git.bfg
 
+import scala.jdk.CollectionConverters._
 import com.google.common.cache.{CacheBuilder, CacheLoader, CacheStats, LoadingCache}
 import com.madgag.git.bfg.cleaner._
-
-import scala.collection.JavaConverters._
 
 trait Memo[K, V] {
   def apply(z: K => V): MemoFunc[K, V]
@@ -50,7 +49,7 @@ object MemoUtil {
       (f: Cleaner[V]) =>
         lazy val permanentCache = loaderCacheFor(f)(fix)
 
-        def fix(v: V) {
+        def fix(v: V): Unit = {
           // enforce that once any value is returned, it is 'good' and therefore an identity-mapped key as well
           permanentCache.put(v, v)
         }

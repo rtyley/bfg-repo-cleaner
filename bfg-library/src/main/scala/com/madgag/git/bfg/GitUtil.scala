@@ -30,7 +30,8 @@ import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.storage.file.WindowCacheConfig
 
-import scala.collection.convert.ImplicitConversionsToScala._
+import scala.jdk.CollectionConverters._
+import scala.jdk.StreamConverters._
 import scala.language.implicitConversions
 
 trait CleaningMapper[V] extends Cleaner[V] {
@@ -51,7 +52,7 @@ object GitUtil {
   
   val ProbablyNoNonFileObjectsOverSizeThreshold: Long = 1024 * 1024
   
-  def tweakStaticJGitConfig(massiveNonFileObjects: Option[Long]) {
+  def tweakStaticJGitConfig(massiveNonFileObjects: Option[Long]): Unit = {
     val wcConfig: WindowCacheConfig = new WindowCacheConfig()
     wcConfig.setStreamFileThreshold(Ints.saturatedCast(massiveNonFileObjects.getOrElse(ProbablyNoNonFileObjectsOverSizeThreshold)))
     wcConfig.install()
@@ -62,22 +63,22 @@ object GitUtil {
     implicit val revWalk = new RevWalk(repo)
     implicit val objectReader = revWalk.getObjectReader
 
-    repo.getAllRefs.values.map(_.getObjectId).filter(_.open.getType == Constants.OBJ_COMMIT)
-      .map(_.asRevCommit).exists(_.getFooterLines(FormerCommitFooter.Key).nonEmpty)
+    repo.getAllRefs.values().stream().toScala(Seq).map(_.getObjectId).filter(_.open.getType == Constants.OBJ_COMMIT)
+      .map(_.asRevCommit).exists(_.getFooterLines(FormerCommitFooter.Key).asScala.nonEmpty)
   }
 
   implicit def cleaner2CleaningMapper[V](f: Cleaner[V]): CleaningMapper[V] = new CleaningMapper[V] {
     def apply(v: V) = f(v)
   }
 
-  def biggestBlobs(implicit objectDB: ObjectDirectory, progressMonitor: ProgressMonitor = NullProgressMonitor.INSTANCE): Stream[SizedObject] = {
+  def biggestBlobs(implicit objectDB: ObjectDirectory, progressMonitor: ProgressMonitor = NullProgressMonitor.INSTANCE): LazyList[SizedObject] = {
     Timing.measureTask("Scanning packfile for large blobs", ProgressMonitor.UNKNOWN) {
       val reader = objectDB.newReader
       objectDB.packedObjects.map {
             objectId =>
               progressMonitor update 1
               SizedObject(objectId, reader.getObjectSize(objectId, OBJ_ANY))
-          }.toSeq.sorted.reverse.toStream.filter { oid =>
+          }.toSeq.sorted.reverse.to(LazyList).filter { oid =>
         oid.size > ProbablyNoNonFileObjectsOverSizeThreshold || reader.open(oid.objectId).getType == OBJ_BLOB
       }
     }

@@ -1,16 +1,13 @@
 import java.io.File
-
 import com.madgag.textmatching.{Glob, TextMatcher}
 import scopt.OptionParser
 
-import scalax.file.ImplicitConversions._
-import scalax.file.Path
-import scalax.file.defaultfs.DefaultPath
+import java.nio.file.{Path, Paths}
 
 object BenchmarkConfig {
   val parser = new OptionParser[BenchmarkConfig]("benchmark") {
     opt[File]("resources-dir").text("benchmark resources folder - contains jars and repos").action {
-      (v, c) => c.copy(resourcesDirOption = v)
+      (v, c) => c.copy(resourcesDirOption = v.toPath)
     }
     opt[String]("java").text("Java command paths").action {
       (v, c) => c.copy(javaCmds = v.split(',').toSeq)
@@ -28,13 +25,13 @@ object BenchmarkConfig {
       (v, c) => c.copy(commands = TextMatcher(v, defaultType = Glob))
     }
     opt[File]("scratch-dir").text("Temp-dir for job runs - preferably ramdisk, eg tmpfs.").action {
-      (v, c) => c.copy(scratchDir = v)
+      (v, c) => c.copy(scratchDir = v.toPath)
     }
     opt[Unit]("only-bfg") action { (_, c) => c.copy(onlyBfg = true) } text "Don't benchmark git-filter-branch"
   }
 }
-case class BenchmarkConfig(resourcesDirOption: Path = Path.fromString(System.getProperty("user.dir")) / "bfg-benchmark" / "resources",
-                           scratchDir: DefaultPath = Path.fromString("/dev/shm/"),
+case class BenchmarkConfig(resourcesDirOption: Path = Paths.get(System.getProperty("user.dir"), "bfg-benchmark", "resources"),
+                           scratchDir: Path = Paths.get("/dev/shm/"),
                            javaCmds: Seq[String] = Seq("java"),
                            bfgVersions: Seq[String] = Seq.empty,
                            commands: TextMatcher = Glob("*"),
@@ -42,13 +39,13 @@ case class BenchmarkConfig(resourcesDirOption: Path = Path.fromString(System.get
                            dieIfTaskTakesLongerThan: Option[Int] = None,
                            repoNames: Seq[String] = Seq.empty) {
 
-  lazy val resourcesDir = Path.fromString(resourcesDirOption.path).toAbsolute
+  lazy val resourcesDir: Path = resourcesDirOption.toAbsolutePath
 
-  lazy val jarsDir = resourcesDir / "jars"
+  lazy val jarsDir: Path = resourcesDir.resolve("jars")
 
-  lazy val reposDir = resourcesDir / "repos"
+  lazy val reposDir: Path = resourcesDir.resolve("repos")
 
-  lazy val bfgJars = bfgVersions.map(version => jarsDir / s"bfg-$version.jar")
+  lazy val bfgJars: Seq[Path] = bfgVersions.map(version => jarsDir.resolve(s"bfg-$version.jar"))
 
-  lazy val repoSpecDirs = repoNames.map(reposDir / _)
+  lazy val repoSpecDirs: Seq[Path] = repoNames.map(reposDir.resolve)
 }

@@ -1,14 +1,13 @@
 package com.madgag.git.bfg.model
 
-import java.nio.charset.{Charset, IllegalCharsetNameException, UnsupportedCharsetException}
-
 import com.madgag.git._
 import com.madgag.git.bfg.cleaner._
 import org.eclipse.jgit.lib.Constants.OBJ_COMMIT
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.RevCommit
 
-import scala.collection.convert.ImplicitConversionsToJava
+import java.nio.charset.{Charset, IllegalCharsetNameException, UnsupportedCharsetException}
+import scala.jdk.CollectionConverters._
 
 /*
  * Copyright (c) 2012, 2013 Roberto Tyley
@@ -37,10 +36,8 @@ object Commit {
 
 case class Commit(node: CommitNode, arcs: CommitArcs) {
   def toBytes: Array[Byte] = {
-    import ImplicitConversionsToJava._
-
     val c = new CommitBuilder
-    c.setParentIds(arcs.parents)
+    c.setParentIds(arcs.parents.asJava)
     c.setTreeId(arcs.tree)
 
     c.setAuthor(node.author)
@@ -66,7 +63,7 @@ object CommitNode {
 }
 
 case class CommitNode(author: PersonIdent, committer: PersonIdent, message: String, encoding: Charset = Constants.CHARSET) {
-  lazy val subject = message.linesIterator.toStream.headOption
+  lazy val subject = message.linesIterator.to(LazyList).headOption
   lazy val lastParagraphBreak = message.lastIndexOf("\n\n")
   lazy val messageWithoutFooters = if (footers.isEmpty) message else (message take lastParagraphBreak)
   lazy val footers: List[Footer] = message.drop(lastParagraphBreak).linesIterator.collect {

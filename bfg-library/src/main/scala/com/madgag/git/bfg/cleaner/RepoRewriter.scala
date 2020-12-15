@@ -27,7 +27,8 @@ import org.eclipse.jgit.revwalk.RevSort._
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import org.eclipse.jgit.transport.ReceiveCommand
 
-import scala.collection.convert.ImplicitConversions._
+import scala.jdk.CollectionConverters._
+import scala.collection.parallel.CollectionConverters._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -81,24 +82,24 @@ object RepoRewriter {
       revWalk.sort(TOPO) // crucial to ensure we visit parents BEFORE children, otherwise blow stack
       revWalk.sort(REVERSE, true) // we want to start with the earliest commits and work our way up...
 
-      val startCommits = allRefs.map(_.targetObjectId.asRevObject(revWalk)).collect { case c: RevCommit => c }
+      val startCommits = allRefs.asScala.map(_.targetObjectId.asRevObject(revWalk)).collect { case c: RevCommit => c }
 
-      revWalk.markStart(startCommits)
+      revWalk.markStart(startCommits.asJavaCollection)
       revWalk
     }
 
     implicit val revWalk = createRevWalk
     implicit val reader = revWalk.getObjectReader
 
-    reporter.reportRefsForScan(allRefs)
+    reporter.reportRefsForScan(allRefs.asScala)
 
     reporter.reportObjectProtection(objectIdCleanerConfig)(repo.getObjectDatabase, revWalk)
 
     val objectIdCleaner = new ObjectIdCleaner(objectIdCleanerConfig, repo.getObjectDatabase, revWalk)
 
-    val commits = revWalk.toList
+    val commits = revWalk.asScala.toSeq
 
-    def clean(commits: Seq[RevCommit]) {
+    def clean(commits: Seq[RevCommit]): Unit = {
       reporter.reportCleaningStart(commits)
 
       Timing.measureTask("Cleaning commits", commits.size) {
@@ -116,7 +117,7 @@ object RepoRewriter {
       }
     }
 
-    def updateRefsWithCleanedIds() {
+    def updateRefsWithCleanedIds(): Unit = {
       val refUpdateCommands = for (ref <- repo.nonSymbolicRefs;
                                    (oldId, newId) <- objectIdCleaner.substitution(ref.getObjectId)
       ) yield new ReceiveCommand(oldId, newId, ref.getName)
@@ -133,7 +134,7 @@ object RepoRewriter {
               if (tip == objectIdCleaner(base)) false else super.isMergedInto(base, tip)
           }
 
-          refDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands)
+          refDatabase.newBatchUpdate.setAllowNonFastForwards(true).addCommand(refUpdateCommands.asJavaCollection)
             .execute(quickMergeCalcRevWalk, progressMonitor)
         }
 

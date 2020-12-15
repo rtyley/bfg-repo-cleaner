@@ -1,23 +1,26 @@
 package lib
 
+import com.google.common.io.MoreFiles
+import com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE
 import com.madgag.compress.CompressUtil._
 
-import scalax.file.ImplicitConversions._
-import scalax.file.Path
-import scalax.file.defaultfs.DefaultPath
+import java.nio.file.{Files, Path}
+import scala.util.Using
 
-class RepoExtractor(scratchDir: DefaultPath) {
+class RepoExtractor(scratchDir: Path) {
 
-  val repoDir = scratchDir / "repo.git"
+  val repoDir = scratchDir.resolve( "repo.git")
 
   def extractRepoFrom(zipPath: Path) = {
-    repoDir.deleteRecursively(force = true)
+    if (Files.exists(repoDir)) MoreFiles.deleteRecursively(repoDir, ALLOW_INSECURE)
 
-    repoDir.createDirectory()
+    Files.createDirectories(repoDir)
 
-    println(s"Extracting repo to ${repoDir.toAbsolute.path}")
+    println(s"Extracting repo to ${repoDir.toAbsolutePath}")
 
-    zipPath.inputStream.acquireFor { stream => unzip(stream, repoDir) }
+    Using(Files.newInputStream(zipPath)) {
+      stream => unzip(stream, repoDir.toFile)
+    }
 
     repoDir
   }
