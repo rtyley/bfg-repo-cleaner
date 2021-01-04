@@ -21,18 +21,19 @@
 package com.madgag.git
 
 import com.google.common.base.Splitter
+import com.google.common.io.BaseEncoding
 import com.madgag.git.bfg.model.FileName
-import org.apache.commons.codec.binary.Hex._
 import org.eclipse.jgit.lib.ObjectLoader
 
+import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets.UTF_8
-import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.{Files, Path}
 import java.security.{DigestOutputStream, MessageDigest}
 import scala.collection.JavaConverters._
 import scala.util.Using
 
 object LFS {
+  val hexEncoding: BaseEncoding = BaseEncoding.base16().lowerCase()
 
   val ObjectsPath: Seq[String] = Seq("lfs" , "objects")
 
@@ -72,6 +73,6 @@ object LFS {
       loader.copyTo(new DigestOutputStream(outStream, digest))
     }
 
-    Pointer(encodeHexString(digest.digest()), loader.getSize)
+    Pointer(hexEncoding.encode(digest.digest()), loader.getSize)
   }
 }
