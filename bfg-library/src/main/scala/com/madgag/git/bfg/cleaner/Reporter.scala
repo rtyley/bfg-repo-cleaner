@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.Files.createDirectories
 import java.nio.file.Path
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import scala.collection.convert.ImplicitConversions._
 import scala.collection.immutable.SortedMap
 import scala.jdk.CollectionConverters._
@@ -49,14 +50,17 @@ trait Reporter {
 
 class CLIReporter(repo: Repository) extends Reporter {
 
-  lazy val reportsDir = {
+  lazy val reportsDir: Path = {
     val now = ZonedDateTime.now()
 
     val topDirPath = repo.topDirectory.toPath.toAbsolutePath
 
     val reportsDir = topDirPath.resolveSibling(s"${topDirPath.getFileName}.bfg-report")
 
-    val dir = reportsDir.resolve(now.formatted("yyyy-MM-dd")).resolve(now.formatted("HH-mm-ss"))
+    val dateFormatter = DateTimeFormatter.ofPattern("uuuu-MM-dd")
+    val timeFormatter = DateTimeFormatter.ofPattern("HH-mm-ss")
+
+    val dir = reportsDir.resolve(now.format(dateFormatter)).resolve(now.format(timeFormatter))
 
     createDirectories(dir)
     dir

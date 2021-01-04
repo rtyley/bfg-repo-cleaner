@@ -40,14 +40,28 @@ object BlobTextModifier {
   val DefaultSizeThreshold: Long = 1024 * 1024
 
   val pat: Pattern = Pattern.compile(".*\\R|.+\\z")
+  //val pat: Pattern = Pattern.compile(".*?\\R")
 
-  def wrappy(objectLoader: ObjectLoader, charset: Charset): Iterable[String] = new Iterable[String] {
+  def wrappy(inputStream: InputStream, charset: Charset): Iterable[String] = new Iterable[String] {
     override def iterator: Iterator[String] = new Iterator[String] {
-      val scanner = new Scanner(objectLoader.openStream(), charset.name())
 
-      override def hasNext: Boolean = scanner.hasNext
 
-      override def next(): String = scanner.findWithinHorizon(pat,0)
+      val scanner = {
+        val s = new Scanner(inputStream, charset.name())
+        s.useDelimiter(Pattern.compile("\\R|\\z"))
+        s
+      }
+
+      var hasN = true
+
+      override def hasNext: Boolean = scanner.hasNext(Pattern.compile("\\R|\\z"))
+
+      override def next(): String = {
+        val str = scanner.findWithinHorizon(pat, 0)
+        println(s"found:$str")
+        hasN = str == null
+        str
+      }
     }
   }
 }
@@ -70,8 +84,9 @@ trait BlobTextModifier extends TreeBlobModifier {
       val loader = threadLocalObjectDBResources.reader().open(e.objectId)
       val opt = for {
         charset <- charsetDetector.charsetFor(e, loader) if loader.getSize < sizeThreshold
-        lines: Iterable[String] = BlobTextModifier.wrappy(loader, charset) if lines.exists(isDirty)
+        lines: Iterable[String] = BlobTextModifier.wrappy(loader.openStream(), charset) if lines.exists(isDirty)
       } yield {
+        val dirty = new String(loader.getBytes)
         val b = new ByteArrayOutputStream(loader.getSize.toInt)
         lines.map(lineCleaner).foreach(line => b.write(line.getBytes(charset)))
         val oid = threadLocalObjectDBResources.inserter().insert(OBJ_BLOB, b.toByteArray)
