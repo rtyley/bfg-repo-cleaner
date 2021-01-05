@@ -20,10 +20,11 @@
 
 package com.madgag.git.bfg.cleaner
 
+import com.google.common.base.Preconditions.checkNotNull
 import com.google.common.io.{ByteSink, ByteSource, ByteStreams, CharSink, CharStreams}
 import com.madgag.git.bfg.model._
 
-import java.io.{ByteArrayOutputStream, InputStream}
+import java.io.{ByteArrayOutputStream, InputStream, Reader}
 import com.madgag.git.ThreadLocalObjectDatabaseResources
 import com.madgag.git.bfg.model.TreeBlobEntry
 import org.eclipse.jgit.lib.Constants.OBJ_BLOB
@@ -42,9 +43,103 @@ object BlobTextModifier {
   val pat: Pattern = Pattern.compile(".*\\R|.+\\z")
   //val pat: Pattern = Pattern.compile(".*?\\R")
 
+  /*
+  https://github.com/google/guava/commit/a2c7f54378dc2585f8524f59d71e56353ac0a1ba
+  Usually a line - multiple lines - will fit into the character buffer.
+  Occasionally a line could be crazy long, and span multiple lengths of the buffer.
+  LF, CR, CR LF (windows) - but disregard LF CR (Acorn)
+   */
+  def wrapReader(reader: Reader): Iterator[String] = new Iterator[String] {
+    val buf = new Array[Char](0x800)
+
+    /**
+     * Anything from `readPointer` onwards, up to `writePointer` exclusive,
+     * can be read.
+     *
+     * After a line is read, `readPointer` will be pointing to the next character
+     * immediately after the terminator of that line.
+     */
+    var readPointer: Int
+
+    /**
+     * Anything from `writePointer` onwards, up to `readPointer` exclusive,
+     * can be overwritten.
+     */
+    var writePointer: Int
+
+    private def readableBufferedBytes: Int = if (readPointer <= writePointer) writePointer - readPointer else {
+      writePointer + (buf.length - readPointer)
+    }
+
+    var eol: Boolean = false
+
+    override def hasNext: Boolean = ???
+
+    def findNewline() = {
+//      while (readPointer < writePointer && buf[readPointer])
+//        buf.indexWhere(c => c == '\n' || c == '\r', readPointer)
+    }
+
+    /**
+     * @param endExclusive - may be writePointer, or just the end of a line
+     */
+    def slurp(sb: StringBuilder, endExclusive: Int) = {
+      if (readPointer > endExclusive) {
+        sb.appendAll(buf, readPointer, buf.length - readPointer)
+      }
+      sb.appendAll(buf, 0, endExclusive)
+      readPointer = endExclusive
+    }
+
+    def fill(): Unit = {
+      val firstUnwritableIndex = if (readPointer > writePointer) readPointer else buf.length
+      val numBytesToAttemptToRead = firstUnwritableIndex - writePointer
+      if (numBytesToAttemptToRead > 0) {
+        val bytesRead = reader.read(buf, writePointer, numBytesToAttemptToRead)
+        if (bytesRead == -1) {
+          eol = true
+        } else {
+          writePointer = (writePointer + bytesRead) % buf.length
+        }
+      }
+    }
+
+    override def next(): String = {
+
+
+      while (readableBufferedBytes > 0) {
+
+      } else {
+        while(!eol) {
+          fill()
+        }
+
+      }
+
+      val sb = new StringBuilder
+
+    }
+  }
+
+  private def copyReaderToBuilder(reader: Reader, to: StringBuilder) = {
+    checkNotNull(reader)
+    checkNotNull(to)
+    val buf = new Array[Char](0x800)
+    var nRead = 0
+    var total = 0
+    while ({
+      nRead = reader.read(buf)
+      nRead
+    } != -1) {
+      to.append(buf, 0, nRead)
+      total += nRead
+    }
+    total
+  }
+
+
   def wrappy(inputStream: InputStream, charset: Charset): Iterable[String] = new Iterable[String] {
     override def iterator: Iterator[String] = new Iterator[String] {
-
 
       val scanner = {
         val s = new Scanner(inputStream, charset.name())
