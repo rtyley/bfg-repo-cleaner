@@ -49,8 +49,10 @@ object BlobTextModifier {
   Occasionally a line could be crazy long, and span multiple lengths of the buffer.
   LF, CR, CR LF (windows) - but disregard LF CR (Acorn)
    */
-  def wrapReader(reader: Reader): Iterator[String] = new Iterator[String] {
-    val buf = new Array[Char](0x800)
+  def wrapReader(reader: Reader, bufferSize: Int = 0x800): Iterator[String] = new Iterator[String] {
+    val buf = new Array[Char](bufferSize)
+
+    var endOfStream: Boolean = false
 
     /**
      * Anything from `readPointer` onwards, up to `writePointer` exclusive,
@@ -59,31 +61,24 @@ object BlobTextModifier {
      * After a line is read, `readPointer` will be pointing to the next character
      * immediately after the terminator of that line.
      */
-    var readPointer: Int
+    var readPointer: Int = 0
 
     /**
      * Anything from `writePointer` onwards, up to `readPointer` exclusive,
      * can be overwritten.
      */
-    var writePointer: Int
+    var writePointer: Int = 0
 
     private def readableBufferedBytes: Int = if (readPointer <= writePointer) writePointer - readPointer else {
       writePointer + (buf.length - readPointer)
     }
 
-    var eol: Boolean = false
-
-    override def hasNext: Boolean = ???
-
-    def findNewline() = {
-//      while (readPointer < writePointer && buf[readPointer])
-//        buf.indexWhere(c => c == '\n' || c == '\r', readPointer)
-    }
+    private def hasReadableBufferedBytes = readPointer != writePointer // check assumptions here - do we use sentinel values?
 
     /**
      * @param endExclusive - may be writePointer, or just the end of a line
      */
-    def slurp(sb: StringBuilder, endExclusive: Int) = {
+    private def slurp(sb: StringBuilder, endExclusive: Int): Unit = {
       if (readPointer > endExclusive) {
         sb.appendAll(buf, readPointer, buf.length - readPointer)
       }
@@ -91,37 +86,91 @@ object BlobTextModifier {
       readPointer = endExclusive
     }
 
-    def fill(): Unit = {
+    override def hasNext: Boolean = hasReadableBufferedBytes || !endOfStream
+
+    private def numBytesWeCouldAcceptInOneRead: Int = {
       val firstUnwritableIndex = if (readPointer > writePointer) readPointer else buf.length
-      val numBytesToAttemptToRead = firstUnwritableIndex - writePointer
+      firstUnwritableIndex - writePointer
+    }
+
+    /*
+     * Must repeatedly fill until it finds a newline or the endOfStream
+     *
+     */
+    override def next(): String = {
+      // search readableBufferedBytes for line-break
+      // if found, return string up to and including line-break characters, advance readPointer
+      // if not found:
+      //   is numBytesWeCouldAcceptInOneRead==0?
+      //     YES: then we must start a StringBuilder
+      //     NO: fill(), then go back to start
+      //
+
+      // easy/quick case - find a line-break between readPointer and BufferEnd, no need for StringBuilder
+      // ...drops into we can NOT find a line-break between readPointer and BufferEnd, we MUST use a StringBuilder
+
+
+      ???
+    }
+
+    def findLineBreak(): Unit = {
+      var i=readPointer
+      while (i < writePointer) {
+
+      }
+        buf.indexWhere(c => c == '\n' || c == '\r', readPointer)
+      }
+    }
+
+
+    private def findLineAcrossBufferEdge(): String = {
+      val sb = new StringBuilder
+      sb.appendAll(buf, readPointer, buf.length - readPointer)
+      readPointer = 0
+      do {
+        fill()
+
+
+      } while ()
+      // fill, search
+      // line-break found or allStreamConsumed?
+      // YES: append up to line-break/stream-end, advance readPointer, terminate
+      // NO: append all up to writePointer, advance readPointer to writePointer, repeat loop
+      sb.toString
+    }
+
+      //      while (readableBufferedBytes > 0) {
+      //
+      //      } else {
+      //        while(!eol) {
+      //          fill()
+      //        }
+      //
+      //      }
+      //
+      //      val sb = new StringBuilder
+
+
+    def findNewline(): Unit = {
+//      while (readPointer < writePointer && buf[readPointer])
+//        buf.indexWhere(c => c == '\n' || c == '\r', readPointer)
+    }
+
+
+
+    private def fill(): Unit = {
+      val numBytesToAttemptToRead = numBytesWeCouldAcceptInOneRead
       if (numBytesToAttemptToRead > 0) {
         val bytesRead = reader.read(buf, writePointer, numBytesToAttemptToRead)
         if (bytesRead == -1) {
-          eol = true
+          endOfStream = true
         } else {
           writePointer = (writePointer + bytesRead) % buf.length
         }
       }
     }
 
-    override def next(): String = {
-
-
-      while (readableBufferedBytes > 0) {
-
-      } else {
-        while(!eol) {
-          fill()
-        }
-
-      }
-
-      val sb = new StringBuilder
-
-    }
-  }
-
-  private def copyReaderToBuilder(reader: Reader, to: StringBuilder) = {
+    private def copyReaderToBuilder(reader: Reader, to: StringBuilder) = {
     checkNotNull(reader)
     checkNotNull(to)
     val buf = new Array[Char](0x800)
