@@ -37,14 +37,14 @@ class LineBreakInclusiveIteratorTest extends AnyFlatSpec with Matchers {
   def splittingLinesOf(text: String): Assertion = {
     val textStream = new ByteArrayInputStream(text.getBytes(UTF_8))
 
-    forAll(1 to text.length + 1) { bufferSize =>
-      val lines: Seq[String] = wrapReader(new InputStreamReader(textStream), bufferSize).toSeq
+    forAll(2 to text.length + 1) { bufferSize =>
+      val lines: Seq[String] = new LineBreakInclusiveIterator(new InputStreamReader(textStream), bufferSize).toSeq
 
       lines.mkString shouldBe text
 
       forAll(lines.dropRight(1)) { line =>
         line should endWith regex lineBreak
-        lineBreak.findAllIn(_) should have length 1
+        lineBreak.findAllIn(line) should have length 1
       }
       lineBreak.findAllIn(lines.last).size should be <= 1
     }
@@ -62,6 +62,27 @@ class LineBreakInclusiveIteratorTest extends AnyFlatSpec with Matchers {
     boof("") shouldBe Seq("")
   }
 
+  it should "return 1 line for a simple string" in {
+    boof("foo") shouldBe Seq("foo")
+  }
+
+  it should "return 1 line for a simple string with a newline at it's end" in {
+    boof("foo\n") shouldBe Seq("foo\n")
+  }
+
+  it should "return 2 lines for a simple string with a newline in the middle of it" in {
+    boof("foo\nbar") shouldBe Seq("foo\n","bar")
+  }
+
+  it should "return 2 lines for two simple strings each ending with a newline" in {
+    boof("foo\nbar\n") shouldBe Seq("foo\n","bar\n")
+  }
+
+  it should "be super cool" in {
+    new LineBreakInclusiveIterator(new PathologicalStringReader(Seq("\r", "\n"))).toSeq shouldBe Seq("\r\n")
+  }
+
+
   it should "be sensible about how many separate lines you get" in {
     boof("\n") shouldBe Seq("\n")
     boof("\n\n") shouldBe Seq("\n", "\n")
@@ -73,8 +94,36 @@ class LineBreakInclusiveIteratorTest extends AnyFlatSpec with Matchers {
   }
 
 
-  def boof(text: String): Seq[String] = wrapReader(readerFor(text)).toSeq
+  def boof(text: String): Seq[String] = (new LineBreakInclusiveIterator(readerFor(text))).toSeq
 
-  def readerFor(text: String): Reader = new InputStreamReader(new ByteArrayInputStream(text.getBytes(UTF_8))
+  def readerFor(text: String): Reader = new InputStreamReader(new ByteArrayInputStream(text.getBytes(UTF_8)))
+
+  class PathologicalStringReader(segments: Seq[String]) extends Reader {
+    var closed = false
+
+    var currentSegmentNumber = 0
+    var currentProgressWithinSegment = 0
+
+    override def read(cbuf: Array[Char], off: Int, len: Int): Int = {
+      require(!closed)
+      if (currentSegmentNumber >= segments.length) -1 else {
+        val segment = segments(currentSegmentNumber)
+        val remainingSegment: String = segment.drop(currentProgressWithinSegment)
+        val lenToCopy = Math.min(remainingSegment.length, len)
+        val segmentToGive = remainingSegment.take(lenToCopy)
+        Array.copy(segmentToGive.toCharArray, 0, cbuf, off, lenToCopy)
+        currentProgressWithinSegment += lenToCopy
+        if (currentProgressWithinSegment == segment.length) {
+          currentSegmentNumber += 1
+          currentProgressWithinSegment = 0
+        }
+        lenToCopy
+      }
+    }
+
+    override def close(): Unit = {
+      closed = true
+    }
+  }
 
 }

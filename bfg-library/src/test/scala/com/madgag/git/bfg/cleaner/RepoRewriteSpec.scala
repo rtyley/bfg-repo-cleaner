@@ -22,7 +22,6 @@ package com.madgag.git.bfg.cleaner
 
 import com.madgag.git._
 import com.madgag.git.bfg.GitUtil._
-import com.madgag.git.bfg.cleaner.BlobTextModifier.wrappy
 import com.madgag.git.bfg.cleaner.ObjectIdSubstitutor._
 import com.madgag.git.bfg.cleaner.protection.ProtectedObjectCensus
 import com.madgag.git.bfg.model.{BlobFileMode, FileName, RegularFile, TreeBlobEntry}

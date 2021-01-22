@@ -33,6 +33,7 @@ case class FillResult(filledToBufferEdge: Boolean, endOfStream: Boolean)
   \n, \r, \r \n
    */
 class LineBreakInclusiveIterator(reader: Reader, bufferSize: Int = 0x800) extends Iterator[String] {
+  require(bufferSize >= 2)
 
   val buf = new Array[Char](bufferSize)
 
@@ -92,7 +93,11 @@ class LineBreakInclusiveIterator(reader: Reader, bufferSize: Int = 0x800) extend
   // @tailrec
   private def caseB_readBeforeOrEqualToWritePointer(): String = {
     val fillResult = fill()
-    if (fillResult.endOfStream) new String(buf, readPointer, writePointer - readPointer) else {
+    if (fillResult.endOfStream) {
+      val str = new String(buf, readPointer, writePointer - readPointer)
+      readPointer = writePointer
+      str
+    } else {
       val fl: Option[String] = findLBX()
       fl.getOrElse {
         if (fillResult.filledToBufferEdge) caseC_writeBeforeReadPointer() else caseB_readBeforeOrEqualToWritePointer()
@@ -116,10 +121,10 @@ class LineBreakInclusiveIterator(reader: Reader, bufferSize: Int = 0x800) extend
     var i = readPointer
     while (i < writePointer - 1) {
       val c = buf(i)
-      if(c == '\n' || c == '\r') {
-        val str = new String(buf, readPointer, i - readPointer)
-        readPointer = i + 1
-        return Some(str)
+      if (c == '\r' && buf(i+1) == '\n') {
+        return if (i < writePointer - 2) Some(grabUpTo(i + 2)) else None // Need to ensure there's a buffer byte...
+      } else if (c == '\n' || c == '\r') {
+        return Some(grabUpTo(i + 1))
       }
       i += 1
     }
@@ -127,12 +132,36 @@ class LineBreakInclusiveIterator(reader: Reader, bufferSize: Int = 0x800) extend
 
   }
 
-  def findLBXWith(stringBuilder: StringBuilder): Option[String] = ???
+  private def grabUpTo(startOfNextLine: Int): String = {
+    val str = new String(buf, readPointer, startOfNextLine - readPointer)
+    readPointer = startOfNextLine
+    str
+  }
+
+  /*
+  stringBuilder has been checked for LBX, but may contain full or partial LB at the tail
+   */
+  def findLBXWith(stringBuilder: StringBuilder): Option[String] = {
+    val currentSBSize = stringBuilder.size
+    def bufWithBack(index: Int): Char = if (index<0) stringBuilder.charAt(currentSBSize + index) else buf(index)
+
+    var i = - Math.min(currentSBSize, 2) // we need at most 2 bytes from the stringbuilder, but it's possible that it will just have 1
+    while (i < writePointer - 1) {
+      val c = bufWithBack(i)
+      if (c == '\r' && bufWithBack(i+1) == '\n') {
+        return if (i < writePointer - 2) Some(stringBuilder.append(grabUpTo(i + 2)).result) else None // Need to ensure there's a buffer byte...
+      } else if (c == '\n' || c == '\r') {
+        return Some(stringBuilder.append(grabUpTo(i + 1)).result)
+      }
+      i += 1
+    }
+    None
+  }
 
   def stringBuilderSearching(stringBuilder: StringBuilder): String = {
     val fillResult = fill()
     if (fillResult.endOfStream) {
-      stringBuilder.appendAll(buf, readPointer, writePointer - readPointer).toString
+      stringBuilder.appendAll(buf, readPointer, writePointer - readPointer).result
     } else {
       val fl: Option[String] = findLBXWith(stringBuilder)
       fl.getOrElse {
@@ -157,15 +186,18 @@ class LineBreakInclusiveIterator(reader: Reader, bufferSize: Int = 0x800) extend
   /*
   Fill needs to block/loop until it either reaches endOfStream or reads at least one byte
    */
+  @tailrec
   private def fill(): FillResult = {
-    val numBytesToAttemptToRead = numBytesWeCouldAcceptInOneRead
-    if (numBytesToAttemptToRead > 0) {
-      val bytesRead = reader.read(buf, writePointer, numBytesToAttemptToRead)
-      if (bytesRead == -1) {
+    val bytesRead = reader.read(buf, writePointer, numBytesWeCouldAcceptInOneRead)
+    bytesRead match {
+      case -1 =>
         endOfStream = true
-      } else {
+        FillResult(filledToBufferEdge=false, endOfStream = true)
+      case 0 =>
+        fill()
+      case _ =>
         writePointer = (writePointer + bytesRead) % buf.length // if we filled the buf, writePointer goes back to zero
-      }
+        FillResult(filledToBufferEdge = bytesRead==buf.length, endOfStream = false)
     }
   }
 
