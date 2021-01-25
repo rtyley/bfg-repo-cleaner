@@ -22,6 +22,7 @@ package com.madgag.git.bfg.cleaner
 
 import java.io.Reader
 import scala.annotation.tailrec
+import scala.util.matching.Regex
 
 case class FillResult(filledToBufferEdge: Boolean, endOfStream: Boolean)
 
@@ -33,7 +34,11 @@ case class FillResult(filledToBufferEdge: Boolean, endOfStream: Boolean)
   \n, \r, \r \n
    */
 class LineBreakInclusiveIterator(reader: Reader, bufferSize: Int = 0x800) extends Iterator[String] {
-  require(bufferSize >= 2)
+  private val lineBreak: Regex = "\\R".r
+
+  val MaxLBSize = 2
+
+  require(bufferSize >= MaxLBSize + 1)
 
   val buf = new Array[Char](bufferSize)
 
@@ -84,9 +89,16 @@ class LineBreakInclusiveIterator(reader: Reader, bufferSize: Int = 0x800) extend
    */
   override def next(): String = {
     val foundLine:Option[String] = findLBX() // case A "LBX visible in readable bytes before buffer edge"
-    foundLine.getOrElse {
+    val result = foundLine.getOrElse {
       if (readPointer <= writePointer) caseB_readBeforeOrEqualToWritePointer() else caseC_writeBeforeReadPointer()
     }
+
+    val lineBreakDistanceBeforeEndOfString = lineBreak.findAllMatchIn(result).map(m => result.length - m.end).toSeq
+    assert(lineBreakDistanceBeforeEndOfString.forall(_ == 0), (Seq(
+      s"'$result' should have at most 1 line break, and if it exists that line-break should be at the end of the string."
+    ) ++ Option.when(lineBreakDistanceBeforeEndOfString.nonEmpty)(s"Line-breaks occur at ${lineBreakDistanceBeforeEndOfString.mkString(", ")} char before the end of the string")).mkString(" "))
+
+    result
   }
 
   // case C "read is before or equal to write in the buffer, with no LBX visible in readable bytes"
@@ -105,31 +117,24 @@ class LineBreakInclusiveIterator(reader: Reader, bufferSize: Int = 0x800) extend
     }
   }
 
-  def startStringBuilderAndLoopReadPointerToBufferStart(): StringBuilder = {
+  private def startStringBuilderAndLoopReadPointerToBufferStart(): StringBuilder = {
     val stringBuilder = new StringBuilder()
-    stringBuilder.appendAll(buf, readPointer,buf.length - readPointer)
-    readPointer = 0
+    loopRound(stringBuilder)
     stringBuilder
+  }
+
+  private def loopRound(stringBuilder: StringBuilder): Unit = {
+    val charsRemaining = buf.length - readPointer
+    val numCharsToClone = Math.min(MaxLBSize, charsRemaining)
+    stringBuilder.appendAll(buf, readPointer, charsRemaining - numCharsToClone)
+    Array.copy(buf, buf.length - numCharsToClone, buf, 0, numCharsToClone)
+    readPointer = 0
+    writePointer = numCharsToClone
   }
 
   // case C "read is ahead of write in the buffer, with no LBX visible before buffer edge"
   private def caseC_writeBeforeReadPointer(): String = {
     stringBuilderSearching(startStringBuilderAndLoopReadPointerToBufferStart())
-  }
-
-  def findLBX(): Option[String] = {
-    var i = readPointer
-    while (i < writePointer - 1) {
-      val c = buf(i)
-      if (c == '\r' && buf(i+1) == '\n') {
-        return if (i < writePointer - 2) Some(grabUpTo(i + 2)) else None // Need to ensure there's a buffer byte...
-      } else if (c == '\n' || c == '\r') {
-        return Some(grabUpTo(i + 1))
-      }
-      i += 1
-    }
-    None
-
   }
 
   private def grabUpTo(startOfNextLine: Int): String = {
@@ -138,18 +143,35 @@ class LineBreakInclusiveIterator(reader: Reader, bufferSize: Int = 0x800) extend
     str
   }
 
+  def findLBX(): Option[String] = {
+    var i = readPointer
+    val searchBoundary = (if (writePointer==0) buf.length else writePointer) - 1
+    val boundaryFor2CharLB = searchBoundary - 1
+
+    while (i < searchBoundary) {
+      val c = buf(i)
+      if (c == '\r' && buf(i+1) == '\n') {
+        return if (i < boundaryFor2CharLB) Some(grabUpTo(i + 2)) else None // Need to ensure there's a buffer byte...
+      } else if (c == '\n' || c == '\r') {
+        return Some(grabUpTo(i + 1))
+      }
+      i += 1
+    }
+    None
+  }
+
   /*
   stringBuilder has been checked for LBX, but may contain full or partial LB at the tail
    */
   def findLBXWith(stringBuilder: StringBuilder): Option[String] = {
-    val currentSBSize = stringBuilder.size
-    def bufWithBack(index: Int): Char = if (index<0) stringBuilder.charAt(currentSBSize + index) else buf(index)
+    var i = 0
+    val searchBoundary = (if (writePointer==0) buf.length else writePointer) - 1
+    val boundaryFor2CharLB = searchBoundary - 1
 
-    var i = - Math.min(currentSBSize, 2) // we need at most 2 bytes from the stringbuilder, but it's possible that it will just have 1
-    while (i < writePointer - 1) {
-      val c = bufWithBack(i)
-      if (c == '\r' && bufWithBack(i+1) == '\n') {
-        return if (i < writePointer - 2) Some(stringBuilder.append(grabUpTo(i + 2)).result) else None // Need to ensure there's a buffer byte...
+    while (i < searchBoundary) {
+      val c = buf(i)
+      if (c == '\r' && buf(i+1) == '\n') {
+        return if (i < boundaryFor2CharLB) Some(stringBuilder.append(grabUpTo(i + 2)).result) else None // Need to ensure there's a buffer byte...
       } else if (c == '\n' || c == '\r') {
         return Some(stringBuilder.append(grabUpTo(i + 1)).result)
       }
@@ -161,12 +183,14 @@ class LineBreakInclusiveIterator(reader: Reader, bufferSize: Int = 0x800) extend
   def stringBuilderSearching(stringBuilder: StringBuilder): String = {
     val fillResult = fill()
     if (fillResult.endOfStream) {
-      stringBuilder.appendAll(buf, readPointer, writePointer - readPointer).result
+      stringBuilder.appendAll(buf, readPointer, writePointer - readPointer)
+      readPointer = writePointer
+      stringBuilder.result
     } else {
       val fl: Option[String] = findLBXWith(stringBuilder)
       fl.getOrElse {
         if (fillResult.filledToBufferEdge) {
-          stringBuilder.appendAll(buf)
+          loopRound(stringBuilder)
         }
         stringBuilderSearching(stringBuilder)
       }
@@ -197,7 +221,7 @@ class LineBreakInclusiveIterator(reader: Reader, bufferSize: Int = 0x800) extend
         fill()
       case _ =>
         writePointer = (writePointer + bytesRead) % buf.length // if we filled the buf, writePointer goes back to zero
-        FillResult(filledToBufferEdge = bytesRead==buf.length, endOfStream = false)
+        FillResult(filledToBufferEdge = writePointer == 0, endOfStream = false)
     }
   }
 

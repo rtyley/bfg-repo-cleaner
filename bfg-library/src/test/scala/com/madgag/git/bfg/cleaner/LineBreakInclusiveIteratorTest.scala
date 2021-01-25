@@ -21,6 +21,8 @@
 package com.madgag.git.bfg.cleaner
 
 import com.madgag.git.bfg.cleaner.BlobTextModifier._
+import org.apache.commons.text.StringEscapeUtils
+import org.apache.commons.text.StringEscapeUtils.escapeJava
 import org.scalatest.Inspectors._
 import org.scalatest._
 import org.scalatest.flatspec.AnyFlatSpec
@@ -28,23 +30,25 @@ import org.scalatest.matchers.should.Matchers
 
 import java.io.{ByteArrayInputStream, InputStreamReader, Reader}
 import java.nio.charset.StandardCharsets.UTF_8
+import java.util.regex.Pattern
 import scala.util.matching.Regex
 
-class LineBreakInclusiveIteratorTest extends AnyFlatSpec with Matchers {
+class LineBreakInclusiveIteratorTest extends AnyFlatSpec with Matchers with OptionValues {
 
   val lineBreak: Regex = "\\R".r
 
   def splittingLinesOf(text: String): Assertion = {
-    val textStream = new ByteArrayInputStream(text.getBytes(UTF_8))
+    val textBytes = text.getBytes(UTF_8)
 
-    forAll(2 to text.length + 1) { bufferSize =>
+    forAll(3 to text.length + 1) { bufferSize =>
+      val textStream = new ByteArrayInputStream(textBytes)
       val lines: Seq[String] = new LineBreakInclusiveIterator(new InputStreamReader(textStream), bufferSize).toSeq
 
       lines.mkString shouldBe text
 
       forAll(lines.dropRight(1)) { line =>
-        line should endWith regex lineBreak
-        lineBreak.findAllIn(line) should have length 1
+        val lineWithEscapedLineBreaks = lineBreak.replaceAllIn(line, m => escapeJava(escapeJava(m.matched)))
+        assert(lineBreak.findAllIn(line).toSeq.size == 1, s": '$lineWithEscapedLineBreaks' should have exactly 1 line break")
       }
       lineBreak.findAllIn(lines.last).size should be <= 1
     }
@@ -78,6 +82,26 @@ class LineBreakInclusiveIteratorTest extends AnyFlatSpec with Matchers {
     boof("foo\nbar\n") shouldBe Seq("foo\n","bar\n")
   }
 
+  it should "handle weird border issues" in {
+    boof("h\r\n\r\nmno", bufferSize = 3) shouldBe Seq("h\r\n", "\r\n", "mno")
+  }
+
+  it should "handle weird border issues quicka" in {
+    boof("mno", bufferSize = 3) shouldBe Seq("mno")
+  }
+
+  it should "handle crazy thang" in {
+    boof("foo", bufferSize = 3) shouldBe Seq("foo")
+  }
+
+  it should "be cool, real cool" in {
+    boof("F\r\n\r\nM", bufferSize = 5) shouldBe Seq("F\r\n", "\r\n", "M")
+  }
+
+  it should "be cool, fool" in {
+    boof("F\n\nM", bufferSize = 3) shouldBe Seq("F\n", "\n", "M")
+  }
+
   it should "be super cool" in {
     new LineBreakInclusiveIterator(new PathologicalStringReader(Seq("\r", "\n"))).toSeq shouldBe Seq("\r\n")
   }
@@ -94,7 +118,8 @@ class LineBreakInclusiveIteratorTest extends AnyFlatSpec with Matchers {
   }
 
 
-  def boof(text: String): Seq[String] = (new LineBreakInclusiveIterator(readerFor(text))).toSeq
+  def boof(text: String, bufferSize: Int = 1024): Seq[String] =
+    new LineBreakInclusiveIterator(readerFor(text), bufferSize).toSeq
 
   def readerFor(text: String): Reader = new InputStreamReader(new ByteArrayInputStream(text.getBytes(UTF_8)))
 

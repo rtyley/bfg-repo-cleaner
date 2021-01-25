@@ -7,6 +7,7 @@ libraryDependencies ++= guava ++ Seq(
   scalaGit,
   jgit,
   slf4jSimple,
-  scalaGitTest % Test
+  scalaGitTest % Test,
+  "org.apache.commons" % "commons-text" % "1.9" % Test
 )
 
