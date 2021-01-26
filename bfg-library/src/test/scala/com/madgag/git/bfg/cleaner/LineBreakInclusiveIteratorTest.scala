@@ -31,28 +31,33 @@ import org.scalatest.matchers.should.Matchers
 import java.io.{ByteArrayInputStream, InputStreamReader, Reader}
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.regex.Pattern
+import scala.collection.BitSet
 import scala.util.matching.Regex
 
 class LineBreakInclusiveIteratorTest extends AnyFlatSpec with Matchers with OptionValues {
 
   val lineBreak: Regex = "\\R".r
 
-  def splittingLinesOf(text: String): Assertion = {
-    val textBytes = text.getBytes(UTF_8)
-
+  def splittingLinesOf(text: String) = {
     forAll(3 to text.length + 1) { bufferSize =>
-      val textStream = new ByteArrayInputStream(textBytes)
-      val lines: Seq[String] = new LineBreakInclusiveIterator(new InputStreamReader(textStream), bufferSize).toSeq
+      testThis(text, new InputStreamReader(new ByteArrayInputStream(text.getBytes(UTF_8))), bufferSize)
 
-      lines.mkString shouldBe text
-
-      forAll(lines.dropRight(1)) { line =>
-        val lineWithEscapedLineBreaks = lineBreak.replaceAllIn(line, m => escapeJava(escapeJava(m.matched)))
-        assert(lineBreak.findAllIn(line).toSeq.size == 1, s": '$lineWithEscapedLineBreaks' should have exactly 1 line break")
+      for (reader <- PathologicalStringReader.allPossible(text)) {
+        // testThis(text, reader, bufferSize)
       }
-      lineBreak.findAllIn(lines.last).size should be <= 1
     }
+  }
 
+  def testThis(text: String, reader: Reader, bufferSize: Int): Unit = {
+    val lines: Seq[String] = new LineBreakInclusiveIterator(reader, bufferSize).toSeq
+
+    lines.mkString shouldBe text
+
+    forAll(lines.dropRight(1)) { line =>
+      val lineWithEscapedLineBreaks = lineBreak.replaceAllIn(line, m => escapeJava(escapeJava(m.matched)))
+      assert(lineBreak.findAllIn(line).toSeq.size == 1, s": '$lineWithEscapedLineBreaks' should have exactly 1 line break")
+    }
+    lineBreak.findAllIn(lines.last).size should be <= 1
   }
 
   it should "handle the empty string" in splittingLinesOf("")
@@ -123,7 +128,19 @@ class LineBreakInclusiveIteratorTest extends AnyFlatSpec with Matchers with Opti
 
   def readerFor(text: String): Reader = new InputStreamReader(new ByteArrayInputStream(text.getBytes(UTF_8)))
 
-  class PathologicalStringReader(segments: Seq[String]) extends Reader {
+  object PathologicalStringReader {
+    def allPossible(text: String): Iterable[PathologicalStringReader] = {
+      require(text.length <= 9)
+      for (i <- 0 until 1 << text.length) yield {
+        val breakIndicies = BitSet(i).to(Seq)
+        val segments: Seq[String] =
+          breakIndicies.zip(breakIndicies.tail).map { case (start, end) => text.substring(start, end) }
+        new PathologicalStringReader(segments)
+      }
+    }
+  }
+
+  class PathologicalStringReader(val segments: Seq[String]) extends Reader {
     var closed = false
 
     var currentSegmentNumber = 0
