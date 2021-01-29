@@ -24,7 +24,7 @@ import com.google.common.base.Preconditions.checkNotNull
 import com.google.common.io.{ByteSink, ByteSource, ByteStreams, CharSink, CharStreams}
 import com.madgag.git.bfg.model._
 
-import java.io.{ByteArrayOutputStream, InputStream, Reader}
+import java.io.{ByteArrayOutputStream, InputStream, InputStreamReader, Reader}
 import com.madgag.git.ThreadLocalObjectDatabaseResources
 import com.madgag.git.bfg.model.TreeBlobEntry
 import org.eclipse.jgit.lib.Constants.OBJ_BLOB
@@ -62,12 +62,11 @@ trait BlobTextModifier extends TreeBlobModifier {
 
       val loader = threadLocalObjectDBResources.reader().open(e.objectId)
       val opt = for {
-        charset <- charsetDetector.charsetFor(e, loader) if loader.getSize < sizeThreshold
-        lines: Iterable[String] = ??? // BlobTextModifier.wrappy(loader.openStream(), charset) if lines.exists(isDirty)
+        charset <- charsetDetector.charsetFor(e, loader)
+        if loader.getSize < sizeThreshold && linesFor(loader, charset).exists(isDirty)
       } yield {
-        val dirty = new String(loader.getBytes)
         val b = new ByteArrayOutputStream(loader.getSize.toInt)
-        lines.map(lineCleaner).foreach(line => b.write(line.getBytes(charset)))
+        linesFor(loader, charset).map(lineCleaner).foreach(line => b.write(line.getBytes(charset)))
         val oid = threadLocalObjectDBResources.inserter().insert(OBJ_BLOB, b.toByteArray)
         e.copy(objectId = oid)
       }
@@ -79,5 +78,9 @@ trait BlobTextModifier extends TreeBlobModifier {
       case Some(lineCleaner) => filterTextIn(entry, lineCleaner).withoutName
       case None => entry.withoutName
     }
+  }
+
+  private def linesFor(loader: ObjectLoader, charset: Charset) = {
+    new LineBreakInclusiveIterator(new InputStreamReader(loader.openStream(), charset))
   }
 }
