@@ -91,6 +91,9 @@ object CLIConfig {
     opt[String]("filter-content-size-threshold").abbr("fs").valueName("<size>").text("only do file-content filtering on files smaller than <size> (default is %1$d bytes)".format(CLIConfig().filterSizeThreshold)).action {
       (v, c) => c.copy(filterSizeThreshold = ByteSize.parse(v))
     }
+    opt[String]("blob-exec").abbr("be").valueName("<cmd>").text("execute the system command for each blob").action {
+      (v, c) => c.copy(blobExec = Some(v))
+    }
     opt[String]('p', "protect-blobs-from").valueName("<refs>").text("protect blobs that appear in the most recent versions of the specified refs (default is 'HEAD')").action {
       (v, c) => c.copy(protectBlobsFromRevisions = v.split(',').toSet)
     }
@@ -131,6 +134,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      filenameFilters: Seq[Filter[String]] = Nil,
                      filterSizeThreshold: Long = BlobTextModifier.DefaultSizeThreshold,
                      textReplacementExpressions: Traversable[String] = List.empty,
+                     blobExec: Option[String] = None,
                      stripBlobsWithIds: Option[Set[ObjectId]] = None,
                      lfsConversion: Option[String] = None,
                      strictObjectChecking: Boolean = false,
@@ -181,6 +185,15 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     new LfsBlobConverter(lfsGlobExpr, repo)
   }
 
+  lazy val blobExecModifier: Option[BlobExecModifier] = blobExec.map {
+    execCommand =>
+      new BlobExecModifier {
+        val command = execCommand
+
+        val threadLocalObjectDBResources: ThreadLocalObjectDatabaseResources = repo.getObjectDatabase.threadLocalResources
+      }
+  }
+
   lazy val privateDataRemoval = sensitiveData.getOrElse(Seq(fileDeletion, folderDeletion, blobTextModifier).flatten.nonEmpty)
 
   lazy val objectIdSubstitutor = if (privateDataRemoval) ObjectIdSubstitutor.OldIdsPrivate else ObjectIdSubstitutor.OldIdsPublic
@@ -218,7 +231,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
       }
     }
 
-    Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier, lfsBlobConverter).flatten
+    Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier, lfsBlobConverter, blobExecModifier).flatten
   }
 
   lazy val definesNoWork = treeBlobCleaners.isEmpty && folderDeletion.isEmpty && treeEntryListCleaners.isEmpty
