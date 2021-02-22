@@ -118,7 +118,7 @@ object CLIConfig {
         c.copy(fixFilenameDuplicatesPreferring = ord)
     }
     arg[File]("<repo>") optional() action { (x, c) =>
-      c.copy(repoLocation = x) } text("file path for Git repository to clean")
+      c.copy(repoLocation = x) } text("file path for Git repository to clean (defaults to working directory)")
   }
 }
 
