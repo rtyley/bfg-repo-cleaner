@@ -47,7 +47,7 @@ object CLIConfig {
     def fileMatcher(name: String, defaultType: TextMatcherType = Glob) = {
       implicit val textMatcherRead = Read.reads { TextMatcher(_, defaultType) }
 
-      opt[TextMatcher](name).valueName(s"<${defaultType.expressionPrefix}>").validate { m =>
+      opt[TextMatcher](name).unbounded.valueName(s"<${defaultType.expressionPrefix}>").validate { m =>
         if (m.expression.contains('/')) {
           failure("*** Can only match on filename, NOT path *** - remove '/' path segments")
         } else success
@@ -72,10 +72,10 @@ object CLIConfig {
         c.copy(stripBlobsWithIds = Some(readLinesFrom(v).map(_.trim).filterNot(_.isEmpty).map(_.asObjectId).toSet))
     }
     fileMatcher("delete-files").abbr("D").text("delete files with the specified names (eg '*.class', '*.{txt,log}' - matches on file name, not path within repo)").action {
-      (v, c) => c.copy(deleteFiles = Some(v))
+      (v, c) => c.copy(deleteFiles = c.deleteFiles :+ v)
     }
     fileMatcher("delete-folders").text("delete folders with the specified names (eg '.svn', '*-tmp' - matches on folder name, not path within repo)").action {
-      (v, c) => c.copy(deleteFolders = Some(v))
+      (v, c) => c.copy(deleteFolders = c.deleteFolders :+ v)
     }
     opt[String]("convert-to-git-lfs").text("extract files with the specified names (eg '*.zip' or '*.mp4') into Git LFS").action {
       (v, c) => c.copy(lfsConversion = Some(v))
@@ -128,8 +128,8 @@ object CLIConfig {
 case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
                      stripBlobsBiggerThan: Option[Long] = None,
                      protectBlobsFromRevisions: Set[String] = Set("HEAD"),
-                     deleteFiles: Option[TextMatcher] = None,
-                     deleteFolders: Option[TextMatcher] = None,
+                     deleteFiles: Seq[TextMatcher] = Seq(),
+                     deleteFolders: Seq[TextMatcher] = Seq(),
                      fixFilenameDuplicatesPreferring: Option[Ordering[FileMode]] = None,
                      filenameFilters: Seq[Filter[String]] = Nil,
                      filterSizeThreshold: Long = BlobTextModifier.DefaultSizeThreshold,
@@ -149,11 +149,11 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   lazy val objectChecker = if (strictObjectChecking) Some(new ObjectChecker()) else None
 
-  lazy val fileDeletion: Option[Cleaner[TreeBlobs]] = deleteFiles.map {
+  lazy val fileDeletion: Seq[Cleaner[TreeBlobs]] = deleteFiles.map {
     textMatcher => new FileDeleter(textMatcher)
   }
 
-  lazy val folderDeletion: Option[Cleaner[TreeSubtrees]] = deleteFolders.map {
+  lazy val folderDeletion: Seq[Cleaner[TreeSubtrees]] = deleteFolders.map {
     textMatcher => { subtrees: TreeSubtrees =>
       TreeSubtrees(subtrees.entryMap.view.filterKeys(filename => !textMatcher(filename)).toMap)
     }
@@ -184,7 +184,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
     new LfsBlobConverter(lfsGlobExpr, repo)
   }
 
-  lazy val privateDataRemoval = sensitiveData.getOrElse(Seq(fileDeletion, folderDeletion, blobTextModifier).flatten.nonEmpty)
+  lazy val privateDataRemoval = sensitiveData.getOrElse(Seq(blobTextModifier).flatten.nonEmpty && fileDeletion.nonEmpty && folderDeletion.nonEmpty)
 
   lazy val objectIdSubstitutor = if (privateDataRemoval) ObjectIdSubstitutor.OldIdsPrivate else ObjectIdSubstitutor.OldIdsPublic
 
@@ -221,7 +221,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
       }
     }
 
-    Seq(blobsByIdRemover, blobRemover, fileDeletion, blobTextModifier, lfsBlobConverter).flatten
+    Seq(blobsByIdRemover, blobRemover, blobTextModifier, lfsBlobConverter).flatten ++ fileDeletion
   }
 
   lazy val definesNoWork = treeBlobCleaners.isEmpty && folderDeletion.isEmpty && treeEntryListCleaners.isEmpty
