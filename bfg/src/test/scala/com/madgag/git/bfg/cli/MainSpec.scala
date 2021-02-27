@@ -45,10 +45,9 @@ class MainSpec extends AnyFlatSpec with Matchers with OptionValues with Inspecto
     }
   }
 
-
   "removing empty trees" should "work" in new unpackedRepo("/sample-repos/folder-example.git.zip") {
     ensureRemovalFrom(commitHist()).ofCommitsThat(haveFolder("secret-files")) {
-      run("--delete-files {credentials,passwords}.txt")
+      run("--delete-files {credentials,passwords}.txt --no-replace-blobs")
     }
   }
 
