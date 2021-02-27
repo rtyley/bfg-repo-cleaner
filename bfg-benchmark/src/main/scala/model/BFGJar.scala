@@ -1,6 +1,6 @@
 package model
 
-import scalax.file.Path
+import java.nio.file.Path
 
 object BFGJar {
   def from(path: Path) = BFGJar(path, Map.empty)

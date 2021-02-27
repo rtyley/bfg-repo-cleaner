@@ -24,7 +24,7 @@ import com.madgag.git._
 import com.madgag.git.bfg.GitUtil._
 import com.madgag.git.bfg.cleaner.ObjectIdSubstitutor._
 import com.madgag.git.bfg.cleaner.protection.ProtectedObjectCensus
-import com.madgag.git.bfg.model.TreeBlobEntry
+import com.madgag.git.bfg.model.{FileName, RegularFile, TreeBlobEntry}
 import com.madgag.git.test._
 import com.madgag.textmatching._
 import org.apache.commons.io.FilenameUtils
@@ -39,7 +39,7 @@ import java.net.URLEncoder
 import java.util.Properties
 import java.util.regex.Pattern._
 import scala.PartialFunction.condOpt
-import scala.collection.convert.ImplicitConversionsToScala._
+import scala.jdk.CollectionConverters._
 
 class RepoRewriteSpec extends AnyFlatSpec with Matchers {
 
@@ -52,7 +52,7 @@ class RepoRewriteSpec extends AnyFlatSpec with Matchers {
     val blobsToRemove = Set(abbrId("06d740"))
     RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), OldIdsPublic, Seq(FormerCommitFooter), treeBlobsCleaners = Seq(new BlobRemover(blobsToRemove))))
 
-    val allCommits = repo.git.log.all.call.toSeq
+    val allCommits = repo.git.log.all.call.asScala.toSeq
 
     val unwantedBlobsByCommit = allCommits.flatMap(commit => {
       val unwantedBlobs = allBlobsReachableFrom(commit).intersect(blobsToRemove).map(_.shortName)
@@ -118,30 +118,42 @@ class RepoRewriteSpec extends AnyFlatSpec with Matchers {
     originalContents should include("correcthorse")
     cleanedContents should not include "correcthorse"
 
-    propertiesIn(cleanedContents).toMap should have size propertiesIn(originalContents).size
+    propertiesIn(cleanedContents).asScala.toMap should have size propertiesIn(originalContents).size
   }
+
+
 
 
   def textReplacementOf(parentPath: String, fileNamePrefix: String, fileNamePostfix: String, before: String, after: String) = {
     implicit val repo = unpackRepo("/sample-repos/encodings.git.zip")
+    val beforeAndAfter = Seq(before, after).map(URLEncoder.encode(_, "UTF-8")).mkString("-")
+    val filename = s"$fileNamePrefix-ORIGINAL.$fileNamePostfix"
+    val beforeFile = s"$parentPath/$filename"
+    val afterFile = s"$parentPath/$fileNamePrefix-MODIFIED-$beforeAndAfter.$fileNamePostfix"
+    // val dirtyFile = repo.resolve(s"master:$beforeFile")
 
     val blobTextModifier = new BlobTextModifier {
       def lineCleanerFor(entry: TreeBlobEntry) = Some(quote(before).r --> (_ => after))
 
       val threadLocalObjectDBResources = repo.getObjectDatabase.threadLocalResources
     }
+
     RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus.None, treeBlobsCleaners = Seq(blobTextModifier)))
-
-    val beforeAndAfter = Seq(before, after).map(URLEncoder.encode(_, "UTF-8")).mkString("-")
-
-    val beforeFile = s"$parentPath/$fileNamePrefix-ORIGINAL.$fileNamePostfix"
-    val afterFile = s"$parentPath/$fileNamePrefix-MODIFIED-$beforeAndAfter.$fileNamePostfix"
 
     val cleanedFile = repo.resolve(s"master:$beforeFile")
     val expectedFile = repo.resolve(s"master:$afterFile")
 
     expectedFile should not be null
 
+    implicit val threadLocalObjectReader = repo.getObjectDatabase.threadLocalResources.reader()
+    // val dirty = dirtyFile.open.getBytes
+    val cleaned = cleanedFile.open.getBytes
+    val expected = expectedFile.open.getBytes
+    // val dirtyStr = new String(dirty)
+    val cleanedStr = new String(cleaned)
+    val expectedStr = new String(expected)
+
+    cleanedStr shouldBe expectedStr
     cleanedFile shouldBe expectedFile
   }
 

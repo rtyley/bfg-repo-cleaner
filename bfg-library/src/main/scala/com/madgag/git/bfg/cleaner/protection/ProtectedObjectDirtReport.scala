@@ -30,7 +30,7 @@ import org.eclipse.jgit.revwalk.{RevObject, RevWalk}
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.eclipse.jgit.treewalk.filter.TreeFilter
 
-import scala.collection.convert.ImplicitConversionsToScala._
+import scala.jdk.CollectionConverters._
 
 object ProtectedObjectDirtReport {
   def reportsFor(objectIdCleanerConfig: ObjectIdCleaner.Config, objectDB: ObjectDatabase)(implicit revWalk: RevWalk) = {
@@ -68,6 +68,6 @@ case class ProtectedObjectDirtReport(revObject: RevObject, originalTreeOrBlob: R
     tw.addTree(originalTreeOrBlob.asRevTree)
     tw.addTree(newId.asRevTree)
     tw.setFilter(TreeFilter.ANY_DIFF)
-    DiffEntry.scan(tw).filterNot(_.getChangeType == ADD)
+    DiffEntry.scan(tw).asScala.filterNot(_.getChangeType == ADD).toSeq
   }
 }

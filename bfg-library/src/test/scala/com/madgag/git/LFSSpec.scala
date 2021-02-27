@@ -27,8 +27,9 @@ import org.eclipse.jgit.lib.ObjectInserter
 import org.scalatest.OptionValues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import scalax.file.Path
-import scalax.file.Path._
+
+import java.nio.file.Files
+import java.nio.file.Files.createTempFile
 
 class LFSSpec extends AnyFlatSpec with Matchers with OptionValues {
   "Our implementation of Git LFS Pointers" should "create pointers that have the same Git id as the ones produced by `git lfs pointer`" in {
@@ -42,19 +43,19 @@ class LFSSpec extends AnyFlatSpec with Matchers with OptionValues {
   it should "have the correctly sharded path" in {
     val pointer = LFS.Pointer("b2893eddd9b394bfb7efadafda2ae0be02c573fdd83a70f26c781a943f3b7016", 21616)
 
-    pointer.path shouldBe Path("b2", "89", "b2893eddd9b394bfb7efadafda2ae0be02c573fdd83a70f26c781a943f3b7016")
+    pointer.path shouldBe Seq("b2", "89", "b2893eddd9b394bfb7efadafda2ae0be02c573fdd83a70f26c781a943f3b7016")
   }
 
   it should "calculate pointers correctly directly from the Git database, creating a temporary file" in {
     implicit val repo = unpackRepo("/sample-repos/example.git.zip")
     implicit val (revWalk, reader) = repo.singleThreadedReaderTuple
 
-    val tmpFile = createTempFile(s"bfg.test.git-lfs.conv")
+    val tmpFile = createTempFile(s"bfg.test.git-lfs",".conv")
 
     val pointer = LFS.pointerFor(abbrId("06d7").open, tmpFile)
 
     pointer shouldBe Pointer("5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef", 1024)
 
-    tmpFile.size.value shouldBe 1024
+    Files.size(tmpFile) shouldBe 1024
   }
 }

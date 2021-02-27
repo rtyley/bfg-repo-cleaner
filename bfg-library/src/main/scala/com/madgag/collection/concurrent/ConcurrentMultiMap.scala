@@ -20,6 +20,7 @@
 
 package com.madgag.collection.concurrent
 
+import com.madgag.scala.collection.decorators._
 
 class ConcurrentMultiMap[A, B] {
 
@@ -34,5 +35,5 @@ class ConcurrentMultiMap[A, B] {
     this
   }
 
-  def toMap: Map[A, Set[B]] = m.toMap.mapValues(_.toSet)
+  def toMap: Map[A, Set[B]] = m.toMap.mapV(_.toSet)
 }

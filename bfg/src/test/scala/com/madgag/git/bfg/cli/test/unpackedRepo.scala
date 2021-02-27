@@ -24,7 +24,7 @@ import com.madgag.git.bfg
 import com.madgag.git.bfg.cli.Main
 
 class unpackedRepo(filePath: String) extends bfg.test.unpackedRepo(filePath) {
-  def run(options: String) {
+  def run(options: String): Unit = {
     Main.main(options.split(' ') :+ repo.getDirectory.getAbsolutePath)
   }
 }

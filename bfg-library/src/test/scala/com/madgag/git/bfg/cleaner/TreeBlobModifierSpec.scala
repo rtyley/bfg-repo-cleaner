@@ -28,7 +28,7 @@ import com.madgag.git.test._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-import scala.collection.convert.ImplicitConversionsToScala._
+import scala.jdk.CollectionConverters._
 
 class TreeBlobModifierSpec extends AnyFlatSpec with Matchers {
 
@@ -48,7 +48,7 @@ class TreeBlobModifierSpec extends AnyFlatSpec with Matchers {
 
     RepoRewriter.rewrite(repo, ObjectIdCleaner.Config(ProtectedObjectCensus(Set("HEAD")), OldIdsPublic, treeBlobsCleaners = Seq(countingTreeBlobModifier)))
 
-    val endCounts = countingTreeBlobModifier.counts.asMap().toMap
+    val endCounts = countingTreeBlobModifier.counts.asMap().asScala.toMap
 
     endCounts.size should be >= 4
     all (endCounts.values) shouldBe 1

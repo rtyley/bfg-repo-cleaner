@@ -1,8 +1,7 @@
 import Dependencies._
 
-libraryDependencies ++= Seq(
+libraryDependencies ++= guava ++ Seq(
   madgagCompress,
-  scalaIoFile,
   textmatching,
   scopt
 )

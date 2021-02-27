@@ -2,12 +2,13 @@ import lib.Timing.measureTask
 import lib._
 import model._
 
+import java.nio.file.Files
+import java.nio.file.Files.isDirectory
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.concurrent.duration.Duration
+import scala.jdk.StreamConverters._
 import scala.sys.process._
-import scalax.file.PathMatcher.IsDirectory
-import scalax.io.Codec
 
 /*
  * Vary BFG runs by:
@@ -17,24 +18,22 @@ import scalax.io.Codec
  */
 object Benchmark extends App {
 
-  implicit val codec = Codec.UTF8
-
   BenchmarkConfig.parser.parse(args, BenchmarkConfig()) map {
     config =>
-      println(s"Using resources dir : ${config.resourcesDir.path}")
+      println(s"Using resources dir : ${config.resourcesDir}")
 
-      require(config.resourcesDir.exists, s"Resources dir not found : ${config.resourcesDir.path}")
-      require(config.jarsDir.exists, s"Jars dir not found : ${config.jarsDir.path}")
-      require(config.reposDir.exists, s"Repos dir not found : ${config.reposDir.path}")
+      require(Files.exists(config.resourcesDir), s"Resources dir not found : ${config.resourcesDir}")
+      require(Files.exists(config.jarsDir), s"Jars dir not found : ${config.jarsDir}")
+      require(Files.exists(config.reposDir), s"Repos dir not found : ${config.reposDir}")
 
-      val missingJars = config.bfgJars.filterNot(_.exists).map(_.toAbsolute.path)
+      val missingJars = config.bfgJars.filterNot(Files.exists(_))
       require(missingJars.isEmpty, s"Missing BFG jars : ${missingJars.mkString(",")}")
 
       val tasksFuture = for {
         bfgInvocableEngineSet <- bfgInvocableEngineSet(config)
       } yield {
         val gfbInvocableEngineSetOpt =
-          if (config.onlyBfg) None else Some(InvocableEngineSet[GFBInvocation](GitFilterBranch, Seq(InvocableGitFilterBranch)))
+          Option.when(!config.onlyBfg)(InvocableEngineSet[GFBInvocation](GitFilterBranch, Seq(InvocableGitFilterBranch)))
         boogaloo(config, new RepoExtractor(config.scratchDir), Seq(bfgInvocableEngineSet) ++ gfbInvocableEngineSetOpt.toSeq)
       }
 
@@ -59,27 +58,24 @@ object Benchmark extends App {
   def boogaloo(config: BenchmarkConfig, repoExtractor: RepoExtractor, invocableEngineSets: Seq[InvocableEngineSet[_ <: EngineInvocation]]) = {
 
     for {
-      repoSpecDir <- config.repoSpecDirs.toList
-      availableCommandDirs = (repoSpecDir / "commands").children().filter(IsDirectory).toList
+      repoSpecDir <- config.repoSpecDirs
+      availableCommandDirs = Files.list(repoSpecDir.resolve("commands")).toScala(Seq).filter(isDirectory(_))
       // println(s"Available commands for $repoName : ${availableCommandDirs.map(_.name).mkString(", ")}")
-      commandDir <- availableCommandDirs.filter(p => config.commands(p.name))
+      commandDir <- availableCommandDirs.filter(p => config.commands(p.getFileName.toString))
     } yield {
-
-      val repoName = repoSpecDir.name
-
-      val commandName = commandDir.name
+      val commandName: String = commandDir.getFileName.toString
       
       commandName -> (for {
         invocableEngineSet <- invocableEngineSets
       } yield for {
           (invocable, processMaker) <- invocableEngineSet.invocationsFor(commandDir)
         } yield {
-        val cleanRepoDir = repoExtractor.extractRepoFrom(repoSpecDir / "repo.git.zip")
-        commandDir.children().foreach(p => p.copyTo(cleanRepoDir / p.name))
-        val process = processMaker(cleanRepoDir)
+        val cleanRepoDir = repoExtractor.extractRepoFrom(repoSpecDir.resolve("repo.git.zip"))
+        Files.list(commandDir).toScala(Seq).foreach(p => Files.copy(p, cleanRepoDir.resolve(p.getFileName)))
+        val process = processMaker(cleanRepoDir.toFile)
 
             val duration = measureTask(s"$commandName - $invocable") {
-              process ! ProcessLogger(_ => Unit)
+              process ! ProcessLogger(_ => ())
             }
 
             if (config.dieIfTaskTakesLongerThan.exists(_ < duration.toMillis)) {

@@ -22,9 +22,15 @@ package com.madgag.git.bfg
 
 import org.eclipse.jgit.revwalk.RevCommit
 
+import java.nio.file.Path
+
 
 package object model {
   implicit class RichRevCommit(revCommit: RevCommit) {
-    lazy val arcs = CommitArcs(revCommit.getParents, revCommit.getTree)
+    lazy val arcs: CommitArcs = CommitArcs(revCommit.getParents.toIndexedSeq, revCommit.getTree)
+  }
+
+  implicit class RichPath(path: Path) {
+    def resolve(pathSegments: Seq[String]): Path = pathSegments.foldLeft(path)(_ resolve _)
   }
 }

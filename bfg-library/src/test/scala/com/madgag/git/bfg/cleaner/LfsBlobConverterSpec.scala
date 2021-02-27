@@ -23,15 +23,18 @@ package com.madgag.git.bfg.cleaner
 import com.madgag.diff.{After, Before, MapDiff}
 import com.madgag.git.LFS.Pointer
 import com.madgag.git._
-import com.madgag.git.bfg.model.{BlobFileMode, FileName, Tree, TreeBlobs}
+import com.madgag.git.bfg.model.{BlobFileMode, FileName, Tree, TreeBlobs, _}
 import com.madgag.git.test._
+import com.madgag.scala.collection.decorators._
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.lib.ObjectId
 import org.scalatest.concurrent.Eventually
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{Inspectors, OptionValues}
-import scalax.file.ImplicitConversions._
+
+import java.nio.file.Files.readAllBytes
+import java.nio.file.{Files, Path}
 
 class LfsBlobConverterSpec extends AnyFlatSpec with Matchers with OptionValues with Inspectors with Eventually {
 
@@ -85,7 +88,7 @@ class LfsBlobConverterSpec extends AnyFlatSpec with Matchers with OptionValues w
 
     fileBeforeAndAfter(After)._1 shouldBe fileBeforeAndAfter(Before)._1
 
-    val fileIds = fileBeforeAndAfter.mapValues(_._2)
+    val fileIds = fileBeforeAndAfter.mapV(_._2)
 
     val (originalFileId, pointerObjectId) = (fileIds(Before), fileIds(After))
 
@@ -97,13 +100,13 @@ class LfsBlobConverterSpec extends AnyFlatSpec with Matchers with OptionValues w
 
     val pointer = Pointer.parse(pointerObjectId.open.getCachedBytes)
 
-    val lfsStoredFile = repo.getDirectory / "lfs" / "objects" / pointer.path
+    val lfsStoredFile: Path = repo.getDirectory.toPath.resolve(Seq("lfs", "objects") ++ pointer.path)
 
-    lfsStoredFile.exists shouldBe true
+    Files.exists(lfsStoredFile) shouldBe true
 
-    lfsStoredFile.size.value shouldBe pointer.blobSize
+    Files.size(lfsStoredFile) shouldBe pointer.blobSize
 
-    eventually { lfsStoredFile.bytes.toArray.blobId } shouldBe originalFileId
+    eventually { readAllBytes(lfsStoredFile).blobId } shouldBe originalFileId
   }
 
   def verifyPointersForChangedFiles(diff: MapDiff[FileName, (BlobFileMode, ObjectId)])(implicit repo: FileRepository) = {

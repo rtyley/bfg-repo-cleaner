@@ -139,7 +139,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
     }
   }
 
-  def recordChange(originalBlobs: TreeBlobs, fixedTreeBlobs: TreeBlobs) {
+  def recordChange(originalBlobs: TreeBlobs, fixedTreeBlobs: TreeBlobs): Unit = {
     val changedFiles: Set[TreeBlobEntry] = originalBlobs.entries.toSet -- fixedTreeBlobs.entries.toSet
     for (TreeBlobEntry(filename, _, oldId) <- changedFiles) {
       fixedTreeBlobs.objectId(filename) match {
