@@ -75,12 +75,22 @@ if (("rtyley.github.io" == window.location.host) && (window.location.protocol !=
 </ul>
 
 <h1 id="usage">Usage</h1>
+<p>
+  Make sure that local commits from all branches have been pushed. If you have protected
+  branches on the remote repo you will need to unlock them. Check that no PRs or issues
+  reference the commit you want to filter or any of its descendents@mdash;these hidden refs
+  will not be rewritten and the original commit will be retained
+  (a <a href="https://en.wikipedia.org/wiki/Merkle_tree">Merkel tree</a> win)!
+  All forks should be deleted.
+</p>
+
 <p>First clone a fresh copy of your repo, using the <a href="http://stackoverflow.com/q/3959924/438886"><code>--mirror</code></a> flag:</p>
 <pre><code>$ git clone --mirror git://example.com/some-big-repo.git
 </code></pre>
 <p>This is a <a href="http://git-scm.com/docs/gitglossary.html#def_bare_repository">bare</a>
 repo, which means your normal files won't be visible, but it is a <em>full</em> copy of the Git database of your repository, and at this point
-you should <strong>make a backup of it</strong> to ensure you don't lose anything.</p>
+you should <strong>make a backup of it</strong> to ensure you don't lose anything:</p>
+<pre><code>$ cp -rp some-big-repo.git some-big-repo-backup.git</code></pre>
 <p>Now you can run the BFG to clean your repository up:</p>
 <pre><code>$ java -jar <a class="latest-download-link" data-event-category="Java command" href="#download">bfg.jar</a> --strip-blobs-bigger-than 100M some-big-repo.git
 </code></pre>
@@ -90,7 +100,26 @@ $ git reflog expire --expire=now --all && git gc --prune=now --aggressive
 </code></pre>
 <p>Finally, once you're happy with the updated state of your repo, push it back up <em>(note that because your clone command used the <code>--mirror</code> flag, this push will update <strong>all</strong> refs on your remote server)</em>:</p>
 <pre><code>$ git push</code></pre>
-<p>At this point, you're ready for everyone to ditch their old copies of the repo and do fresh clones of the nice, new pristine data. It's best to delete all old clones, as they'll have dirty history that you <i>don't</i> want to risk pushing back into your newly cleaned repo.
+<p>If you have protected branches on your remote repository you will see an error like the following:</p>
+<pre><code>! [remote rejected] master -> master (pre-receive hook declined)</code></pre>
+<p>Unlock them and try again. Pull requests will cause similar errors:</p>
+<pre><code>! [remote rejected] refs/pull/957/head -> refs/pull/957/head (hook declined)</code></pre>
+<p>
+  though in this case the references are hidden and cannot be rewritten. See issues
+  <a href="https://github.com/rtyley/bfg-repo-cleaner/issues/16">#16</a>,
+  <a href="https://github.com/rtyley/bfg-repo-cleaner/issues/36">#36</a>, and
+  <a href="https://github.com/rtyley/bfg-repo-cleaner/issues/350">#350</a>
+  for more information.
+</p>
+
+<p>
+  At this point, you're ready for everyone to ditch their old copies of the repo and do fresh
+  clones of the nice, new pristine data. It's best to reclone the repo, as the existing clones
+  will have dirty history that you <i>don't</i> want to risk pushing back into your newly
+  cleaned repo. If the old clones have local commits then you should be able to replay
+  them onto the corresponding commit hash from the new repo. Be prepared for zombie commits
+  popping up from time to time via pull requests from a fork, or from developers who have
+  old copies of the repo lying around on various machines.
 </p>
 
 <h1 id="examples">Examples</h1>
