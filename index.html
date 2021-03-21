@@ -21,16 +21,7 @@
 <script type="text/javascript">
 if (("rtyley.github.io" == window.location.host) && (window.location.protocol != "https:"))
     window.location.protocol = "https";
-
-/* <![CDATA[ */
-    (function() {
-        var s = document.createElement('script'), t = document.getElementsByTagName('script')[0];
-        s.type = 'text/javascript';
-        s.async = true;
-        s.src = 'https://api.flattr.com/js/0.6/load.js?mode=auto';
-        t.parentNode.insertBefore(s, t);
-    })();
-/* ]]> */</script>
+</script>
 <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
@@ -59,7 +50,7 @@ if (("rtyley.github.io" == window.location.host) && (window.location.protocol !=
 </code></pre>
 
 <h1>an alternative to git-filter-branch</h1>
-<p>The BFG is a simpler, faster alternative to <a href="http://git-scm.com/docs/git-filter-branch"><code>git-filter-branch</code></a> for cleansing bad data out of your Git repository history:</p>
+<p>The BFG is a simpler, faster alternative to <a href="https://git-scm.com/docs/git-filter-branch"><code>git-filter-branch</code></a> for cleansing bad data out of your Git repository history:</p>
 
 <ul>
 <li>Removing <strong>Crazy Big Files</strong></li>
@@ -75,16 +66,16 @@ if (("rtyley.github.io" == window.location.host) && (window.location.protocol !=
 </ul>
 
 <h1 id="usage">Usage</h1>
-<p>First clone a fresh copy of your repo, using the <a href="http://stackoverflow.com/q/3959924/438886"><code>--mirror</code></a> flag:</p>
+<p>First clone a fresh copy of your repo, using the <a href="https://stackoverflow.com/q/3959924/438886"><code>--mirror</code></a> flag:</p>
 <pre><code>$ git clone --mirror git://example.com/some-big-repo.git
 </code></pre>
-<p>This is a <a href="http://git-scm.com/docs/gitglossary.html#def_bare_repository">bare</a>
+<p>This is a <a href="https://git-scm.com/docs/gitglossary.html#def_bare_repository">bare</a>
 repo, which means your normal files won't be visible, but it is a <em>full</em> copy of the Git database of your repository, and at this point
 you should <strong>make a backup of it</strong> to ensure you don't lose anything.</p>
 <p>Now you can run the BFG to clean your repository up:</p>
 <pre><code>$ java -jar <a class="latest-download-link" data-event-category="Java command" href="#download">bfg.jar</a> --strip-blobs-bigger-than 100M some-big-repo.git
 </code></pre>
-<p>The BFG will update your commits and all branches and tags so they are clean, but it doesn't physically delete the unwanted stuff. Examine the repo to make sure your history has been updated, and then use the standard <a href="http://git-scm.com/docs/git-gc"><code>git gc</code></a> command to strip out the unwanted dirty data, which Git will now recognise as surplus to requirements:</p>
+<p>The BFG will update your commits and all branches and tags so they are clean, but it doesn't physically delete the unwanted stuff. Examine the repo to make sure your history has been updated, and then use the standard <a href="https://git-scm.com/docs/git-gc"><code>git gc</code></a> command to strip out the unwanted dirty data, which Git will now recognise as surplus to requirements:</p>
 <pre><code>$ cd some-big-repo.git
 $ git reflog expire --expire=now --all && git gc --prune=now --aggressive
 </code></pre>
@@ -106,7 +97,7 @@ $ git reflog expire --expire=now --all && git gc --prune=now --aggressive
 <pre><code>$ bfg <strong>--replace-text passwords.txt</strong>  my-repo.git</code></pre>
 
 <p>Remove all folders or files named '.git' - a <a href="https://github.com/git/git/blob/d29e9c89d/fsck.c#L228-L229">reserved filename</a> in Git. These often
-  <a href="http://stackoverflow.com/q/16821649/438886">become a problem</a> when migrating to
+  <a href="https://stackoverflow.com/q/16821649/438886">become a problem</a> when migrating to
   Git from other source-control systems like Mercurial :</p>
 <pre><code>$ bfg <strong>--delete-folders .git --delete-files .git  --no-blob-protection</strong>  my-repo.git</code></pre>
 
@@ -166,58 +157,58 @@ than <code>git-filter-branch</code>, turning an <em>overnight</em> job into one 
 <p>BFG's performance advantage is due to these factors:</p>
 
 <ul>
-<li>The approach of <code>git-filter-branch</code> is to step through every commit in your repository, examining the complete file-hierarchy of each one. For the intended use-cases of The BFG this is wasteful, as we don't care <em>where</em> in a file structure a 'bad' file exists - we just want it dealt with. Inherent in the nature of Git is that <em>every</em> file and folder is represented precisely once (and given a unique <a href="http://en.wikipedia.org/wiki/SHA-1">SHA-1</a> hash-id). The BFG takes advantage of this to process each and every file &amp; folder exactly <strong>once</strong> - no need for extra work.</li>
-<li>Taking advantage of the great support for parallelism in <a href="http://docs.scala-lang.org/overviews/parallel-collections/overview.html">Scala</a> and the JVM, the BFG does multi-core processing by default - the work of cleaning your Git repository is spread over every single core in your machine and typically consumes 100% of capacity for a substantial portion of the run.</li>
+<li>The approach of <code>git-filter-branch</code> is to step through every commit in your repository, examining the complete file-hierarchy of each one. For the intended use-cases of The BFG this is wasteful, as we don't care <em>where</em> in a file structure a 'bad' file exists - we just want it dealt with. Inherent in the nature of Git is that <em>every</em> file and folder is represented precisely once (and given a unique <a href="https://en.wikipedia.org/wiki/SHA-1">SHA-1</a> hash-id). The BFG takes advantage of this to process each and every file &amp; folder exactly <strong>once</strong> - no need for extra work.</li>
+<li>Taking advantage of the great support for parallelism in <a href="https://docs.scala-lang.org/overviews/parallel-collections/overview.html">Scala</a> and the JVM, the BFG does multi-core processing by default - the work of cleaning your Git repository is spread over every single core in your machine and typically consumes 100% of capacity for a substantial portion of the run.</li>
 <li>All action takes place in a single process (the process of the JVM), so doesn't require the frequent fork-and-exec-ing needed by <code>git-filter-branch</code>'s mix of Bash and C code.</li>
 </ul>
 
 <h1 id="feedback">Feedback</h1>
 <blockquote>
 I tried deleting using several "how to" blog entries for git filter-branch, but wasn't successful. Then tried The BFG; worked like a champ - very cool tool!
-<figcaption class="attribution">— <a href="http://linkedin.com/in/billh">Bill Hunt</a>, CTO at <a href="http://www.opttown.com/">OptTown</a></figcaption>
+<figcaption class="attribution">— <a href="https://linkedin.com/in/billh">Bill Hunt</a>, CTO at OptTown</figcaption>
 </blockquote>
 &nbsp;
 <blockquote>
 I found The BFG Repo-Cleaner and ran it to clean up some large files, and was amazed by the performance.
-<figcaption class="attribution">— <a href="https://github.com/Fryguy">Jason Frey</a>, Software Engineer at <a href="http://www.redhat.com/">Red Hat</a></figcaption>
+<figcaption class="attribution">— <a href="https://github.com/Fryguy">Jason Frey</a>, Software Engineer at <a href="https://www.redhat.com/">Red Hat</a></figcaption>
 </blockquote>
 &nbsp;
 <blockquote>
 I was able to shrink the current repository down to ~500 megabytes in about 10 minutes when using this tool. My hand crafted scripts clock in at 615 megabytes in 3 days time for comparison.
-<figcaption class="attribution">— <a href="https://plus.google.com/+ElliotGlaysher">Elliot Glaysher</a>, Google Software Engineer on <a href="https://code.google.com/p/chromium/issues/detail?id=111570#c29">Google Chrome</a></figcaption>
+<figcaption class="attribution">— <a href="https://github.com/eglaysher">Elliot Glaysher</a>, Google Software Engineer on <a href="https://code.google.com/p/chromium/issues/detail?id=111570#c29">Google Chrome</a></figcaption>
 </blockquote>
 &nbsp;
 <blockquote>
 The BFG was simple to set up and so fast that I had to ask Roberto, <em>"Is that it?"</em> and check for myself... it worked exactly as intended.
-<figcaption class="attribution">— <a href="https://github.com/ntoll">Nicholas Tollervey</a>, Developer at <a href="http://www.guardian.co.uk/">The Guardian</a></figcaption>
+<figcaption class="attribution">— <a href="https://github.com/ntoll">Nicholas Tollervey</a>, Developer at <a href="https://www.guardian.co.uk/">The Guardian</a></figcaption>
 </blockquote>
 &nbsp;
 <blockquote>
 Roberto's creations (<a href="https://play.google.com/store/apps/details?id=com.madgag.agit">Agit</a> and The BFG) are both very cool ;-)
-<figcaption class="attribution">— <a href="https://plus.google.com/+JunioCHamano/posts/Lm7iBwSLvoo">Junio C Hamano</a>, <a href="http://kerneltrap.org/node/5496">Maintainer of Git</a></figcaption>
+<figcaption class="attribution">— <a href="https://git-blame.blogspot.com/">Junio C Hamano</a>, <a href="https://github.blog/2020-04-07-celebrating-15-years-of-git-an-interview-with-git-maintainer-junio-hamano/">Maintainer of Git</a></figcaption>
 </blockquote>
 <p>
    <strong>Also see more feedback on </strong><a href="https://twitter.com/rtyley/timelines/464727264345993216"><strong>Twitter...</strong></a>
 </p>
 <h1>Requirements</h1>
 <ul>
-<li>The <a href="https://www.java.com/en/download/manual.jsp">Java Runtime Environment</a> (<b>Java 8</b> or above - BFG <a href="http://repo1.maven.org/maven2/com/madgag/bfg/1.12.16/bfg-1.12.16.jar">v1.12.16</a> was the last version to support Java 7, <a href="http://repo1.maven.org/maven2/com/madgag/bfg/1.12.3/bfg-1.12.3.jar">v1.12.3</a> was the last version to support Java 6)</li>
+<li>The <a href="https://www.java.com/en/download/manual.jsp">Java Runtime Environment</a> (<b>Java 8</b> or above - BFG <a href="https://repo1.maven.org/maven2/com/madgag/bfg/1.12.16/bfg-1.12.16.jar">v1.12.16</a> was the last version to support Java 7, <a href="https://repo1.maven.org/maven2/com/madgag/bfg/1.12.3/bfg-1.12.3.jar">v1.12.3</a> was the last version to support Java 6)</li>
 </ul>
 <p>That's it - the Scala library and all other dependencies are folded into the <a class="latest-download-link" data-event-category="Requirements Link" href="#download">downloadable jar</a>.</p>
 
 <h1 id="links">Links...</h1>
 <ul>
-<li><a href="http://www.guardian.co.uk/info/developer-blog/2013/apr/29/rewrite-git-history-with-the-bfg">Rewriting Git project history with The BFG</a> - a blogpost for The Guardian</li>
-<li><a href="http://episodes.gitminutes.com/2013/04/gitminutes-06-roberto-tyley-on.html">GitMinutes</a> podcast interview</li>
+<li><a href="https://www.guardian.co.uk/info/developer-blog/2013/apr/29/rewrite-git-history-with-the-bfg">Rewriting Git project history with The BFG</a> - a blogpost for The Guardian</li>
+<li><a href="https://episodes.gitminutes.com/2013/04/gitminutes-06-roberto-tyley-on.html">GitMinutes</a> podcast interview</li>
 <li><a href="https://www.parleys.com/play/53a7d2d1e4b0543940d9e56b">Git Going Faster... with Scala</a> - talk for ScalaDays 2014, later Parleys <em><a href="https://twitter.com/Parleys/status/517319848331083776">Presentation of the Day</a></em></li>
-<li><a href="http://www.infoq.com/articles/git-Cleaner">InfoQ interview</a></li>
-<li><a href="http://stackoverflow.com/questions/tagged/git-rewrite-history">Questions tagged <code>git-rewrite-history</code></a> on Stack Overflow</li>
+<li><a href="https://www.infoq.com/articles/git-Cleaner">InfoQ interview</a></li>
+<li><a href="https://stackoverflow.com/questions/tagged/git-rewrite-history">Questions tagged <code>git-rewrite-history</code></a> on Stack Overflow</li>
 </ul>
 
 <h1>License</h1>
 
 <p>The BFG is free software: you can redistribute it and/or modify
-    it under the terms of the <a href="http://www.gnu.org/licenses/gpl.html">GNU General Public License</a> as published by
+    it under the terms of the <a href="https://www.gnu.org/licenses/gpl.html">GNU General Public License</a> as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.</p>
 
@@ -235,11 +226,9 @@ Roberto's creations (<a href="https://play.google.com/store/apps/details?id=com.
           </a>
 
           <p class="repo-owner"><a href="https://github.com/rtyley/bfg-repo-cleaner">The BFG</a> is by <a href="https://github.com/rtyley">Roberto Tyley</a>, the author of <a href="https://github.com/guardian/prout">Prout</a>, <a href="https://github.com/guardian/gu-who">gu:who</a>, <a href="https://play.google.com/store/apps/details?id=com.madgag.agit">Agit</a> and the packager of <a href="https://rtyley.github.io/spongycastle/">Spongy Castle</a>. <a href="https://twitter.com/rtyley">Twitter</a> <a href="https://plus.google.com/+RobertoTyley?rel=author">Google+</a> <a href="rtyley.gpg">PGP</a></p>
-          <p><a href="https://travis-ci.org/rtyley/bfg-repo-cleaner"><img src="https://travis-ci.org/rtyley/bfg-repo-cleaner.svg?branch=master" alt="Build Status"></a></p>
-<p><a href="https://www.bountysource.com/teams/bfg-repo-cleaner?utm_source=BFG%20Repo-Cleaner&amp;utm_medium=shield&amp;utm_campaign=raised"><img src="https://www.bountysource.com/badge/team?team_id=28704&amp;style=raised" /></a><p>
-<p><a class="FlattrButton" style="display:none;" rev="flattr;button:compact;" href="http://github.com/rtyley/bfg-repo-cleaner"></a>
-<noscript><a href="http://flattr.com/thing/1227783/The-BFG-Repo-Cleaner" target="_blank">
-<img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" /></a></noscript></p>
+          <p><a href="https://travis-ci.com/rtyley/bfg-repo-cleaner"><img src="https://travis-ci.com/rtyley/bfg-repo-cleaner.svg?branch=master" alt="Build Status"></a></p>
+<p><iframe src="https://github.com/sponsors/rtyley/button" title="Sponsor rtyley" height="35" width="116" style="border: 0;"></iframe><p>
+            
 
           <p>This page was generated by <a href="https://pages.github.com/">GitHub Pages</a> using the Architect theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.</p>
         </aside>
