@@ -3,7 +3,7 @@ import common._
 
 organization in ThisBuild := "com.madgag"
 
-scalaVersion in ThisBuild := "2.13.4"
+scalaVersion in ThisBuild := "2.13.10"
 
 scalacOptions in ThisBuild ++= Seq("-deprecation", "-feature", "-language:postfixOps")
 
