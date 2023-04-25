@@ -1,19 +1,24 @@
 import Dependencies._
 import common._
 
-organization in ThisBuild := "com.madgag"
+ThisBuild / organization := "com.madgag"
 
-scalaVersion in ThisBuild := "2.13.10"
+ThisBuild / scalaVersion := "2.13.10"
 
-scalacOptions in ThisBuild ++= Seq("-deprecation", "-feature", "-language:postfixOps")
+ThisBuild / scalacOptions ++= Seq("-deprecation", "-feature", "-language:postfixOps")
 
-licenses in ThisBuild := Seq("GPLv3" -> url("http://www.gnu.org/licenses/gpl-3.0.html"))
+ThisBuild / licenses := Seq("GPLv3" -> url("http://www.gnu.org/licenses/gpl-3.0.html"))
 
-homepage in ThisBuild := Some(url("https://github.com/rtyley/bfg-repo-cleaner"))
+ThisBuild / homepage := Some(url("https://github.com/rtyley/bfg-repo-cleaner"))
 
-resolvers in ThisBuild ++= jgitVersionOverride.map(_ => Resolver.mavenLocal).toSeq
+ThisBuild / resolvers ++= jgitVersionOverride.map(_ => Resolver.mavenLocal).toSeq
 
-libraryDependencies in ThisBuild += scalatest % Test
+ThisBuild / libraryDependencies += scalatest % Test
+
+ThisBuild / Test/testOptions += Tests.Argument(
+  TestFrameworks.ScalaTest,
+  "-u", s"test-results/scala-${scalaVersion.value}"
+)
 
 lazy val root = Project(id = "bfg-parent", base = file(".")) aggregate (bfg, bfgTest, bfgLibrary)
 
@@ -27,9 +32,9 @@ lazy val bfg = bfgProject("bfg") enablePlugins(BuildInfoPlugin) dependsOn(bfgLib
 
 lazy val bfgBenchmark = bfgProject("bfg-benchmark")
 
-publishTo in ThisBuild := sonatypePublishToBundle.value
+ThisBuild / publishTo := sonatypePublishToBundle.value
 
-pomExtra in ThisBuild := (
+ThisBuild / pomExtra := (
   <scm>
     <url>git@github.com:rtyley/bfg-repo-cleaner.git</url>
     <connection>scm:git:git@github.com:rtyley/bfg-repo-cleaner.git</connection>

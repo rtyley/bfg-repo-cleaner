@@ -9,3 +9,5 @@ repo.git.zip
 **/.classpath
 **/.settings
 .bsp
+
+test-results/

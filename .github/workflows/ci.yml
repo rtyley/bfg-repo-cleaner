@@ -1,0 +1,30 @@
+name: CI
+on:
+  workflow_dispatch:
+  pull_request:
+
+  # triggering CI default branch improves caching
+  # see https://docs.github.com/en/free-pro-team@latest/actions/guides/caching-dependencies-to-speed-up-workflows#restrictions-for-accessing-a-cache
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: corretto
+          java-version: 11
+          cache: sbt
+      - name: Build and Test
+        run: sbt -v test
+      - name: Test Summary
+        uses: test-summary/action@v2
+        with:
+          paths: "test-results/**/TEST-*.xml"
+        if: always()
