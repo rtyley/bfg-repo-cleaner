@@ -130,7 +130,6 @@ class RepoRewriteSpec extends AnyFlatSpec with Matchers {
     val filename = s"$fileNamePrefix-ORIGINAL.$fileNamePostfix"
     val beforeFile = s"$parentPath/$filename"
     val afterFile = s"$parentPath/$fileNamePrefix-MODIFIED-$beforeAndAfter.$fileNamePostfix"
-    // val dirtyFile = repo.resolve(s"master:$beforeFile")
 
     val blobTextModifier = new BlobTextModifier {
       def lineCleanerFor(entry: TreeBlobEntry) = Some(quote(before).r --> (_ => after))
@@ -146,10 +145,8 @@ class RepoRewriteSpec extends AnyFlatSpec with Matchers {
     expectedFile should not be null
 
     implicit val threadLocalObjectReader = repo.getObjectDatabase.threadLocalResources.reader()
-    // val dirty = dirtyFile.open.getBytes
     val cleaned = cleanedFile.open.getBytes
     val expected = expectedFile.open.getBytes
-    // val dirtyStr = new String(dirty)
     val cleanedStr = new String(cleaned)
     val expectedStr = new String(expected)
 
@@ -166,5 +163,11 @@ class RepoRewriteSpec extends AnyFlatSpec with Matchers {
   it should "handle ASCII in ISO-8859-1" in textReplacementOf("ISO-8859-1", "laparabla", "txt", "palpitando", "buscando")
 
   it should "handle converting Windows newlines to Unix" in textReplacementOf("newlines", "windows", "txt", "\r\n", "\n")
+
+  it should "handle a file that uses LF for newlines" in
+    textReplacementOf("newlines", "using-LF", "txt", "file", "blob")
+
+  it should "handle a file that uses CRLF for newlines" in
+    textReplacementOf("newlines", "using-CRLF", "txt", "file", "blob")
 
 }
