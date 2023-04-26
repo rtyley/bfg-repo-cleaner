@@ -10,4 +10,5 @@ repo.git.zip
 **/.settings
 .bsp
 
+.DS_Store
 test-results/

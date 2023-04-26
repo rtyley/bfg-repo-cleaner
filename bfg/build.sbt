@@ -17,7 +17,7 @@ packageOptions in (Compile, packageBin) +=
   Package.ManifestAttributes( "Main-Class-After-UseNewerJava-Check" -> "com.madgag.git.bfg.cli.Main" )
 
 // note you don't want the jar name to collide with the non-assembly jar, otherwise confusion abounds.
-assemblyJarName in assembly := s"${name.value}-${version.value}-${gitDescription.value}${jgitVersionOverride.map("-jgit-" + _).mkString}.jar"
+assembly / assemblyJarName := s"${name.value}-${version.value}-${gitDescription.value}${jgitVersionOverride.map("-jgit-" + _).mkString}.jar"
 
 buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion, gitDescription)
 
@@ -37,7 +37,7 @@ cliUsageDump := {
   val scalaRun = new ForkRun(ForkOptions().withOutputStrategy(CustomOutput(new FileOutputStream(usageDumpFile))))
 
   val mainClassName = (mainClass in (Compile, run)).value getOrElse sys.error("No main class detected.")
-  val classpath = Attributed.data((fullClasspath in Runtime).value)
+  val classpath = Attributed.data((Runtime / fullClasspath).value)
   val args = Seq.empty
 
   scalaRun.run(mainClassName, classpath, args, streams.value.log).failed foreach (sys error _.getMessage)
@@ -64,12 +64,12 @@ import Tests._
     }
   }
 
-  testGrouping in Test := isolateTestsWhichRequireTheirOwnJvm( (definedTests in Test).value )
+  Test / testGrouping := isolateTestsWhichRequireTheirOwnJvm( (Test / definedTests).value )
 }
 
-fork in Test := true // JGit uses static (ie JVM-wide) config
+Test / fork := true // JGit uses static (ie JVM-wide) config
 
-logBuffered in Test := false
+Test / logBuffered := false
 
-parallelExecution in Test := false
+Test / parallelExecution := false
 
