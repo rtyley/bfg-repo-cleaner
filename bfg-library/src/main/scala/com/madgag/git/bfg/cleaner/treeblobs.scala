@@ -34,6 +34,10 @@ class BlobRemover(blobIds: Set[ObjectId]) extends Cleaner[TreeBlobs] {
   override def apply(treeBlobs: TreeBlobs) = treeBlobs.entries.filter(e => !blobIds.contains(e.objectId))
 }
 
+class SubtreeRemover(blobIds: Set[ObjectId]) extends Cleaner[TreeSubtrees] {
+  override def apply(subtrees: TreeSubtrees) = TreeSubtrees(subtrees.entryMap.filter(e => !blobIds.contains(e._2)))
+}
+
 class BlobReplacer(badBlobs: Set[ObjectId], blobInserter: => BlobInserter) extends Cleaner[TreeBlobs] {
   override def apply(treeBlobs: TreeBlobs) = treeBlobs.entries.map {
     case e if badBlobs.contains(e.objectId) =>
