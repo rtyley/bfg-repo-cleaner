@@ -13,5 +13,5 @@ extract:
 _dev_rebuild: ## Faster in-host rebuild, yet modifies the host state
 	docker run --rm -v "$(PWD):/usr/src/app" $(DOCKER_TAG) sbt assembly
 
-.PHONY: build run
+.PHONY: build extract _dev_rebuild
 
