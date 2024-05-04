@@ -13,4 +13,6 @@ alternative to `git-filter-branch` for cleansing bad data out of your Git reposi
 * Removing **Crazy Big Files**
 * Removing **Passwords, Credentials** & other **Private data**
 
+For a containerized build run `make build`, for detailed steps check `BUILD.md`
+
 Main documentation for The BFG is here : **https://rtyley.github.io/bfg-repo-cleaner/**
