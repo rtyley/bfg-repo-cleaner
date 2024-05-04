@@ -5,9 +5,7 @@ build:
 
 extract:
 	container_id=`docker run -d $(DOCKER_TAG) sh -c "sleep 60"` && \
-	echo $$container_id && \
 	dir_name=`docker exec $$container_id sh -c 'ls /usr/src/app/target/ | grep scala- | head -n1'` && \
-	echo $$dir_name && \
 	mkdir -p ./target/$$dir_name && \
 	docker cp $$container_id:/usr/src/app/target/$$dir_name ./target/ && \
 	docker rm -f $$container_id
