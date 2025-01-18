@@ -63,7 +63,7 @@ object GitUtil {
     implicit val revWalk = new RevWalk(repo)
     implicit val objectReader = revWalk.getObjectReader
 
-    repo.getAllRefs.values().stream().toScala(Seq).map(_.getObjectId).filter(_.open.getType == Constants.OBJ_COMMIT)
+    repo.getRefDatabase.getRefs().asScala.map(_.getObjectId).filter(_.open.getType == Constants.OBJ_COMMIT)
       .map(_.asRevCommit).exists(_.getFooterLines(FormerCommitFooter.Key).asScala.nonEmpty)
   }
 

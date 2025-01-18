@@ -13,14 +13,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup JDK
-        uses: actions/setup-java@v3
-        with:
-          distribution: corretto
-          java-version: 11
-          cache: sbt
+      - uses: actions/checkout@v4
+      - uses: guardian/setup-scala@v1
       - name: Build and Test
         run: sbt -v test
       - name: Test Summary

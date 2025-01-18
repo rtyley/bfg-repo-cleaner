@@ -2,10 +2,10 @@ package com.madgag.git.bfg.test
 
 import com.madgag.git._
 import com.madgag.git.test._
-import org.eclipse.jgit.internal.storage.file.{GC, ObjectDirectory}
+import org.eclipse.jgit.internal.storage.file.{FileRepository, GC, ObjectDirectory}
 import org.eclipse.jgit.lib.Constants.OBJ_BLOB
 import org.eclipse.jgit.lib.{ObjectId, ObjectReader, Repository}
-import org.eclipse.jgit.revwalk.{RevCommit, RevTree}
+import org.eclipse.jgit.revwalk.{RevCommit, RevTree, RevWalk}
 import org.eclipse.jgit.treewalk.TreeWalk
 import org.scalatest.Inspectors
 import org.scalatest.flatspec.AnyFlatSpec
@@ -16,9 +16,9 @@ import scala.jdk.CollectionConverters._
 
 class unpackedRepo(filePath: String) extends AnyFlatSpec with Matchers {
 
-  implicit val repo = unpackRepo(filePath)
-  implicit val objectDirectory = repo.getObjectDatabase.asInstanceOf[ObjectDirectory]
-  implicit lazy val (revWalk, reader) = repo.singleThreadedReaderTuple
+  implicit val repo: FileRepository = unpackRepo(filePath)
+  implicit val objectDirectory: ObjectDirectory = repo.getObjectDatabase
+  implicit lazy val (revWalk: RevWalk, reader: ObjectReader) = repo.singleThreadedReaderTuple
 
 
   def blobOfSize(sizeInBytes: Int): Matcher[ObjectId] = Matcher { (objectId: ObjectId) =>
@@ -29,8 +29,8 @@ class unpackedRepo(filePath: String) extends AnyFlatSpec with Matchers {
   }
 
   def packedBlobsOfSize(sizeInBytes: Long): Set[ObjectId] = {
-    implicit val reader = repo.newObjectReader()
-    repo.getObjectDatabase.asInstanceOf[ObjectDirectory].packedObjects.filter { objectId =>
+    implicit val reader: ObjectReader = repo.newObjectReader()
+    repo.getObjectDatabase.packedObjects.filter { objectId =>
       val objectLoader = objectId.open
       objectLoader.getType == OBJ_BLOB && objectLoader.getSize == sizeInBytes
     }.toSet

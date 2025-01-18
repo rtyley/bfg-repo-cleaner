@@ -6,6 +6,7 @@ import org.eclipse.jgit.lib.Constants.OBJ_COMMIT
 import org.eclipse.jgit.lib._
 import org.eclipse.jgit.revwalk.RevCommit
 
+import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.charset.{Charset, IllegalCharsetNameException, UnsupportedCharsetException}
 import scala.jdk.CollectionConverters._
 
@@ -59,10 +60,10 @@ case class CommitArcs(parents: Seq[ObjectId], tree: ObjectId) {
 
 object CommitNode {
   def apply(c: RevCommit): CommitNode = CommitNode(c.getAuthorIdent, c.getCommitterIdent, c.getFullMessage,
-      try c.getEncoding catch {case e @ (_ : IllegalCharsetNameException | _ : UnsupportedCharsetException) => Constants.CHARSET})
+      try c.getEncoding catch {case e @ (_ : IllegalCharsetNameException | _ : UnsupportedCharsetException) => UTF_8})
 }
 
-case class CommitNode(author: PersonIdent, committer: PersonIdent, message: String, encoding: Charset = Constants.CHARSET) {
+case class CommitNode(author: PersonIdent, committer: PersonIdent, message: String, encoding: Charset = UTF_8) {
   lazy val subject = message.linesIterator.to(LazyList).headOption
   lazy val lastParagraphBreak = message.lastIndexOf("\n\n")
   lazy val messageWithoutFooters = if (footers.isEmpty) message else (message take lastParagraphBreak)

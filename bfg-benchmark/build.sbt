@@ -1,4 +1,4 @@
-import Dependencies._
+import Dependencies.*
 
 libraryDependencies ++= guava ++ Seq(
   madgagCompress,
