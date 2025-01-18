@@ -1,5 +1,8 @@
-BFG Repo-Cleaner [![Build Status](https://travis-ci.com/rtyley/bfg-repo-cleaner.svg?branch=master)](https://travis-ci.com/rtyley/bfg-repo-cleaner)
+BFG Repo-Cleaner 
 ================
+
+[![CI](https://github.com/rtyley/bfg-repo-cleaner/actions/workflows/ci.yml/badge.svg)](https://github.com/rtyley/bfg-repo-cleaner/actions/workflows/ci.yml)
+[![Release](https://github.com/rtyley/bfg-repo-cleaner/actions/workflows/release.yml/badge.svg)](https://github.com/rtyley/bfg-repo-cleaner/actions/workflows/release.yml)
 
 _Removes large or troublesome blobs like git-filter-branch does, but faster - and written in Scala_ - [Fund the BFG](https://j.mp/fund-bfg)
 
