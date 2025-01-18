@@ -23,7 +23,7 @@ package com.madgag.git.bfg.cli
 import com.madgag.git._
 import com.madgag.git.bfg.cli.test.unpackedRepo
 import com.madgag.git.bfg.model._
-import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.lib.{ObjectId, ObjectReader}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.{Inspectors, OptionValues}
@@ -36,7 +36,7 @@ class MainSpec extends AnyFlatSpec with Matchers with OptionValues with Inspecto
   // concurrent testing against scala.App is not safe https://twitter.com/rtyley/status/340376844916387840
 
   "CLI" should "not change commits unnecessarily" in new unpackedRepo("/sample-repos/exampleWithInitialCleanHistory.git.zip") {
-    implicit val r = reader
+    implicit val r: ObjectReader = reader
 
     ensureInvariantValue(commitHist() take 2) {
       ensureRemovalFrom(commitHist()).ofCommitsThat(haveCommitWhereObjectIds(contain(abbrId("294f")))) {
@@ -90,7 +90,7 @@ class MainSpec extends AnyFlatSpec with Matchers with OptionValues with Inspecto
   }
 
   "strip blobs by id" should "work" in new unpackedRepo("/sample-repos/example.git.zip") {
-    implicit val r = reader
+    implicit val r: ObjectReader = reader
 
     val badBlobs = Set(abbrId("db59"), abbrId("86f9"))
     val blobIdsFile = Files.createTempFile("test-strip-blobs",".ids")

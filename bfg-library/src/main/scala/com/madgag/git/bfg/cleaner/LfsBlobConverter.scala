@@ -30,7 +30,7 @@ import com.madgag.textmatching.{Glob, TextMatcher}
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.lib.{ObjectId, ObjectReader}
 
-import java.nio.charset.Charset
+import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.{Files, Path}
 import scala.jdk.StreamConverters._
 import scala.util.{Try, Using}
@@ -50,7 +50,7 @@ class LfsBlobConverter(
 
   val gitAttributesLine = s"$lfsGlobExpression filter=lfs diff=lfs merge=lfs -text"
 
-  implicit val UTF_8 = Charset.forName("UTF-8")
+  implicit val UTF_8: Charset = StandardCharsets.UTF_8
 
   val lfsPointerMemo = MemoUtil.concurrentCleanerMemo[ObjectId]()
   

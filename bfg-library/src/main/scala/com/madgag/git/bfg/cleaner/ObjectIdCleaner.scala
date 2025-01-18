@@ -162,7 +162,7 @@ class ObjectIdCleaner(config: ObjectIdCleaner.Config, objectDB: ObjectDatabase, 
         tb.setTagger(originalTag.getTaggerIdent)
         tb.setMessage(objectIdSubstitutor.replaceOldIds(originalTag.getFullMessage, threadLocalResources.reader(), apply))
         val cleanedTag: ObjectId = threadLocalResources.inserter().insert(tb)
-        objectChecker.foreach(_.checkTag(tb.toByteArray))
+        objectChecker.foreach(_.checkTag(tb.build()))
         cleanedTag
     }.getOrElse(originalTag)
   }

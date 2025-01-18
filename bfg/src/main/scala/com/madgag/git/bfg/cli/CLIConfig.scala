@@ -45,7 +45,7 @@ object CLIConfig {
   val parser = new OptionParser[CLIConfig]("bfg") {
 
     def fileMatcher(name: String, defaultType: TextMatcherType = Glob) = {
-      implicit val textMatcherRead = Read.reads { TextMatcher(_, defaultType) }
+      implicit val textMatcherRead: Read[TextMatcher] = Read.reads { TextMatcher(_, defaultType) }
 
       opt[TextMatcher](name).valueName(s"<${defaultType.expressionPrefix}>").validate { m =>
         if (m.expression.contains('/')) {
@@ -143,7 +143,7 @@ case class CLIConfig(stripBiggestBlobs: Option[Int] = None,
 
   lazy val gitdir = resolveGitDirFor(repoLocation)
 
-  implicit lazy val repo = FileRepositoryBuilder.create(gitdir.get).asInstanceOf[FileRepository]
+  implicit lazy val repo: FileRepository = FileRepositoryBuilder.create(gitdir.get).asInstanceOf[FileRepository]
 
   lazy val objectProtection = ProtectedObjectCensus(protectBlobsFromRevisions)
 

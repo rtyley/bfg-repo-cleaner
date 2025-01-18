@@ -1,6 +1,6 @@
 import java.io.{File, FileOutputStream}
 
-import Dependencies._
+import Dependencies.*
 import sbt.taskKey
 
 import scala.sys.process.Process
@@ -13,11 +13,18 @@ gitDescription := Try[String](Process("git describe --all --always --dirty --lon
 libraryDependencies += useNewerJava
 
 mainClass := Some("use.newer.java.Version8")
-packageOptions in (Compile, packageBin) +=
+Compile / packageBin / packageOptions +=
   Package.ManifestAttributes( "Main-Class-After-UseNewerJava-Check" -> "com.madgag.git.bfg.cli.Main" )
 
 // note you don't want the jar name to collide with the non-assembly jar, otherwise confusion abounds.
 assembly / assemblyJarName := s"${name.value}-${version.value}-${gitDescription.value}${jgitVersionOverride.map("-jgit-" + _).mkString}.jar"
+
+assembly / assemblyMergeStrategy := {
+  case PathList("META-INF", "versions", "9", "module-info.class") => MergeStrategy.discard
+  case x =>
+    val oldStrategy = (assembly / assemblyMergeStrategy).value
+    oldStrategy(x)
+}
 
 buildInfoKeys := Seq[BuildInfoKey](version, scalaVersion, gitDescription)
 
@@ -25,10 +32,10 @@ buildInfoPackage := "com.madgag.git.bfg"
 
 crossPaths := false
 
-publishArtifact in (Compile, packageBin) := false
+Compile / packageBin / publishArtifact := false
 
 // replace the conventional main artifact with an uber-jar
-addArtifact(artifact in (Compile, packageBin), assembly)
+addArtifact(Compile / packageBin / artifact, assembly)
 
 val cliUsageDump = taskKey[File]("Dump the CLI 'usage' output to a file")
 
@@ -36,7 +43,7 @@ cliUsageDump := {
   val usageDumpFile = File.createTempFile("bfg-usage", "dump.txt")
   val scalaRun = new ForkRun(ForkOptions().withOutputStrategy(CustomOutput(new FileOutputStream(usageDumpFile))))
 
-  val mainClassName = (mainClass in (Compile, run)).value getOrElse sys.error("No main class detected.")
+  val mainClassName = (Compile / run / mainClass).value getOrElse sys.error("No main class detected.")
   val classpath = Attributed.data((Runtime / fullClasspath).value)
   val args = Seq.empty
 
@@ -52,7 +59,7 @@ libraryDependencies ++= Seq(
   scalaGitTest % "test"
 )
 
-import Tests._
+import Tests.*
 {
   def isolateTestsWhichRequireTheirOwnJvm(tests: Seq[TestDefinition]) = {
     val (testsRequiringIsolation, testsNotNeedingIsolation) = tests.partition(_.name.contains("RequiresOwnJvm"))

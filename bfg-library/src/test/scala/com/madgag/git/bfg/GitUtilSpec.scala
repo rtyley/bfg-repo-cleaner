@@ -22,11 +22,12 @@ package com.madgag.git.bfg
 
 import com.madgag.git._
 import com.madgag.git.test._
+import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class GitUtilSpec extends AnyFlatSpec with Matchers {
-  implicit val repo = unpackRepo("/sample-repos/example.git.zip")
+  implicit val repo: FileRepository = unpackRepo("/sample-repos/example.git.zip")
 
   "reachable blobs" should "match expectations" in {
     implicit val (revWalk, reader) = repo.singleThreadedReaderTuple

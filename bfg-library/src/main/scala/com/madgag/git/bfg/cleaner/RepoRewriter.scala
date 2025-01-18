@@ -22,7 +22,7 @@ package com.madgag.git.bfg.cleaner
 
 import com.madgag.git._
 import com.madgag.git.bfg.Timing
-import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.lib.{ObjectId, ProgressMonitor, RefDatabase}
 import org.eclipse.jgit.revwalk.RevSort._
 import org.eclipse.jgit.revwalk.{RevCommit, RevWalk}
 import org.eclipse.jgit.transport.ReceiveCommand
@@ -66,14 +66,14 @@ When updating a Tree, the User has no right to muck with sub-trees. They can onl
 object RepoRewriter {
 
   def rewrite(repo: org.eclipse.jgit.lib.Repository, objectIdCleanerConfig: ObjectIdCleaner.Config): Map[ObjectId, ObjectId] = {
-    assert(!repo.getAllRefs.isEmpty, "Can't find any refs in repo at " + repo.getDirectory.getAbsolutePath)
+    implicit val refDatabase: RefDatabase = repo.getRefDatabase
 
-    implicit val refDatabase = repo.getRefDatabase
+    assert(refDatabase.hasRefs, "Can't find any refs in repo at " + repo.getDirectory.getAbsolutePath)
 
     val reporter: Reporter = new CLIReporter(repo)
-    implicit val progressMonitor = reporter.progressMonitor
+    implicit val progressMonitor: ProgressMonitor = reporter.progressMonitor
 
-    val allRefs = repo.getAllRefs.values
+    val allRefs = refDatabase.getRefs().asScala
 
     def createRevWalk: RevWalk = {
 
@@ -82,7 +82,7 @@ object RepoRewriter {
       revWalk.sort(TOPO) // crucial to ensure we visit parents BEFORE children, otherwise blow stack
       revWalk.sort(REVERSE, true) // we want to start with the earliest commits and work our way up...
 
-      val startCommits = allRefs.asScala.map(_.targetObjectId.asRevObject(revWalk)).collect { case c: RevCommit => c }
+      val startCommits = allRefs.map(_.targetObjectId.asRevObject(revWalk)).collect { case c: RevCommit => c }
 
       revWalk.markStart(startCommits.asJavaCollection)
       revWalk
@@ -91,7 +91,7 @@ object RepoRewriter {
     implicit val revWalk = createRevWalk
     implicit val reader = revWalk.getObjectReader
 
-    reporter.reportRefsForScan(allRefs.asScala)
+    reporter.reportRefsForScan(allRefs)
 
     reporter.reportObjectProtection(objectIdCleanerConfig)(repo.getObjectDatabase, revWalk)
 
